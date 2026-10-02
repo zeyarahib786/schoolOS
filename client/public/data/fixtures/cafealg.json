@@ -1,0 +1,37 @@
+[
+ {
+  "name": "Sara Abdullah",
+  "grade": "Grade 9 · A",
+  "allergens": "Peanuts, Tree nuts",
+  "sev": "Severe",
+  "plan": "Nut-free tray · EpiPen on file"
+ },
+ {
+  "name": "Daniel George",
+  "grade": "Grade 12 · A",
+  "allergens": "Tree nuts",
+  "sev": "Severe",
+  "plan": "Nut-free tray · guardian consent"
+ },
+ {
+  "name": "Emily Watson",
+  "grade": "Grade 8 · A",
+  "allergens": "Lactose",
+  "sev": "Moderate",
+  "plan": "Dairy-free substitutions"
+ },
+ {
+  "name": "Musa Diallo",
+  "grade": "Grade 10 · B",
+  "allergens": "Gluten (Coeliac)",
+  "sev": "Moderate",
+  "plan": "Gluten-free menu line"
+ },
+ {
+  "name": "Hana Yusuf",
+  "grade": "Grade 7 · A",
+  "allergens": "Egg",
+  "sev": "Mild",
+  "plan": "Egg-free baked goods"
+ }
+]

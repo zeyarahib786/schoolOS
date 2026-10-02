@@ -1,0 +1,32 @@
+[
+ {
+  "cat": "Facilities & Maintenance",
+  "budget": 520000,
+  "spent": 418000,
+  "c": "green"
+ },
+ {
+  "cat": "IT & Technology",
+  "budget": 300000,
+  "spent": 264000,
+  "c": "blue"
+ },
+ {
+  "cat": "Academic Resources",
+  "budget": 240000,
+  "spent": 151000,
+  "c": "green"
+ },
+ {
+  "cat": "Transport & Fuel",
+  "budget": 180000,
+  "spent": 172000,
+  "c": "amber"
+ },
+ {
+  "cat": "Events & Activities",
+  "budget": 120000,
+  "spent": 131000,
+  "c": "red"
+ }
+]

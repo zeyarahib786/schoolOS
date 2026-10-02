@@ -1,0 +1,50 @@
+[
+ {
+  "name": "Fatima Al Hashimi",
+  "item": "Lunch — Chicken Biryani",
+  "amt": -22,
+  "type": "Purchase",
+  "time": "12:40",
+  "method": "Wallet"
+ },
+ {
+  "name": "Omar Siddiqui",
+  "item": "Wallet top-up",
+  "amt": 100,
+  "type": "Top-up",
+  "time": "11:15",
+  "method": "Card"
+ },
+ {
+  "name": "Aisha Noor",
+  "item": "Snack — Fruit Cup + Laban",
+  "amt": -9,
+  "type": "Purchase",
+  "time": "10:32",
+  "method": "Wallet"
+ },
+ {
+  "name": "Sara Abdullah",
+  "item": "Lunch — Nut-free tray",
+  "amt": -24,
+  "type": "Purchase",
+  "time": "12:45",
+  "method": "Wallet"
+ },
+ {
+  "name": "Layla Mansour",
+  "item": "Wallet top-up",
+  "amt": 150,
+  "type": "Top-up",
+  "time": "08:20",
+  "method": "Online portal"
+ },
+ {
+  "name": "Yusuf Rahman",
+  "item": "Snack — Hummus & Veg",
+  "amt": -8,
+  "type": "Purchase",
+  "time": "10:50",
+  "method": "Wallet"
+ }
+]

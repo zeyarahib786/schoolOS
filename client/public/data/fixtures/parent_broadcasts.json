@@ -1,0 +1,34 @@
+[
+ {
+  "subject": "Term 2 fee reminder",
+  "audience": "Due-fee parents",
+  "channel": "SMS + Email",
+  "delivered": 86,
+  "read": 71,
+  "sent": "Today"
+ },
+ {
+  "subject": "Parent-teacher meeting invite",
+  "audience": "All parents",
+  "channel": "In-app + Email",
+  "delivered": 980,
+  "read": 742,
+  "sent": "Yesterday"
+ },
+ {
+  "subject": "Sports day schedule",
+  "audience": "Gr 1-8 parents",
+  "channel": "In-app",
+  "delivered": 540,
+  "read": 498,
+  "sent": "12 Jun"
+ },
+ {
+  "subject": "Exam timetable released",
+  "audience": "Gr 9-12 parents",
+  "channel": "Email",
+  "delivered": 320,
+  "read": 289,
+  "sent": "10 Jun"
+ }
+]

@@ -1,0 +1,66 @@
+import { z } from 'zod';
+
+const objectId = z.string().regex(/^[a-f0-9]{24}$/i, 'Invalid id');
+
+export const listBooksSchema = z.object({
+  body: z.object({}).optional(),
+  params: z.object({}).optional(),
+  query: z.object({
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(100).default(20),
+    search: z.string().trim().max(120).optional(),
+    category: z.string().trim().max(80).optional(),
+  }),
+});
+
+export const createBookSchema = z.object({
+  query: z.object({}).optional(),
+  params: z.object({}).optional(),
+  body: z.object({
+    isbn: z.string().trim().min(1).max(30),
+    title: z.string().trim().min(1).max(200),
+    author: z.string().trim().min(1).max(120),
+    category: z.string().trim().min(1).max(80),
+    totalCopies: z.number().int().positive(),
+  }),
+});
+
+export const issueLoanSchema = z.object({
+  query: z.object({}).optional(),
+  params: z.object({}).optional(),
+  body: z.object({
+    bookId: objectId,
+    studentId: objectId,
+    dueDate: z.string().refine((v) => !Number.isNaN(Date.parse(v)), 'Invalid date'),
+  }),
+});
+
+export const loanIdParamSchema = z.object({
+  body: z.object({}).optional(),
+  query: z.object({}).optional(),
+  params: z.object({ id: objectId }),
+});
+
+export const listLoansSchema = z.object({
+  body: z.object({}).optional(),
+  params: z.object({}).optional(),
+  query: z.object({
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(100).default(20),
+    studentId: objectId.optional(),
+    status: z.enum(['Active', 'Returned', 'Overdue']).optional(),
+  }),
+});
+
+export const createBookRequestSchema = z.object({ query: z.object({}).optional(), params: z.object({}).optional(), body: z.object({ bookId: objectId, note: z.string().trim().max(300).optional() }) });
+export const listBookRequestsSchema = z.object({ body: z.object({}).optional(), params: z.object({}).optional(), query: z.object({ page: z.coerce.number().int().min(1).default(1), limit: z.coerce.number().int().min(1).max(100).default(20), status: z.enum(['Pending', 'Fulfilled']).optional() }) });
+export const bookRequestIdParamSchema = z.object({ body: z.object({}).optional(), query: z.object({}).optional(), params: z.object({ id: objectId }) });
+export const sendRemindersSchema = z.object({ query: z.object({}).optional(), params: z.object({}).optional(), body: z.object({ loanIds: z.array(objectId).min(1).max(100) }) });
+
+export type CreateBookInput = z.infer<typeof createBookSchema>['body'];
+export type ListBooksQuery = z.infer<typeof listBooksSchema>['query'];
+export type IssueLoanInput = z.infer<typeof issueLoanSchema>['body'];
+export type ListLoansQuery = z.infer<typeof listLoansSchema>['query'];
+export type CreateBookRequestInput = z.infer<typeof createBookRequestSchema>['body'];
+export type ListBookRequestsQuery = z.infer<typeof listBookRequestsSchema>['query'];
+export type SendRemindersInput = z.infer<typeof sendRemindersSchema>['body'];

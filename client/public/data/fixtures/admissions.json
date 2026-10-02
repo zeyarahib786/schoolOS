@@ -1,0 +1,52 @@
+[
+ {
+  "name": "Hanan Qureshi",
+  "grade": "Grade 6",
+  "stage": "Application",
+  "date": "12 Jun",
+  "src": "Website",
+  "dob": "2014-03-11",
+  "guardian": "Bilal Qureshi",
+  "phone": "+971 50 771 2204"
+ },
+ {
+  "name": "Leon Fernandes",
+  "grade": "Grade 9",
+  "stage": "Assessment",
+  "date": "11 Jun",
+  "src": "Referral",
+  "dob": "2011-07-22",
+  "guardian": "Maria Fernandes",
+  "phone": "+971 55 209 3318"
+ },
+ {
+  "name": "Noor Saeed",
+  "grade": "KG 2",
+  "stage": "Interview",
+  "date": "10 Jun",
+  "src": "Walk-in",
+  "dob": "2020-01-09",
+  "guardian": "Saeed Al Marri",
+  "phone": "+971 52 884 1190"
+ },
+ {
+  "name": "Ali Haider",
+  "grade": "Grade 4",
+  "stage": "Offer",
+  "date": "09 Jun",
+  "src": "Website",
+  "dob": "2016-05-30",
+  "guardian": "Reema Haider",
+  "phone": "+971 50 332 8841"
+ },
+ {
+  "name": "Priya Nair",
+  "grade": "Grade 7",
+  "stage": "Enrolled",
+  "date": "08 Jun",
+  "src": "Agent",
+  "dob": "2013-09-14",
+  "guardian": "Anil Nair",
+  "phone": "+971 56 110 7723"
+ }
+]

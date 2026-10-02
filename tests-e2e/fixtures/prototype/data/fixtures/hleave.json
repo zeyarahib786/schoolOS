@@ -1,0 +1,57 @@
+[
+ {
+  "id": "GP-2214",
+  "name": "Sara Abdullah",
+  "room": "OB-201",
+  "type": "Weekend leave",
+  "from": "14 Jun",
+  "to": "15 Jun",
+  "reason": "Family event — Sharjah",
+  "status": "Out",
+  "by": "Ms. Farah"
+ },
+ {
+  "id": "GP-2210",
+  "name": "Hamza Ali",
+  "room": "FB-101",
+  "type": "Home leave",
+  "from": "13 Jun",
+  "to": "16 Jun",
+  "reason": "Family visit — Abu Dhabi",
+  "status": "Approved",
+  "by": "Mr. Idris"
+ },
+ {
+  "id": "GP-2212",
+  "name": "Zaid Omar",
+  "room": "FB-101",
+  "type": "Day-out",
+  "from": "15 Jun",
+  "to": "15 Jun",
+  "reason": "Shopping — guardian pickup",
+  "status": "Requested",
+  "by": "—"
+ },
+ {
+  "id": "GP-2213",
+  "name": "Daniel George",
+  "room": "FB-102",
+  "type": "Home leave",
+  "from": "20 Jun",
+  "to": "30 Jun",
+  "reason": "Eid Al Adha holidays",
+  "status": "Requested",
+  "by": "—"
+ },
+ {
+  "id": "GP-2209",
+  "name": "Aisha Noor",
+  "room": "OB-201",
+  "type": "Medical",
+  "from": "13 Jun",
+  "to": "13 Jun",
+  "reason": "Dental appointment",
+  "status": "Returned",
+  "by": "Ms. Farah"
+ }
+]

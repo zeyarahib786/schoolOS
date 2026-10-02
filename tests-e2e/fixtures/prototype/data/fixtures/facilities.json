@@ -1,0 +1,38 @@
+[
+ {
+  "name": "Main Auditorium",
+  "type": "Hall",
+  "cap": 400,
+  "status": "Available"
+ },
+ {
+  "name": "Science Lab 1",
+  "type": "Laboratory",
+  "cap": 32,
+  "status": "Booked"
+ },
+ {
+  "name": "Sports Hall",
+  "type": "Sports",
+  "cap": 120,
+  "status": "Available"
+ },
+ {
+  "name": "Computer Lab A",
+  "type": "Laboratory",
+  "cap": 30,
+  "status": "Maintenance"
+ },
+ {
+  "name": "Music Room",
+  "type": "Studio",
+  "cap": 24,
+  "status": "Available"
+ },
+ {
+  "name": "Library Seminar Room",
+  "type": "Meeting",
+  "cap": 18,
+  "status": "Booked"
+ }
+]

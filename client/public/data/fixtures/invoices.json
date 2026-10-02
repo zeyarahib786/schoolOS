@@ -1,0 +1,50 @@
+[
+ {
+  "id": "INV-25-3391",
+  "student": "Fatima Al Hashimi",
+  "term": "Term 2 Tuition",
+  "amt": 8500,
+  "status": "Paid",
+  "due": "01 Jun"
+ },
+ {
+  "id": "INV-25-3392",
+  "student": "Yusuf Rahman",
+  "term": "Term 2 Tuition",
+  "amt": 8500,
+  "status": "Due",
+  "due": "20 Jun"
+ },
+ {
+  "id": "INV-25-3393",
+  "student": "Omar Siddiqui",
+  "term": "Term 2 + Transport",
+  "amt": 11200,
+  "status": "Overdue",
+  "due": "05 Jun"
+ },
+ {
+  "id": "INV-25-3394",
+  "student": "Layla Mansour",
+  "term": "Term 2 Tuition",
+  "amt": 7800,
+  "status": "Paid",
+  "due": "01 Jun"
+ },
+ {
+  "id": "INV-25-3395",
+  "student": "Ethan Pereira",
+  "term": "Term 2 + Transport",
+  "amt": 11200,
+  "status": "Overdue",
+  "due": "05 Jun"
+ },
+ {
+  "id": "INV-25-3396",
+  "student": "Zara Sheikh",
+  "term": "Term 2 Tuition",
+  "amt": 7200,
+  "status": "Due",
+  "due": "20 Jun"
+ }
+]

@@ -1,0 +1,37 @@
+[
+ {
+  "loc": "Main Gate · Turnstile A",
+  "type": "Face + Card",
+  "sync": "12s ago",
+  "punches": 642,
+  "status": "Online"
+ },
+ {
+  "loc": "Main Gate · Turnstile B",
+  "type": "Face + Card",
+  "sync": "12s ago",
+  "punches": 588,
+  "status": "Online"
+ },
+ {
+  "loc": "Staff Entrance",
+  "type": "Fingerprint",
+  "sync": "40s ago",
+  "punches": 146,
+  "status": "Online"
+ },
+ {
+  "loc": "Primary Block",
+  "type": "Face",
+  "sync": "1m ago",
+  "punches": 410,
+  "status": "Online"
+ },
+ {
+  "loc": "Sports Complex",
+  "type": "Card",
+  "sync": "18m ago",
+  "punches": 0,
+  "status": "Offline"
+ }
+]

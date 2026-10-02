@@ -1,0 +1,38 @@
+[
+ {
+  "r": "Route 1 · Jumeirah",
+  "bus": "DXB-4412",
+  "driver": "Saeed Al Marri",
+  "riders": 38,
+  "cap": 42,
+  "onTime": 98,
+  "status": "On road"
+ },
+ {
+  "r": "Route 3 · Al Barsha",
+  "bus": "DXB-4419",
+  "driver": "Rakesh Nair",
+  "riders": 41,
+  "cap": 42,
+  "onTime": 96,
+  "status": "On road"
+ },
+ {
+  "r": "Route 5 · Mirdif",
+  "bus": "DXB-4421",
+  "driver": "Imran Qadir",
+  "riders": 33,
+  "cap": 38,
+  "onTime": 99,
+  "status": "Depot"
+ },
+ {
+  "r": "Route 7 · Al Wasl",
+  "bus": "DXB-4430",
+  "driver": "John Mathew",
+  "riders": 36,
+  "cap": 42,
+  "onTime": 91,
+  "status": "Delayed"
+ }
+]

@@ -1,0 +1,118 @@
+[
+ {
+  "name": "Yara Khalifa",
+  "batch": "2019",
+  "path": "Medicine · NYU Abu Dhabi",
+  "contact": "+971 50 880 1122",
+  "email": "yara.khalifa@gmail.com",
+  "status": "Mentor",
+  "employer": "NYU Abu Dhabi Hospital",
+  "industry": "Healthcare",
+  "university": "NYU Abu Dhabi",
+  "skills": [
+   "Clinical research",
+   "Public health"
+  ],
+  "mentorAvail": true,
+  "consent": true
+ },
+ {
+  "name": "Rami Haddad",
+  "batch": "2018",
+  "path": "Software Engineer · Careem",
+  "contact": "+971 55 213 9087",
+  "email": "rami.haddad@outlook.com",
+  "status": "Active",
+  "employer": "Careem",
+  "industry": "Technology",
+  "university": "AUS",
+  "skills": [
+   "Backend engineering",
+   "Cloud infra"
+  ],
+  "mentorAvail": false,
+  "consent": true
+ },
+ {
+  "name": "Sophia Lin",
+  "batch": "2020",
+  "path": "Architecture · UCL London",
+  "contact": "+971 52 661 4410",
+  "email": "sophia.lin@ucl.ac.uk",
+  "status": "Active",
+  "employer": "Foster + Partners",
+  "industry": "Architecture",
+  "university": "UCL London",
+  "skills": [
+   "Urban design"
+  ],
+  "mentorAvail": false,
+  "consent": true
+ },
+ {
+  "name": "Tariq Mansour",
+  "batch": "2016",
+  "path": "Founder · LogiTech FZ",
+  "contact": "+971 50 119 7733",
+  "email": "tariq@logitechfz.com",
+  "status": "Mentor",
+  "employer": "LogiTech FZ (Founder)",
+  "industry": "Logistics / Startups",
+  "university": "AUD",
+  "skills": [
+   "Entrepreneurship",
+   "Fundraising",
+   "Operations"
+  ],
+  "mentorAvail": true,
+  "consent": true
+ },
+ {
+  "name": "Aaliyah Basheer",
+  "batch": "2021",
+  "path": "Business · LSE",
+  "contact": "+971 56 770 2231",
+  "email": "aaliyah.basheer@lse.ac.uk",
+  "status": "Active",
+  "employer": "Student",
+  "industry": "Finance (studying)",
+  "university": "LSE",
+  "skills": [
+   "Economics"
+  ],
+  "mentorAvail": false,
+  "consent": true
+ },
+ {
+  "name": "Marcus Reed",
+  "batch": "2017",
+  "path": "Doctor · Cleveland Clinic",
+  "contact": "+971 55 442 8890",
+  "email": "marcus.reed@ccf.org",
+  "status": "Lapsed",
+  "employer": "Cleveland Clinic Abu Dhabi",
+  "industry": "Healthcare",
+  "university": "Imperial College London",
+  "skills": [
+   "Cardiology"
+  ],
+  "mentorAvail": false,
+  "consent": false
+ },
+ {
+  "name": "Noura Saif",
+  "batch": "2019",
+  "path": "Law · Sorbonne Paris",
+  "contact": "+971 50 330 1567",
+  "email": "noura.saif@sorbonne.fr",
+  "status": "Active",
+  "employer": "Al Tamimi & Co.",
+  "industry": "Legal",
+  "university": "Sorbonne Paris",
+  "skills": [
+   "Corporate law"
+  ],
+  "mentorAvail": true,
+  "consent": true
+ }
+]

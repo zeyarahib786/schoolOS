@@ -1,0 +1,56 @@
+[
+ {
+  "name": "Aisha Noor",
+  "cls": "9-B",
+  "mat": 91,
+  "sci": 97,
+  "eng": 93,
+  "grade": "A+",
+  "rank": 1
+ },
+ {
+  "name": "Fatima Al Hashimi",
+  "cls": "10-A",
+  "mat": 96,
+  "sci": 94,
+  "eng": 89,
+  "grade": "A+",
+  "rank": 2
+ },
+ {
+  "name": "Ibrahim Khan",
+  "cls": "10-B",
+  "mat": 88,
+  "sci": 82,
+  "eng": 90,
+  "grade": "A",
+  "rank": 4
+ },
+ {
+  "name": "Yusuf Rahman",
+  "cls": "10-A",
+  "mat": 74,
+  "sci": 80,
+  "eng": 71,
+  "grade": "B+",
+  "rank": 18
+ },
+ {
+  "name": "Omar Siddiqui",
+  "cls": "11-C",
+  "mat": 61,
+  "sci": 58,
+  "eng": 66,
+  "grade": "C",
+  "rank": 74
+ },
+ {
+  "name": "Ethan Pereira",
+  "cls": "11-A",
+  "mat": 48,
+  "sci": 52,
+  "eng": 55,
+  "grade": "D",
+  "rank": 119
+ }
+]

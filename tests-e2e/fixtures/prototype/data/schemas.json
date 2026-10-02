@@ -1,0 +1,1515 @@
+{
+ "generated": "from live app state",
+ "datasets": 68,
+ "schemas": {
+  "ADMISSIONS": {
+   "type": "array",
+   "count": 5,
+   "items": {
+    "type": "object",
+    "properties": {
+     "name": {
+      "type": "string"
+     },
+     "grade": {
+      "type": "string"
+     },
+     "stage": {
+      "type": "string"
+     },
+     "date": {
+      "type": "string"
+     },
+     "src": {
+      "type": "string"
+     },
+     "dob": {
+      "type": "string"
+     },
+     "guardian": {
+      "type": "string"
+     },
+     "phone": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "ADM_DOCS": {
+   "type": "array",
+   "count": 6,
+   "items": {
+    "type": "object",
+    "properties": {
+     "key": {
+      "type": "string"
+     },
+     "label": {
+      "type": "string"
+     },
+     "req": {
+      "type": "boolean"
+     }
+    }
+   }
+  },
+  "ALUMNI": {
+   "type": "array",
+   "count": 7,
+   "items": {
+    "type": "object",
+    "properties": {
+     "name": {
+      "type": "string"
+     },
+     "batch": {
+      "type": "string"
+     },
+     "path": {
+      "type": "string"
+     },
+     "contact": {
+      "type": "string"
+     },
+     "email": {
+      "type": "string"
+     },
+     "status": {
+      "type": "string"
+     },
+     "employer": {
+      "type": "string"
+     },
+     "industry": {
+      "type": "string"
+     },
+     "university": {
+      "type": "string"
+     },
+     "skills": {
+      "type": "array"
+     },
+     "mentorAvail": {
+      "type": "boolean"
+     },
+     "consent": {
+      "type": "boolean"
+     }
+    }
+   }
+  },
+  "ALUMNI_EVENTS": {
+   "type": "array",
+   "count": 2,
+   "items": {
+    "type": "object",
+    "properties": {
+     "title": {
+      "type": "string"
+     },
+     "date": {
+      "type": "string"
+     },
+     "invited": {
+      "type": "number"
+     },
+     "rsvp": {
+      "type": "number"
+     }
+    }
+   }
+  },
+  "ANN": {
+   "type": "array",
+   "count": 5,
+   "items": {
+    "type": "object",
+    "properties": {
+     "t": {
+      "type": "string"
+     },
+     "by": {
+      "type": "string"
+     },
+     "tm": {
+      "type": "string"
+     },
+     "bd": {
+      "type": "string"
+     },
+     "ic": {
+      "type": "string"
+     },
+     "c": {
+      "type": "string"
+     },
+     "aud": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "AUDIT": {
+   "type": "array",
+   "count": 6,
+   "items": {
+    "type": "object",
+    "properties": {
+     "user": {
+      "type": "string"
+     },
+     "action": {
+      "type": "string"
+     },
+     "module": {
+      "type": "string"
+     },
+     "time": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "AV": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   },
+   "count": 9
+  },
+  "BEHAVIOUR": {
+   "type": "array",
+   "count": 5,
+   "items": {
+    "type": "object",
+    "properties": {
+     "name": {
+      "type": "string"
+     },
+     "cls": {
+      "type": "string"
+     },
+     "type": {
+      "type": "string"
+     },
+     "note": {
+      "type": "string"
+     },
+     "pts": {
+      "type": "string"
+     },
+     "date": {
+      "type": "string"
+     },
+     "c": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "BIODEVICES": {
+   "type": "array",
+   "count": 5,
+   "items": {
+    "type": "object",
+    "properties": {
+     "loc": {
+      "type": "string"
+     },
+     "type": {
+      "type": "string"
+     },
+     "sync": {
+      "type": "string"
+     },
+     "punches": {
+      "type": "number"
+     },
+     "status": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "BOARDERS": {
+   "type": "array",
+   "count": 10,
+   "items": {
+    "type": "object",
+    "properties": {
+     "name": {
+      "type": "string"
+     },
+     "id": {
+      "type": "string"
+     },
+     "grade": {
+      "type": "string"
+     },
+     "room": {
+      "type": "string"
+     },
+     "block": {
+      "type": "string"
+     },
+     "guardian": {
+      "type": "string"
+     },
+     "phone": {
+      "type": "string"
+     },
+     "fee": {
+      "type": "string"
+     },
+     "medical": {
+      "type": "string"
+     },
+     "joined": {
+      "type": "string"
+     },
+     "roll": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "BOOKCAT": {
+   "type": "array",
+   "count": 10,
+   "items": {
+    "type": "object",
+    "properties": {
+     "title": {
+      "type": "string"
+     },
+     "author": {
+      "type": "string"
+     },
+     "cat": {
+      "type": "string"
+     },
+     "total": {
+      "type": "number"
+     },
+     "avail": {
+      "type": "number"
+     }
+    }
+   }
+  },
+  "BOOKINGS": {
+   "type": "array",
+   "count": 3,
+   "items": {
+    "type": "object",
+    "properties": {
+     "facility": {
+      "type": "string"
+     },
+     "by": {
+      "type": "string"
+     },
+     "date": {
+      "type": "string"
+     },
+     "time": {
+      "type": "string"
+     },
+     "status": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "BOT_KB": {
+   "type": "array",
+   "count": 40,
+   "items": {
+    "type": "object",
+    "properties": {
+     "k": {
+      "type": "array"
+     },
+     "a": {
+      "type": "string"
+     },
+     "links": {
+      "type": "array"
+     }
+    }
+   }
+  },
+  "BOT_SUGGEST": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   },
+   "count": 5
+  },
+  "CAFEALG": {
+   "type": "array",
+   "count": 5,
+   "items": {
+    "type": "object",
+    "properties": {
+     "name": {
+      "type": "string"
+     },
+     "grade": {
+      "type": "string"
+     },
+     "allergens": {
+      "type": "string"
+     },
+     "sev": {
+      "type": "string"
+     },
+     "plan": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "CAFEITEMS": {
+   "type": "array",
+   "count": 5,
+   "items": {
+    "type": "object",
+    "properties": {
+     "item": {
+      "type": "string"
+     },
+     "price": {
+      "type": "number"
+     },
+     "sold": {
+      "type": "number"
+     },
+     "cat": {
+      "type": "string"
+     },
+     "cal": {
+      "type": "number"
+     }
+    }
+   }
+  },
+  "CAFESTOCK": {
+   "type": "array",
+   "count": 6,
+   "items": {
+    "type": "object",
+    "properties": {
+     "item": {
+      "type": "string"
+     },
+     "cat": {
+      "type": "string"
+     },
+     "stock": {
+      "type": "number"
+     },
+     "min": {
+      "type": "number"
+     },
+     "unit": {
+      "type": "string"
+     },
+     "vendor": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "CAFETXN": {
+   "type": "array",
+   "count": 6,
+   "items": {
+    "type": "object",
+    "properties": {
+     "name": {
+      "type": "string"
+     },
+     "item": {
+      "type": "string"
+     },
+     "amt": {
+      "type": "number"
+     },
+     "type": {
+      "type": "string"
+     },
+     "time": {
+      "type": "string"
+     },
+     "method": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "CERTS": {
+   "type": "array",
+   "count": 5,
+   "items": {
+    "type": "object",
+    "properties": {
+     "name": {
+      "type": "string"
+     },
+     "cls": {
+      "type": "string"
+     },
+     "type": {
+      "type": "string"
+     },
+     "ref": {
+      "type": "string"
+     },
+     "date": {
+      "type": "string"
+     },
+     "status": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "CLASSES": {
+   "type": "array",
+   "count": 11,
+   "items": {
+    "type": "object",
+    "properties": {
+     "cls": {
+      "type": "string"
+     },
+     "rep": {
+      "type": "string"
+     },
+     "teacher": {
+      "type": "string"
+     },
+     "filled": {
+      "type": "number"
+     },
+     "cap": {
+      "type": "number"
+     },
+     "stream": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "CLINIC": {
+   "type": "array",
+   "count": 4,
+   "items": {
+    "type": "object",
+    "properties": {
+     "name": {
+      "type": "string"
+     },
+     "cls": {
+      "type": "string"
+     },
+     "reason": {
+      "type": "string"
+     },
+     "action": {
+      "type": "string"
+     },
+     "time": {
+      "type": "string"
+     },
+     "status": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "COURSES": {
+   "type": "array",
+   "count": 10,
+   "items": {
+    "type": "object",
+    "properties": {
+     "t": {
+      "type": "string"
+     },
+     "teacher": {
+      "type": "string"
+     },
+     "cls": {
+      "type": "string"
+     },
+     "prog": {
+      "type": "number"
+     },
+     "due": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "CRMLEADS": {
+   "type": "array",
+   "count": 11,
+   "items": {
+    "type": "object",
+    "properties": {
+     "name": {
+      "type": "string"
+     },
+     "grade": {
+      "type": "string"
+     },
+     "stage": {
+      "type": "string"
+     },
+     "source": {
+      "type": "string"
+     },
+     "phone": {
+      "type": "string"
+     },
+     "guardian": {
+      "type": "string"
+     },
+     "owner": {
+      "type": "string"
+     },
+     "date": {
+      "type": "string"
+     },
+     "temp": {
+      "type": "string"
+     },
+     "idle": {
+      "type": "number"
+     },
+     "follow": {
+      "type": "number"
+     },
+     "followType": {
+      "type": "string"
+     },
+     "archived": {
+      "type": "boolean"
+     },
+     "log": {
+      "type": "array"
+     }
+    }
+   }
+  },
+  "CRMSTAGES": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   },
+   "count": 5
+  },
+  "CRM_EMAIL_TEMPLATES": {
+   "type": "array",
+   "items": {
+    "type": "function"
+   },
+   "count": 3
+  },
+  "CURRIC": {
+   "type": "array",
+   "count": 6,
+   "items": {
+    "type": "object",
+    "properties": {
+     "sub": {
+      "type": "string"
+     },
+     "grades": {
+      "type": "string"
+     },
+     "units": {
+      "type": "number"
+     },
+     "done": {
+      "type": "number"
+     },
+     "c": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "EVENTS": {
+   "type": "array",
+   "count": 5,
+   "items": {
+    "type": "object",
+    "properties": {
+     "d": {
+      "type": "string"
+     },
+     "mon": {
+      "type": "string"
+     },
+     "t": {
+      "type": "string"
+     },
+     "tag": {
+      "type": "string"
+     },
+     "c": {
+      "type": "string"
+     },
+     "sub": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "EXAMRESULTS": {
+   "type": "array",
+   "count": 6,
+   "items": {
+    "type": "object",
+    "properties": {
+     "name": {
+      "type": "string"
+     },
+     "cls": {
+      "type": "string"
+     },
+     "mat": {
+      "type": "number"
+     },
+     "sci": {
+      "type": "number"
+     },
+     "eng": {
+      "type": "number"
+     },
+     "grade": {
+      "type": "string"
+     },
+     "rank": {
+      "type": "number"
+     }
+    }
+   }
+  },
+  "EXAMSCHED": {
+   "type": "array",
+   "items": {
+    "type": "array"
+   },
+   "count": 6
+  },
+  "EXAMSCHEMES": {
+   "type": "array",
+   "count": 1,
+   "items": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "string"
+     },
+     "name": {
+      "type": "string"
+     },
+     "term": {
+      "type": "string"
+     },
+     "classes": {
+      "type": "array"
+     },
+     "subjects": {
+      "type": "array"
+     },
+     "maxMarks": {
+      "type": "number"
+     },
+     "weightage": {
+      "type": "string"
+     },
+     "passMark": {
+      "type": "number"
+     },
+     "gradeScale": {
+      "type": "array"
+     },
+     "publishDate": {
+      "type": "string"
+     },
+     "status": {
+      "type": "string"
+     },
+     "locked": {
+      "type": "boolean"
+     }
+    }
+   }
+  },
+  "EXPENSES": {
+   "type": "array",
+   "count": 5,
+   "items": {
+    "type": "object",
+    "properties": {
+     "cat": {
+      "type": "string"
+     },
+     "budget": {
+      "type": "number"
+     },
+     "spent": {
+      "type": "number"
+     },
+     "c": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "FACILITIES": {
+   "type": "array",
+   "count": 6,
+   "items": {
+    "type": "object",
+    "properties": {
+     "name": {
+      "type": "string"
+     },
+     "type": {
+      "type": "string"
+     },
+     "cap": {
+      "type": "number"
+     },
+     "status": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "FAC_DATES": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   },
+   "count": 5
+  },
+  "FAC_SLOTS": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   },
+   "count": 8
+  },
+  "FEESTRUCT": {
+   "type": "array",
+   "items": {
+    "type": "array"
+   },
+   "count": 9
+  },
+  "HLEAVE": {
+   "type": "array",
+   "count": 5,
+   "items": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "string"
+     },
+     "name": {
+      "type": "string"
+     },
+     "room": {
+      "type": "string"
+     },
+     "type": {
+      "type": "string"
+     },
+     "from": {
+      "type": "string"
+     },
+     "to": {
+      "type": "string"
+     },
+     "reason": {
+      "type": "string"
+     },
+     "status": {
+      "type": "string"
+     },
+     "by": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "HMAINT": {
+   "type": "array",
+   "count": 5,
+   "items": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "string"
+     },
+     "room": {
+      "type": "string"
+     },
+     "issue": {
+      "type": "string"
+     },
+     "cat": {
+      "type": "string"
+     },
+     "prio": {
+      "type": "string"
+     },
+     "by": {
+      "type": "string"
+     },
+     "status": {
+      "type": "string"
+     },
+     "date": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "HOSTEL": {
+   "type": "array",
+   "count": 2,
+   "items": {
+    "type": "object",
+    "properties": {
+     "block": {
+      "type": "string"
+     },
+     "code": {
+      "type": "string"
+     },
+     "beds": {
+      "type": "number"
+     },
+     "filled": {
+      "type": "number"
+     },
+     "rooms": {
+      "type": "number"
+     },
+     "floors": {
+      "type": "number"
+     },
+     "warden": {
+      "type": "string"
+     },
+     "assist": {
+      "type": "string"
+     },
+     "c": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "HROOMS": {
+   "type": "array",
+   "count": 10,
+   "items": {
+    "type": "object",
+    "properties": {
+     "no": {
+      "type": "string"
+     },
+     "block": {
+      "type": "string"
+     },
+     "floor": {
+      "type": "number"
+     },
+     "type": {
+      "type": "string"
+     },
+     "cap": {
+      "type": "number"
+     },
+     "occ": {
+      "type": "array"
+     },
+     "status": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "INVENTORY": {
+   "type": "array",
+   "count": 5,
+   "items": {
+    "type": "object",
+    "properties": {
+     "item": {
+      "type": "string"
+     },
+     "cat": {
+      "type": "string"
+     },
+     "stock": {
+      "type": "number"
+     },
+     "min": {
+      "type": "number"
+     },
+     "c": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "INVOICES": {
+   "type": "array",
+   "count": 6,
+   "items": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "string"
+     },
+     "student": {
+      "type": "string"
+     },
+     "term": {
+      "type": "string"
+     },
+     "amt": {
+      "type": "number"
+     },
+     "status": {
+      "type": "string"
+     },
+     "due": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "LANG_ENABLED": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   },
+   "count": 4
+  },
+  "LEAVE": {
+   "type": "array",
+   "items": {
+    "type": "array"
+   },
+   "count": 4
+  },
+  "LIBCAT": {
+   "type": "array",
+   "items": {
+    "type": "array"
+   },
+   "count": 7
+  },
+  "LIBLOANS": {
+   "type": "array",
+   "count": 6,
+   "items": {
+    "type": "object",
+    "properties": {
+     "title": {
+      "type": "string"
+     },
+     "author": {
+      "type": "string"
+     },
+     "borrower": {
+      "type": "string"
+     },
+     "cls": {
+      "type": "string"
+     },
+     "due": {
+      "type": "string"
+     },
+     "status": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "LX_FEAT_ICONS": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   },
+   "count": 3
+  },
+  "MEALPLANS": {
+   "type": "array",
+   "count": 4,
+   "items": {
+    "type": "object",
+    "properties": {
+     "plan": {
+      "type": "string"
+     },
+     "price": {
+      "type": "number"
+     },
+     "subs": {
+      "type": "number"
+     },
+     "meals": {
+      "type": "string"
+     },
+     "c": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "MEETINGS": {
+   "type": "array",
+   "count": 7,
+   "items": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "string"
+     },
+     "time": {
+      "type": "string"
+     },
+     "date": {
+      "type": "string"
+     },
+     "parent": {
+      "type": "string"
+     },
+     "student": {
+      "type": "string"
+     },
+     "teacher": {
+      "type": "string"
+     },
+     "status": {
+      "type": "string"
+     },
+     "link": {
+      "type": "string"
+     },
+     "room": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "MENU": {
+   "type": "array",
+   "count": 5,
+   "items": {
+    "type": "object",
+    "properties": {
+     "day": {
+      "type": "string"
+     },
+     "b": {
+      "type": "object"
+     },
+     "l": {
+      "type": "object"
+     },
+     "s": {
+      "type": "object"
+     }
+    }
+   }
+  },
+  "OPTIONAL": {
+   "type": "array",
+   "count": 28,
+   "items": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "string"
+     },
+     "label": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "PARENT_BROADCASTS": {
+   "type": "array",
+   "count": 4,
+   "items": {
+    "type": "object",
+    "properties": {
+     "subject": {
+      "type": "string"
+     },
+     "audience": {
+      "type": "string"
+     },
+     "channel": {
+      "type": "string"
+     },
+     "delivered": {
+      "type": "number"
+     },
+     "read": {
+      "type": "number"
+     },
+     "sent": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "PAYRUN": {
+   "type": "array",
+   "count": 6,
+   "items": {
+    "type": "object",
+    "properties": {
+     "name": {
+      "type": "string"
+     },
+     "dept": {
+      "type": "string"
+     },
+     "gross": {
+      "type": "number"
+     },
+     "ded": {
+      "type": "number"
+     },
+     "status": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "PERMROWS": {
+   "type": "array",
+   "items": {
+    "type": "array"
+   },
+   "count": 11
+  },
+  "ROLES": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   },
+   "count": 6
+  },
+  "ROUTES": {
+   "type": "array",
+   "count": 4,
+   "items": {
+    "type": "object",
+    "properties": {
+     "r": {
+      "type": "string"
+     },
+     "bus": {
+      "type": "string"
+     },
+     "driver": {
+      "type": "string"
+     },
+     "riders": {
+      "type": "number"
+     },
+     "cap": {
+      "type": "number"
+     },
+     "onTime": {
+      "type": "number"
+     },
+     "status": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "SOCIAL_SAMPLES": {
+   "type": "array",
+   "count": 3,
+   "items": {
+    "type": "object",
+    "properties": {
+     "platform": {
+      "type": "string"
+     },
+     "text": {
+      "type": "string"
+     },
+     "url": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "STAFF": {
+   "type": "array",
+   "count": 7,
+   "items": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "string"
+     },
+     "name": {
+      "type": "string"
+     },
+     "role": {
+      "type": "string"
+     },
+     "dept": {
+      "type": "string"
+     },
+     "type": {
+      "type": "string"
+     },
+     "phone": {
+      "type": "string"
+     },
+     "status": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "STAFF_DOCS": {
+   "type": "array",
+   "count": 6,
+   "items": {
+    "type": "object",
+    "properties": {
+     "key": {
+      "type": "string"
+     },
+     "label": {
+      "type": "string"
+     },
+     "req": {
+      "type": "boolean"
+     }
+    }
+   }
+  },
+  "STAGES": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   },
+   "count": 5
+  },
+  "STUDENTS": {
+   "type": "array",
+   "count": 62,
+   "items": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "string"
+     },
+     "name": {
+      "type": "string"
+     },
+     "grade": {
+      "type": "string"
+     },
+     "gender": {
+      "type": "string"
+     },
+     "roll": {
+      "type": "number"
+     },
+     "guardian": {
+      "type": "string"
+     },
+     "phone": {
+      "type": "string"
+     },
+     "fee": {
+      "type": "string"
+     },
+     "att": {
+      "type": "number"
+     },
+     "gpa": {
+      "type": "number"
+     },
+     "status": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "STUDENT_DOCS": {
+   "type": "array",
+   "count": 3,
+   "items": {
+    "type": "object",
+    "properties": {
+     "key": {
+      "type": "string"
+     },
+     "label": {
+      "type": "string"
+     },
+     "req": {
+      "type": "boolean"
+     }
+    }
+   }
+  },
+  "SURVEYS": {
+   "type": "array",
+   "count": 4,
+   "items": {
+    "type": "object",
+    "properties": {
+     "title": {
+      "type": "string"
+     },
+     "audience": {
+      "type": "string"
+     },
+     "responses": {
+      "type": "number"
+     },
+     "sent": {
+      "type": "number"
+     },
+     "status": {
+      "type": "string"
+     },
+     "c": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "TICKETS": {
+   "type": "array",
+   "count": 5,
+   "items": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "string"
+     },
+     "title": {
+      "type": "string"
+     },
+     "cat": {
+      "type": "string"
+     },
+     "by": {
+      "type": "string"
+     },
+     "priority": {
+      "type": "string"
+     },
+     "status": {
+      "type": "string"
+     },
+     "date": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "TT": {
+   "type": "array",
+   "items": {
+    "type": "array"
+   },
+   "count": 6
+  },
+  "TTCLASSES": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   },
+   "count": 9
+  },
+  "VISITORS": {
+   "type": "array",
+   "count": 5,
+   "items": {
+    "type": "object",
+    "properties": {
+     "name": {
+      "type": "string"
+     },
+     "purpose": {
+      "type": "string"
+     },
+     "host": {
+      "type": "string"
+     },
+     "in": {
+      "type": "string"
+     },
+     "out": {
+      "type": "string"
+     },
+     "status": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "WALLETS": {
+   "type": "array",
+   "count": 8,
+   "items": {
+    "type": "object",
+    "properties": {
+     "name": {
+      "type": "string"
+     },
+     "id": {
+      "type": "string"
+     },
+     "grade": {
+      "type": "string"
+     },
+     "plan": {
+      "type": "string"
+     },
+     "bal": {
+      "type": "number"
+     },
+     "last": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "WRITE_ROLES": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   },
+   "count": 3
+  }
+ }
+}

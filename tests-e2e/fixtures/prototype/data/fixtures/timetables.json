@@ -1,0 +1,596 @@
+[
+ {
+  "class": "Grade 10 · A",
+  "status": "Draft",
+  "rows": [
+   [
+    "08:00",
+    [
+     "Mathematics|Mr. Arjun Rao|Rm 204",
+     "English|Ms. Priya Nair|Rm 110",
+     "Physics|Mr. Omar Hassan|Lab 2",
+     "Mathematics|Mr. Arjun Rao|Rm 204",
+     "Arabic|Mr. Yousef Nasser|Rm 130"
+    ]
+   ],
+   [
+    "09:00",
+    [
+     "Physics|Mr. Omar Hassan|Lab 2",
+     "Mathematics|Mr. Arjun Rao|Rm 204",
+     "Chemistry|Dr. Ayesha Khan|Lab 1",
+     "Biology|Ms. Sara Lim|Lab 3",
+     "Mathematics|Mr. Arjun Rao|Rm 204"
+    ]
+   ],
+   [
+    "10:00",
+    [
+     "BREAK",
+     "BREAK",
+     "BREAK",
+     "BREAK",
+     "BREAK"
+    ]
+   ],
+   [
+    "10:30",
+    [
+     "English|Ms. Priya Nair|Rm 110",
+     "Islamic St.|Sh. Khalid Al Ameri|Rm 130",
+     "Mathematics|Mr. Arjun Rao|Rm 204",
+     "English|Ms. Priya Nair|Rm 110",
+     "Physics|Mr. Omar Hassan|Lab 2"
+    ]
+   ],
+   [
+    "11:30",
+    [
+     "Chemistry|Dr. Ayesha Khan|Lab 1",
+     "PE|Coach Daniel Obi|Court",
+     "English|Ms. Priya Nair|Rm 110",
+     "Computer|Ms. Elena Petrova|Lab IT",
+     "Chemistry|Dr. Ayesha Khan|Lab 1"
+    ]
+   ],
+   [
+    "12:30",
+    [
+     "FREE",
+     "Biology|Ms. Sara Lim|Lab 3",
+     "FREE",
+     "Arabic|Mr. Yousef Nasser|Rm 130",
+     "Library|Ms. Fatima Zayed|Lib"
+    ]
+   ]
+  ]
+ },
+ {
+  "class": "Grade 11 · C",
+  "status": "Draft",
+  "rows": [
+   [
+    "08:00",
+    [
+     "English|Ms. Priya Nair|Rm 110",
+     "Physics|Mr. Omar Hassan|Lab 2",
+     "Mathematics|Mr. Arjun Rao|Rm 204",
+     "Arabic|Mr. Yousef Nasser|Rm 130",
+     "Mathematics|Mr. Arjun Rao|Rm 204"
+    ]
+   ],
+   [
+    "09:00",
+    [
+     "Mathematics|Mr. Arjun Rao|Rm 204",
+     "Chemistry|Dr. Ayesha Khan|Lab 1",
+     "Biology|Ms. Sara Lim|Lab 3",
+     "Mathematics|Mr. Arjun Rao|Rm 204",
+     "Physics|Mr. Omar Hassan|Lab 2"
+    ]
+   ],
+   [
+    "10:00",
+    [
+     "BREAK",
+     "BREAK",
+     "BREAK",
+     "BREAK",
+     "BREAK"
+    ]
+   ],
+   [
+    "10:30",
+    [
+     "Islamic St.|Sh. Khalid Al Ameri|Rm 130",
+     "Mathematics|Mr. Arjun Rao|Rm 204",
+     "English|Ms. Priya Nair|Rm 110",
+     "Physics|Mr. Omar Hassan|Lab 2",
+     "English|Ms. Priya Nair|Rm 110"
+    ]
+   ],
+   [
+    "11:30",
+    [
+     "PE|Coach Daniel Obi|Court",
+     "English|Ms. Priya Nair|Rm 110",
+     "Computer|Ms. Elena Petrova|Lab IT",
+     "Chemistry|Dr. Ayesha Khan|Lab 1",
+     "Chemistry|Dr. Ayesha Khan|Lab 1"
+    ]
+   ],
+   [
+    "12:30",
+    [
+     "Biology|Ms. Sara Lim|Lab 3",
+     "FREE",
+     "Arabic|Mr. Yousef Nasser|Rm 130",
+     "Library|Ms. Fatima Zayed|Lib",
+     "FREE"
+    ]
+   ]
+  ]
+ },
+ {
+  "class": "Grade 9 · B",
+  "status": "Draft",
+  "rows": [
+   [
+    "08:00",
+    [
+     "Physics|Mr. Omar Hassan|Lab 2",
+     "Mathematics|Mr. Arjun Rao|Rm 204",
+     "Arabic|Mr. Yousef Nasser|Rm 130",
+     "Mathematics|Mr. Arjun Rao|Rm 204",
+     "English|Ms. Priya Nair|Rm 110"
+    ]
+   ],
+   [
+    "09:00",
+    [
+     "Chemistry|Dr. Ayesha Khan|Lab 1",
+     "Biology|Ms. Sara Lim|Lab 3",
+     "Mathematics|Mr. Arjun Rao|Rm 204",
+     "Physics|Mr. Omar Hassan|Lab 2",
+     "Mathematics|Mr. Arjun Rao|Rm 204"
+    ]
+   ],
+   [
+    "10:00",
+    [
+     "BREAK",
+     "BREAK",
+     "BREAK",
+     "BREAK",
+     "BREAK"
+    ]
+   ],
+   [
+    "10:30",
+    [
+     "Mathematics|Mr. Arjun Rao|Rm 204",
+     "English|Ms. Priya Nair|Rm 110",
+     "Physics|Mr. Omar Hassan|Lab 2",
+     "English|Ms. Priya Nair|Rm 110",
+     "Islamic St.|Sh. Khalid Al Ameri|Rm 130"
+    ]
+   ],
+   [
+    "11:30",
+    [
+     "English|Ms. Priya Nair|Rm 110",
+     "Computer|Ms. Elena Petrova|Lab IT",
+     "Chemistry|Dr. Ayesha Khan|Lab 1",
+     "Chemistry|Dr. Ayesha Khan|Lab 1",
+     "PE|Coach Daniel Obi|Court"
+    ]
+   ],
+   [
+    "12:30",
+    [
+     "FREE",
+     "Arabic|Mr. Yousef Nasser|Rm 130",
+     "Library|Ms. Fatima Zayed|Lib",
+     "FREE",
+     "Biology|Ms. Sara Lim|Lab 3"
+    ]
+   ]
+  ]
+ },
+ {
+  "class": "Grade 8 · A",
+  "status": "Draft",
+  "rows": [
+   [
+    "08:00",
+    [
+     "Mathematics|Mr. Arjun Rao|Rm 204",
+     "Arabic|Mr. Yousef Nasser|Rm 130",
+     "Mathematics|Mr. Arjun Rao|Rm 204",
+     "English|Ms. Priya Nair|Rm 110",
+     "Physics|Mr. Omar Hassan|Lab 2"
+    ]
+   ],
+   [
+    "09:00",
+    [
+     "Biology|Ms. Sara Lim|Lab 3",
+     "Mathematics|Mr. Arjun Rao|Rm 204",
+     "Physics|Mr. Omar Hassan|Lab 2",
+     "Mathematics|Mr. Arjun Rao|Rm 204",
+     "Chemistry|Dr. Ayesha Khan|Lab 1"
+    ]
+   ],
+   [
+    "10:00",
+    [
+     "BREAK",
+     "BREAK",
+     "BREAK",
+     "BREAK",
+     "BREAK"
+    ]
+   ],
+   [
+    "10:30",
+    [
+     "English|Ms. Priya Nair|Rm 110",
+     "Physics|Mr. Omar Hassan|Lab 2",
+     "English|Ms. Priya Nair|Rm 110",
+     "Islamic St.|Sh. Khalid Al Ameri|Rm 130",
+     "Mathematics|Mr. Arjun Rao|Rm 204"
+    ]
+   ],
+   [
+    "11:30",
+    [
+     "Computer|Ms. Elena Petrova|Lab IT",
+     "Chemistry|Dr. Ayesha Khan|Lab 1",
+     "Chemistry|Dr. Ayesha Khan|Lab 1",
+     "PE|Coach Daniel Obi|Court",
+     "English|Ms. Priya Nair|Rm 110"
+    ]
+   ],
+   [
+    "12:30",
+    [
+     "Arabic|Mr. Yousef Nasser|Rm 130",
+     "Library|Ms. Fatima Zayed|Lib",
+     "FREE",
+     "Biology|Ms. Sara Lim|Lab 3",
+     "FREE"
+    ]
+   ]
+  ]
+ },
+ {
+  "class": "Grade 5 · A",
+  "status": "Draft",
+  "rows": [
+   [
+    "08:00",
+    [
+     "Arabic|Mr. Yousef Nasser|Rm 130",
+     "Mathematics|Mr. Arjun Rao|Rm 204",
+     "English|Ms. Priya Nair|Rm 110",
+     "Physics|Mr. Omar Hassan|Lab 2",
+     "Mathematics|Mr. Arjun Rao|Rm 204"
+    ]
+   ],
+   [
+    "09:00",
+    [
+     "Mathematics|Mr. Arjun Rao|Rm 204",
+     "Physics|Mr. Omar Hassan|Lab 2",
+     "Mathematics|Mr. Arjun Rao|Rm 204",
+     "Chemistry|Dr. Ayesha Khan|Lab 1",
+     "Biology|Ms. Sara Lim|Lab 3"
+    ]
+   ],
+   [
+    "10:00",
+    [
+     "BREAK",
+     "BREAK",
+     "BREAK",
+     "BREAK",
+     "BREAK"
+    ]
+   ],
+   [
+    "10:30",
+    [
+     "Physics|Mr. Omar Hassan|Lab 2",
+     "English|Ms. Priya Nair|Rm 110",
+     "Islamic St.|Sh. Khalid Al Ameri|Rm 130",
+     "Mathematics|Mr. Arjun Rao|Rm 204",
+     "English|Ms. Priya Nair|Rm 110"
+    ]
+   ],
+   [
+    "11:30",
+    [
+     "Chemistry|Dr. Ayesha Khan|Lab 1",
+     "Chemistry|Dr. Ayesha Khan|Lab 1",
+     "PE|Coach Daniel Obi|Court",
+     "English|Ms. Priya Nair|Rm 110",
+     "Computer|Ms. Elena Petrova|Lab IT"
+    ]
+   ],
+   [
+    "12:30",
+    [
+     "Library|Ms. Fatima Zayed|Lib",
+     "FREE",
+     "Biology|Ms. Sara Lim|Lab 3",
+     "FREE",
+     "Arabic|Mr. Yousef Nasser|Rm 130"
+    ]
+   ]
+  ]
+ },
+ {
+  "class": "Grade 3 · B",
+  "status": "Draft",
+  "rows": [
+   [
+    "08:00",
+    [
+     "Physics|Mr. Omar Hassan|Lab 2",
+     "Mathematics|Mr. Arjun Rao|Rm 204",
+     "Chemistry|Dr. Ayesha Khan|Lab 1",
+     "Biology|Ms. Sara Lim|Lab 3",
+     "Mathematics|Mr. Arjun Rao|Rm 204"
+    ]
+   ],
+   [
+    "09:00",
+    [
+     "English|Ms. Priya Nair|Rm 110",
+     "Islamic St.|Sh. Khalid Al Ameri|Rm 130",
+     "Mathematics|Mr. Arjun Rao|Rm 204",
+     "English|Ms. Priya Nair|Rm 110",
+     "Physics|Mr. Omar Hassan|Lab 2"
+    ]
+   ],
+   [
+    "10:00",
+    [
+     "BREAK",
+     "BREAK",
+     "BREAK",
+     "BREAK",
+     "BREAK"
+    ]
+   ],
+   [
+    "10:30",
+    [
+     "Chemistry|Dr. Ayesha Khan|Lab 1",
+     "PE|Coach Daniel Obi|Court",
+     "English|Ms. Priya Nair|Rm 110",
+     "Computer|Ms. Elena Petrova|Lab IT",
+     "Chemistry|Dr. Ayesha Khan|Lab 1"
+    ]
+   ],
+   [
+    "11:30",
+    [
+     "FREE",
+     "Biology|Ms. Sara Lim|Lab 3",
+     "FREE",
+     "Arabic|Mr. Yousef Nasser|Rm 130",
+     "Library|Ms. Fatima Zayed|Lib"
+    ]
+   ],
+   [
+    "12:30",
+    [
+     "Mathematics|Mr. Arjun Rao|Rm 204",
+     "English|Ms. Priya Nair|Rm 110",
+     "Physics|Mr. Omar Hassan|Lab 2",
+     "Mathematics|Mr. Arjun Rao|Rm 204",
+     "Arabic|Mr. Yousef Nasser|Rm 130"
+    ]
+   ]
+  ]
+ },
+ {
+  "class": "Grade 1 · A",
+  "status": "Draft",
+  "rows": [
+   [
+    "08:00",
+    [
+     "Mathematics|Mr. Arjun Rao|Rm 204",
+     "Chemistry|Dr. Ayesha Khan|Lab 1",
+     "Biology|Ms. Sara Lim|Lab 3",
+     "Mathematics|Mr. Arjun Rao|Rm 204",
+     "Physics|Mr. Omar Hassan|Lab 2"
+    ]
+   ],
+   [
+    "09:00",
+    [
+     "Islamic St.|Sh. Khalid Al Ameri|Rm 130",
+     "Mathematics|Mr. Arjun Rao|Rm 204",
+     "English|Ms. Priya Nair|Rm 110",
+     "Physics|Mr. Omar Hassan|Lab 2",
+     "English|Ms. Priya Nair|Rm 110"
+    ]
+   ],
+   [
+    "10:00",
+    [
+     "BREAK",
+     "BREAK",
+     "BREAK",
+     "BREAK",
+     "BREAK"
+    ]
+   ],
+   [
+    "10:30",
+    [
+     "PE|Coach Daniel Obi|Court",
+     "English|Ms. Priya Nair|Rm 110",
+     "Computer|Ms. Elena Petrova|Lab IT",
+     "Chemistry|Dr. Ayesha Khan|Lab 1",
+     "Chemistry|Dr. Ayesha Khan|Lab 1"
+    ]
+   ],
+   [
+    "11:30",
+    [
+     "Biology|Ms. Sara Lim|Lab 3",
+     "FREE",
+     "Arabic|Mr. Yousef Nasser|Rm 130",
+     "Library|Ms. Fatima Zayed|Lib",
+     "FREE"
+    ]
+   ],
+   [
+    "12:30",
+    [
+     "English|Ms. Priya Nair|Rm 110",
+     "Physics|Mr. Omar Hassan|Lab 2",
+     "Mathematics|Mr. Arjun Rao|Rm 204",
+     "Arabic|Mr. Yousef Nasser|Rm 130",
+     "Mathematics|Mr. Arjun Rao|Rm 204"
+    ]
+   ]
+  ]
+ },
+ {
+  "class": "KG 2 · B",
+  "status": "Draft",
+  "rows": [
+   [
+    "08:00",
+    [
+     "Chemistry|Dr. Ayesha Khan|Lab 1",
+     "Biology|Ms. Sara Lim|Lab 3",
+     "Mathematics|Mr. Arjun Rao|Rm 204",
+     "Physics|Mr. Omar Hassan|Lab 2",
+     "Mathematics|Mr. Arjun Rao|Rm 204"
+    ]
+   ],
+   [
+    "09:00",
+    [
+     "Mathematics|Mr. Arjun Rao|Rm 204",
+     "English|Ms. Priya Nair|Rm 110",
+     "Physics|Mr. Omar Hassan|Lab 2",
+     "English|Ms. Priya Nair|Rm 110",
+     "Islamic St.|Sh. Khalid Al Ameri|Rm 130"
+    ]
+   ],
+   [
+    "10:00",
+    [
+     "BREAK",
+     "BREAK",
+     "BREAK",
+     "BREAK",
+     "BREAK"
+    ]
+   ],
+   [
+    "10:30",
+    [
+     "English|Ms. Priya Nair|Rm 110",
+     "Computer|Ms. Elena Petrova|Lab IT",
+     "Chemistry|Dr. Ayesha Khan|Lab 1",
+     "Chemistry|Dr. Ayesha Khan|Lab 1",
+     "PE|Coach Daniel Obi|Court"
+    ]
+   ],
+   [
+    "11:30",
+    [
+     "FREE",
+     "Arabic|Mr. Yousef Nasser|Rm 130",
+     "Library|Ms. Fatima Zayed|Lib",
+     "FREE",
+     "Biology|Ms. Sara Lim|Lab 3"
+    ]
+   ],
+   [
+    "12:30",
+    [
+     "Physics|Mr. Omar Hassan|Lab 2",
+     "Mathematics|Mr. Arjun Rao|Rm 204",
+     "Arabic|Mr. Yousef Nasser|Rm 130",
+     "Mathematics|Mr. Arjun Rao|Rm 204",
+     "English|Ms. Priya Nair|Rm 110"
+    ]
+   ]
+  ]
+ },
+ {
+  "class": "KG 1 · A",
+  "status": "Draft",
+  "rows": [
+   [
+    "08:00",
+    [
+     "Biology|Ms. Sara Lim|Lab 3",
+     "Mathematics|Mr. Arjun Rao|Rm 204",
+     "Physics|Mr. Omar Hassan|Lab 2",
+     "Mathematics|Mr. Arjun Rao|Rm 204",
+     "Chemistry|Dr. Ayesha Khan|Lab 1"
+    ]
+   ],
+   [
+    "09:00",
+    [
+     "English|Ms. Priya Nair|Rm 110",
+     "Physics|Mr. Omar Hassan|Lab 2",
+     "English|Ms. Priya Nair|Rm 110",
+     "Islamic St.|Sh. Khalid Al Ameri|Rm 130",
+     "Mathematics|Mr. Arjun Rao|Rm 204"
+    ]
+   ],
+   [
+    "10:00",
+    [
+     "BREAK",
+     "BREAK",
+     "BREAK",
+     "BREAK",
+     "BREAK"
+    ]
+   ],
+   [
+    "10:30",
+    [
+     "Computer|Ms. Elena Petrova|Lab IT",
+     "Chemistry|Dr. Ayesha Khan|Lab 1",
+     "Chemistry|Dr. Ayesha Khan|Lab 1",
+     "PE|Coach Daniel Obi|Court",
+     "English|Ms. Priya Nair|Rm 110"
+    ]
+   ],
+   [
+    "11:30",
+    [
+     "Arabic|Mr. Yousef Nasser|Rm 130",
+     "Library|Ms. Fatima Zayed|Lib",
+     "FREE",
+     "Biology|Ms. Sara Lim|Lab 3",
+     "FREE"
+    ]
+   ],
+   [
+    "12:30",
+    [
+     "Mathematics|Mr. Arjun Rao|Rm 204",
+     "Arabic|Mr. Yousef Nasser|Rm 130",
+     "Mathematics|Mr. Arjun Rao|Rm 204",
+     "English|Ms. Priya Nair|Rm 110",
+     "Physics|Mr. Omar Hassan|Lab 2"
+    ]
+   ]
+  ]
+ }
+]

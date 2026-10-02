@@ -1,0 +1,506 @@
+[
+ {
+  "subject": "Mathematics",
+  "title": "Unit 1 — Foundations",
+  "term": "Term 1",
+  "plannedDate": "04 Feb",
+  "completedDate": "04 Feb",
+  "outcomes": [
+   "Recall key concepts",
+   "Apply to worked examples",
+   "Evaluate & extend"
+  ],
+  "framework": "MOE / school-defined",
+  "owner": "Subject coordinator"
+ },
+ {
+  "subject": "Mathematics",
+  "title": "Unit 2 — Core skills",
+  "term": "Term 1",
+  "plannedDate": "05 Mar",
+  "completedDate": "05 Mar",
+  "outcomes": [
+   "Recall key concepts",
+   "Apply to worked examples",
+   "Evaluate & extend"
+  ],
+  "framework": "MOE / school-defined",
+  "owner": "Subject coordinator"
+ },
+ {
+  "subject": "Mathematics",
+  "title": "Unit 3 — Application",
+  "term": "Term 1",
+  "plannedDate": "06 Apr",
+  "completedDate": "06 Apr",
+  "outcomes": [
+   "Recall key concepts",
+   "Apply to worked examples",
+   "Evaluate & extend"
+  ],
+  "framework": "MOE / school-defined",
+  "owner": "Subject coordinator"
+ },
+ {
+  "subject": "Mathematics",
+  "title": "Unit 4 — Analysis",
+  "term": "Term 2",
+  "plannedDate": "07 May",
+  "completedDate": "07 May",
+  "outcomes": [
+   "Recall key concepts",
+   "Apply to worked examples",
+   "Evaluate & extend"
+  ],
+  "framework": "MOE / school-defined",
+  "owner": "Subject coordinator"
+ },
+ {
+  "subject": "Mathematics",
+  "title": "Unit 5 — Synthesis",
+  "term": "Term 2",
+  "plannedDate": "08 Jun",
+  "completedDate": "08 Jun",
+  "outcomes": [
+   "Recall key concepts",
+   "Apply to worked examples",
+   "Evaluate & extend"
+  ],
+  "framework": "MOE / school-defined",
+  "owner": "Subject coordinator"
+ },
+ {
+  "subject": "Mathematics",
+  "title": "Unit 6 — Review",
+  "term": "Term 2",
+  "plannedDate": "09 Jan",
+  "completedDate": null,
+  "outcomes": [
+   "Recall key concepts",
+   "Apply to worked examples",
+   "Evaluate & extend"
+  ],
+  "framework": "MOE / school-defined",
+  "owner": "Subject coordinator"
+ },
+ {
+  "subject": "English",
+  "title": "Unit 1 — Foundations",
+  "term": "Term 1",
+  "plannedDate": "04 Feb",
+  "completedDate": "04 Feb",
+  "outcomes": [
+   "Recall key concepts",
+   "Apply to worked examples",
+   "Evaluate & extend"
+  ],
+  "framework": "MOE / school-defined",
+  "owner": "Subject coordinator"
+ },
+ {
+  "subject": "English",
+  "title": "Unit 2 — Core skills",
+  "term": "Term 1",
+  "plannedDate": "05 Mar",
+  "completedDate": "05 Mar",
+  "outcomes": [
+   "Recall key concepts",
+   "Apply to worked examples",
+   "Evaluate & extend"
+  ],
+  "framework": "MOE / school-defined",
+  "owner": "Subject coordinator"
+ },
+ {
+  "subject": "English",
+  "title": "Unit 3 — Application",
+  "term": "Term 1",
+  "plannedDate": "06 Apr",
+  "completedDate": "06 Apr",
+  "outcomes": [
+   "Recall key concepts",
+   "Apply to worked examples",
+   "Evaluate & extend"
+  ],
+  "framework": "MOE / school-defined",
+  "owner": "Subject coordinator"
+ },
+ {
+  "subject": "English",
+  "title": "Unit 4 — Analysis",
+  "term": "Term 2",
+  "plannedDate": "07 May",
+  "completedDate": "07 May",
+  "outcomes": [
+   "Recall key concepts",
+   "Apply to worked examples",
+   "Evaluate & extend"
+  ],
+  "framework": "MOE / school-defined",
+  "owner": "Subject coordinator"
+ },
+ {
+  "subject": "English",
+  "title": "Unit 5 — Synthesis",
+  "term": "Term 2",
+  "plannedDate": "08 Jun",
+  "completedDate": "08 Jun",
+  "outcomes": [
+   "Recall key concepts",
+   "Apply to worked examples",
+   "Evaluate & extend"
+  ],
+  "framework": "MOE / school-defined",
+  "owner": "Subject coordinator"
+ },
+ {
+  "subject": "English",
+  "title": "Unit 6 — Review",
+  "term": "Term 2",
+  "plannedDate": "09 Jan",
+  "completedDate": null,
+  "outcomes": [
+   "Recall key concepts",
+   "Apply to worked examples",
+   "Evaluate & extend"
+  ],
+  "framework": "MOE / school-defined",
+  "owner": "Subject coordinator"
+ },
+ {
+  "subject": "Science",
+  "title": "Unit 1 — Foundations",
+  "term": "Term 1",
+  "plannedDate": "04 Feb",
+  "completedDate": "04 Feb",
+  "outcomes": [
+   "Recall key concepts",
+   "Apply to worked examples",
+   "Evaluate & extend"
+  ],
+  "framework": "MOE / school-defined",
+  "owner": "Subject coordinator"
+ },
+ {
+  "subject": "Science",
+  "title": "Unit 2 — Core skills",
+  "term": "Term 1",
+  "plannedDate": "05 Mar",
+  "completedDate": "05 Mar",
+  "outcomes": [
+   "Recall key concepts",
+   "Apply to worked examples",
+   "Evaluate & extend"
+  ],
+  "framework": "MOE / school-defined",
+  "owner": "Subject coordinator"
+ },
+ {
+  "subject": "Science",
+  "title": "Unit 3 — Application",
+  "term": "Term 1",
+  "plannedDate": "06 Apr",
+  "completedDate": "06 Apr",
+  "outcomes": [
+   "Recall key concepts",
+   "Apply to worked examples",
+   "Evaluate & extend"
+  ],
+  "framework": "MOE / school-defined",
+  "owner": "Subject coordinator"
+ },
+ {
+  "subject": "Science",
+  "title": "Unit 4 — Analysis",
+  "term": "Term 2",
+  "plannedDate": "07 May",
+  "completedDate": "07 May",
+  "outcomes": [
+   "Recall key concepts",
+   "Apply to worked examples",
+   "Evaluate & extend"
+  ],
+  "framework": "MOE / school-defined",
+  "owner": "Subject coordinator"
+ },
+ {
+  "subject": "Science",
+  "title": "Unit 5 — Synthesis",
+  "term": "Term 2",
+  "plannedDate": "08 Jun",
+  "completedDate": "08 Jun",
+  "outcomes": [
+   "Recall key concepts",
+   "Apply to worked examples",
+   "Evaluate & extend"
+  ],
+  "framework": "MOE / school-defined",
+  "owner": "Subject coordinator"
+ },
+ {
+  "subject": "Science",
+  "title": "Unit 6 — Review",
+  "term": "Term 2",
+  "plannedDate": "09 Jan",
+  "completedDate": null,
+  "outcomes": [
+   "Recall key concepts",
+   "Apply to worked examples",
+   "Evaluate & extend"
+  ],
+  "framework": "MOE / school-defined",
+  "owner": "Subject coordinator"
+ },
+ {
+  "subject": "Physics",
+  "title": "Unit 1 — Foundations",
+  "term": "Term 1",
+  "plannedDate": "04 Feb",
+  "completedDate": "04 Feb",
+  "outcomes": [
+   "Recall key concepts",
+   "Apply to worked examples",
+   "Evaluate & extend"
+  ],
+  "framework": "MOE / school-defined",
+  "owner": "Subject coordinator"
+ },
+ {
+  "subject": "Physics",
+  "title": "Unit 2 — Core skills",
+  "term": "Term 1",
+  "plannedDate": "05 Mar",
+  "completedDate": "05 Mar",
+  "outcomes": [
+   "Recall key concepts",
+   "Apply to worked examples",
+   "Evaluate & extend"
+  ],
+  "framework": "MOE / school-defined",
+  "owner": "Subject coordinator"
+ },
+ {
+  "subject": "Physics",
+  "title": "Unit 3 — Application",
+  "term": "Term 1",
+  "plannedDate": "06 Apr",
+  "completedDate": "06 Apr",
+  "outcomes": [
+   "Recall key concepts",
+   "Apply to worked examples",
+   "Evaluate & extend"
+  ],
+  "framework": "MOE / school-defined",
+  "owner": "Subject coordinator"
+ },
+ {
+  "subject": "Physics",
+  "title": "Unit 4 — Analysis",
+  "term": "Term 2",
+  "plannedDate": "07 May",
+  "completedDate": "07 May",
+  "outcomes": [
+   "Recall key concepts",
+   "Apply to worked examples",
+   "Evaluate & extend"
+  ],
+  "framework": "MOE / school-defined",
+  "owner": "Subject coordinator"
+ },
+ {
+  "subject": "Physics",
+  "title": "Unit 5 — Synthesis",
+  "term": "Term 2",
+  "plannedDate": "08 Jun",
+  "completedDate": null,
+  "outcomes": [
+   "Recall key concepts",
+   "Apply to worked examples",
+   "Evaluate & extend"
+  ],
+  "framework": "MOE / school-defined",
+  "owner": "Subject coordinator"
+ },
+ {
+  "subject": "Physics",
+  "title": "Unit 6 — Review",
+  "term": "Term 2",
+  "plannedDate": "09 Jan",
+  "completedDate": null,
+  "outcomes": [
+   "Recall key concepts",
+   "Apply to worked examples",
+   "Evaluate & extend"
+  ],
+  "framework": "MOE / school-defined",
+  "owner": "Subject coordinator"
+ },
+ {
+  "subject": "Chemistry",
+  "title": "Unit 1 — Foundations",
+  "term": "Term 1",
+  "plannedDate": "04 Feb",
+  "completedDate": "04 Feb",
+  "outcomes": [
+   "Recall key concepts",
+   "Apply to worked examples",
+   "Evaluate & extend"
+  ],
+  "framework": "MOE / school-defined",
+  "owner": "Subject coordinator"
+ },
+ {
+  "subject": "Chemistry",
+  "title": "Unit 2 — Core skills",
+  "term": "Term 1",
+  "plannedDate": "05 Mar",
+  "completedDate": "05 Mar",
+  "outcomes": [
+   "Recall key concepts",
+   "Apply to worked examples",
+   "Evaluate & extend"
+  ],
+  "framework": "MOE / school-defined",
+  "owner": "Subject coordinator"
+ },
+ {
+  "subject": "Chemistry",
+  "title": "Unit 3 — Application",
+  "term": "Term 1",
+  "plannedDate": "06 Apr",
+  "completedDate": "06 Apr",
+  "outcomes": [
+   "Recall key concepts",
+   "Apply to worked examples",
+   "Evaluate & extend"
+  ],
+  "framework": "MOE / school-defined",
+  "owner": "Subject coordinator"
+ },
+ {
+  "subject": "Chemistry",
+  "title": "Unit 4 — Analysis",
+  "term": "Term 2",
+  "plannedDate": "07 May",
+  "completedDate": "07 May",
+  "outcomes": [
+   "Recall key concepts",
+   "Apply to worked examples",
+   "Evaluate & extend"
+  ],
+  "framework": "MOE / school-defined",
+  "owner": "Subject coordinator"
+ },
+ {
+  "subject": "Chemistry",
+  "title": "Unit 5 — Synthesis",
+  "term": "Term 2",
+  "plannedDate": "08 Jun",
+  "completedDate": null,
+  "outcomes": [
+   "Recall key concepts",
+   "Apply to worked examples",
+   "Evaluate & extend"
+  ],
+  "framework": "MOE / school-defined",
+  "owner": "Subject coordinator"
+ },
+ {
+  "subject": "Chemistry",
+  "title": "Unit 6 — Review",
+  "term": "Term 2",
+  "plannedDate": "09 Jan",
+  "completedDate": null,
+  "outcomes": [
+   "Recall key concepts",
+   "Apply to worked examples",
+   "Evaluate & extend"
+  ],
+  "framework": "MOE / school-defined",
+  "owner": "Subject coordinator"
+ },
+ {
+  "subject": "Islamic Studies",
+  "title": "Unit 1 — Foundations",
+  "term": "Term 1",
+  "plannedDate": "04 Feb",
+  "completedDate": "04 Feb",
+  "outcomes": [
+   "Recall key concepts",
+   "Apply to worked examples",
+   "Evaluate & extend"
+  ],
+  "framework": "MOE / school-defined",
+  "owner": "Subject coordinator"
+ },
+ {
+  "subject": "Islamic Studies",
+  "title": "Unit 2 — Core skills",
+  "term": "Term 1",
+  "plannedDate": "05 Mar",
+  "completedDate": "05 Mar",
+  "outcomes": [
+   "Recall key concepts",
+   "Apply to worked examples",
+   "Evaluate & extend"
+  ],
+  "framework": "MOE / school-defined",
+  "owner": "Subject coordinator"
+ },
+ {
+  "subject": "Islamic Studies",
+  "title": "Unit 3 — Application",
+  "term": "Term 1",
+  "plannedDate": "06 Apr",
+  "completedDate": "06 Apr",
+  "outcomes": [
+   "Recall key concepts",
+   "Apply to worked examples",
+   "Evaluate & extend"
+  ],
+  "framework": "MOE / school-defined",
+  "owner": "Subject coordinator"
+ },
+ {
+  "subject": "Islamic Studies",
+  "title": "Unit 4 — Analysis",
+  "term": "Term 2",
+  "plannedDate": "07 May",
+  "completedDate": "07 May",
+  "outcomes": [
+   "Recall key concepts",
+   "Apply to worked examples",
+   "Evaluate & extend"
+  ],
+  "framework": "MOE / school-defined",
+  "owner": "Subject coordinator"
+ },
+ {
+  "subject": "Islamic Studies",
+  "title": "Unit 5 — Synthesis",
+  "term": "Term 2",
+  "plannedDate": "08 Jun",
+  "completedDate": "08 Jun",
+  "outcomes": [
+   "Recall key concepts",
+   "Apply to worked examples",
+   "Evaluate & extend"
+  ],
+  "framework": "MOE / school-defined",
+  "owner": "Subject coordinator"
+ },
+ {
+  "subject": "Islamic Studies",
+  "title": "Unit 6 — Review",
+  "term": "Term 2",
+  "plannedDate": "09 Jan",
+  "completedDate": null,
+  "outcomes": [
+   "Recall key concepts",
+   "Apply to worked examples",
+   "Evaluate & extend"
+  ],
+  "framework": "MOE / school-defined",
+  "owner": "Subject coordinator"
+ }
+]

@@ -1,0 +1,131 @@
+[
+ {
+  "no": "FB-101",
+  "block": "Falcon Block (Boys)",
+  "floor": 1,
+  "type": "4-bed",
+  "cap": 4,
+  "occ": [
+   "Yusuf Rahman",
+   "Hamza Ali",
+   "Zaid Omar",
+   "Bilal Khan"
+  ],
+  "status": "Full"
+ },
+ {
+  "no": "FB-102",
+  "block": "Falcon Block (Boys)",
+  "floor": 1,
+  "type": "4-bed",
+  "cap": 4,
+  "occ": [
+   "Daniel George",
+   "Ethan Pereira",
+   "Omar Siddiqui"
+  ],
+  "status": "Available"
+ },
+ {
+  "no": "FB-103",
+  "block": "Falcon Block (Boys)",
+  "floor": 1,
+  "type": "2-bed",
+  "cap": 2,
+  "occ": [
+   "Ali Hassan",
+   "Ryan Thomas"
+  ],
+  "status": "Full"
+ },
+ {
+  "no": "FB-203",
+  "block": "Falcon Block (Boys)",
+  "floor": 2,
+  "type": "4-bed",
+  "cap": 4,
+  "occ": [
+   "Karim Fadel",
+   "Jason Lee"
+  ],
+  "status": "Maintenance"
+ },
+ {
+  "no": "FB-205",
+  "block": "Falcon Block (Boys)",
+  "floor": 2,
+  "type": "3-bed",
+  "cap": 3,
+  "occ": [
+   "Musa Diallo",
+   "Leo Martins",
+   "Adam Farooq"
+  ],
+  "status": "Full"
+ },
+ {
+  "no": "OB-201",
+  "block": "Oryx Block (Girls)",
+  "floor": 2,
+  "type": "4-bed",
+  "cap": 4,
+  "occ": [
+   "Aisha Noor",
+   "Sara Abdullah",
+   "Layla Mansour",
+   "Zara Sheikh"
+  ],
+  "status": "Full"
+ },
+ {
+  "no": "OB-204",
+  "block": "Oryx Block (Girls)",
+  "floor": 2,
+  "type": "4-bed",
+  "cap": 4,
+  "occ": [
+   "Mariam Saleh",
+   "Hana Yusuf",
+   "Nadia Karim"
+  ],
+  "status": "Available"
+ },
+ {
+  "no": "OB-205",
+  "block": "Oryx Block (Girls)",
+  "floor": 2,
+  "type": "2-bed",
+  "cap": 2,
+  "occ": [
+   "Emily Watson",
+   "Fatima Zahra"
+  ],
+  "status": "Full"
+ },
+ {
+  "no": "OB-110",
+  "block": "Oryx Block (Girls)",
+  "floor": 1,
+  "type": "3-bed",
+  "cap": 3,
+  "occ": [
+   "Amira Saeed",
+   "Grace Kim"
+  ],
+  "status": "Available"
+ },
+ {
+  "no": "OB-208",
+  "block": "Oryx Block (Girls)",
+  "floor": 2,
+  "type": "4-bed",
+  "cap": 4,
+  "occ": [
+   "Yara Fahim",
+   "Sofia Reyes",
+   "Aaliyah Musa",
+   "Reem Khalid"
+  ],
+  "status": "Full"
+ }
+]

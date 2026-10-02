@@ -1,0 +1,72 @@
+[
+ {
+  "t": "Algebra II — Functions",
+  "teacher": "Rohan Mehta",
+  "cls": "10-A",
+  "prog": 72,
+  "due": "3 assignments"
+ },
+ {
+  "t": "Organic Chemistry Basics",
+  "teacher": "Dr. Amina Yusuf",
+  "cls": "11-C",
+  "prog": 54,
+  "due": "1 quiz due"
+ },
+ {
+  "t": "English Literature — Poetry",
+  "teacher": "Grace Williams",
+  "cls": "9-B",
+  "prog": 88,
+  "due": "On track"
+ },
+ {
+  "t": "Intro to Python",
+  "teacher": "Khalid Noori",
+  "cls": "12-B",
+  "prog": 35,
+  "due": "2 labs due"
+ },
+ {
+  "t": "Arabic Language — Grammar",
+  "teacher": "Sana Iqbal",
+  "cls": "8-A",
+  "prog": 61,
+  "due": "1 assignment"
+ },
+ {
+  "t": "World History — Ancient Civilisations",
+  "teacher": "Grace Williams",
+  "cls": "7-B",
+  "prog": 79,
+  "due": "On track"
+ },
+ {
+  "t": "Biology — Cell Structure",
+  "teacher": "Dr. Amina Yusuf",
+  "cls": "9-B",
+  "prog": 45,
+  "due": "Practical due"
+ },
+ {
+  "t": "Physics — Forces & Motion",
+  "teacher": "Rohan Mehta",
+  "cls": "10-A",
+  "prog": 58,
+  "due": "2 assignments"
+ },
+ {
+  "t": "Foundations of Reading",
+  "teacher": "Grace Williams",
+  "cls": "3-B",
+  "prog": 92,
+  "due": "On track"
+ },
+ {
+  "t": "Islamic Studies",
+  "teacher": "Sh. Khalid Al Ameri",
+  "cls": "5-A",
+  "prog": 83,
+  "due": "On track"
+ }
+]

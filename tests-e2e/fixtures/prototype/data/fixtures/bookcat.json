@@ -1,0 +1,72 @@
+[
+ {
+  "title": "Sapiens: A Brief History",
+  "author": "Y. N. Harari",
+  "cat": "History & Geography",
+  "total": 6,
+  "avail": 4
+ },
+ {
+  "title": "The Hobbit",
+  "author": "J. R. R. Tolkien",
+  "cat": "Fiction & Literature",
+  "total": 8,
+  "avail": 6
+ },
+ {
+  "title": "A Brief History of Time",
+  "author": "Stephen Hawking",
+  "cat": "Science & Technology",
+  "total": 5,
+  "avail": 3
+ },
+ {
+  "title": "To Kill a Mockingbird",
+  "author": "Harper Lee",
+  "cat": "Fiction & Literature",
+  "total": 7,
+  "avail": 5
+ },
+ {
+  "title": "The Alchemist",
+  "author": "Paulo Coelho",
+  "cat": "Fiction & Literature",
+  "total": 6,
+  "avail": 6
+ },
+ {
+  "title": "Cosmos",
+  "author": "Carl Sagan",
+  "cat": "Science & Technology",
+  "total": 4,
+  "avail": 2
+ },
+ {
+  "title": "1984",
+  "author": "George Orwell",
+  "cat": "Fiction & Literature",
+  "total": 5,
+  "avail": 4
+ },
+ {
+  "title": "The Elements of Style",
+  "author": "Strunk & White",
+  "cat": "Languages (Arabic/EN)",
+  "total": 3,
+  "avail": 3
+ },
+ {
+  "title": "Calculus Made Easy",
+  "author": "Silvanus Thompson",
+  "cat": "Mathematics",
+  "total": 4,
+  "avail": 1
+ },
+ {
+  "title": "Arabic for Beginners",
+  "author": "Dept. of Education",
+  "cat": "Languages (Arabic/EN)",
+  "total": 10,
+  "avail": 8
+ }
+]

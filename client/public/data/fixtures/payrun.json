@@ -1,0 +1,44 @@
+[
+ {
+  "name": "Dr. Amina Yusuf",
+  "dept": "Science",
+  "gross": 32000,
+  "ded": 4200,
+  "status": "Processed"
+ },
+ {
+  "name": "Rohan Mehta",
+  "dept": "Mathematics",
+  "gross": 18500,
+  "ded": 2100,
+  "status": "Processed"
+ },
+ {
+  "name": "Grace Williams",
+  "dept": "Languages",
+  "gross": 19500,
+  "ded": 2300,
+  "status": "Processed"
+ },
+ {
+  "name": "Khalid Noori",
+  "dept": "Operations",
+  "gross": 16000,
+  "ded": 1700,
+  "status": "Pending"
+ },
+ {
+  "name": "Sana Iqbal",
+  "dept": "Student Support",
+  "gross": 17500,
+  "ded": 1950,
+  "status": "Pending"
+ },
+ {
+  "name": "Joseph Thomas",
+  "dept": "Finance",
+  "gross": 21000,
+  "ded": 2500,
+  "status": "Processed"
+ }
+]

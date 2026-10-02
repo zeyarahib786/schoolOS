@@ -1,0 +1,17 @@
+[
+ {
+  "key": "id",
+  "label": "Passport / Emirates ID",
+  "req": true
+ },
+ {
+  "key": "birth",
+  "label": "Birth certificate",
+  "req": true
+ },
+ {
+  "key": "photo",
+  "label": "Passport-size photo",
+  "req": true
+ }
+]

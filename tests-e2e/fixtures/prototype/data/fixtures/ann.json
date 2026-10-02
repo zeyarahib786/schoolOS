@@ -1,0 +1,47 @@
+[
+ {
+  "t": "Parent–Teacher Conference · Term 2",
+  "by": "Principal Office",
+  "tm": "2h ago",
+  "bd": "PTC for Grades 6–12 is scheduled for Saturday, 21 June. Booking opens in the Parent portal on Tuesday.",
+  "ic": "comm",
+  "c": "green",
+  "aud": "All Parents"
+ },
+ {
+  "t": "Annual Science Exhibition",
+  "by": "Dr. Amina Yusuf",
+  "tm": "Yesterday",
+  "bd": "Project submissions for the Science Exhibition close on 18 June. Mentors, please verify your team rosters.",
+  "ic": "lms",
+  "c": "blue",
+  "aud": "Grades 8–12"
+ },
+ {
+  "t": "Bus Route 7 — Temporary Change",
+  "by": "Transport Desk",
+  "tm": "2 days ago",
+  "bd": "Due to road works on Al Wasl Road, Route 7 pickup moves 10 minutes earlier from Monday.",
+  "ic": "trans",
+  "c": "amber",
+  "aud": "Route 7 Families"
+ },
+ {
+  "t": "Term 2 Fee Reminder",
+  "by": "Accounts Office",
+  "tm": "3 days ago",
+  "bd": "Term 2 invoices are due on 20 June. Pay via the Parent portal to avoid a late-payment charge.",
+  "ic": "fees",
+  "c": "green",
+  "aud": "Pending Payers"
+ },
+ {
+  "t": "Library Week — Author Visit",
+  "by": "Library Desk",
+  "tm": "last week",
+  "bd": "Emirati author Maitha Al Khayat joins us on 24 June for a reading and Q&A with Grades 4–7.",
+  "ic": "lib",
+  "c": "blue",
+  "aud": "Grades 4–7"
+ }
+]

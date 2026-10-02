@@ -1,0 +1,23 @@
+[
+ {
+  "facility": "Science Lab 1",
+  "by": "Dr. Amina Yusuf",
+  "date": "Today",
+  "time": "10:00–11:30",
+  "status": "Confirmed"
+ },
+ {
+  "facility": "Library Seminar Room",
+  "by": "Grace Williams",
+  "date": "Today",
+  "time": "13:00–14:00",
+  "status": "Confirmed"
+ },
+ {
+  "facility": "Main Auditorium",
+  "by": "Events Team",
+  "date": "Tomorrow",
+  "time": "09:00–12:00",
+  "status": "Pending"
+ }
+]

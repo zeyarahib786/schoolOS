@@ -1,0 +1,50 @@
+[
+ {
+  "title": "Sapiens: A Brief History",
+  "author": "Y. N. Harari",
+  "borrower": "Fatima Al Hashimi",
+  "cls": "10-A",
+  "due": "18 Jun",
+  "status": "On loan"
+ },
+ {
+  "title": "The Hobbit",
+  "author": "J. R. R. Tolkien",
+  "borrower": "Zara Sheikh",
+  "cls": "7-B",
+  "due": "09 Jun",
+  "status": "Overdue"
+ },
+ {
+  "title": "A Brief History of Time",
+  "author": "Stephen Hawking",
+  "borrower": "Ibrahim Khan",
+  "cls": "10-B",
+  "due": "21 Jun",
+  "status": "On loan"
+ },
+ {
+  "title": "To Kill a Mockingbird",
+  "author": "Harper Lee",
+  "borrower": "Layla Mansour",
+  "cls": "8-A",
+  "due": "07 Jun",
+  "status": "Overdue"
+ },
+ {
+  "title": "The Alchemist",
+  "author": "Paulo Coelho",
+  "borrower": "Daniel George",
+  "cls": "12-A",
+  "due": "24 Jun",
+  "status": "On loan"
+ },
+ {
+  "title": "Introduction to Algorithms",
+  "author": "Cormen et al.",
+  "borrower": "Hamza Ali",
+  "cls": "12-B",
+  "due": "26 Jun",
+  "status": "Reserved"
+ }
+]

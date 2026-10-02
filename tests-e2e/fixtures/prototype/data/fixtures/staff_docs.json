@@ -1,0 +1,32 @@
+[
+ {
+  "key": "id",
+  "label": "Passport / Emirates ID",
+  "req": true
+ },
+ {
+  "key": "degree",
+  "label": "Degree certificate",
+  "req": true
+ },
+ {
+  "key": "photo",
+  "label": "Passport-size photo",
+  "req": true
+ },
+ {
+  "key": "experience",
+  "label": "Experience / relieving letter",
+  "req": false
+ },
+ {
+  "key": "visa",
+  "label": "Visa / work permit",
+  "req": false
+ },
+ {
+  "key": "attestation",
+  "label": "Certificate attestation",
+  "req": false
+ }
+]

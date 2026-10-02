@@ -1,0 +1,258 @@
+[
+ {
+  "name": "Zayd Haddad",
+  "grade": "Grade 4",
+  "stage": "New",
+  "source": "Website",
+  "phone": "+971 50 118 2200",
+  "guardian": "Layla Haddad",
+  "owner": "Front Office",
+  "date": "Today",
+  "temp": "Warm",
+  "idle": 0,
+  "follow": 2,
+  "followType": "Scheduled",
+  "archived": false,
+  "log": [
+   [
+    "Enquiry submitted via website",
+    "Today"
+   ]
+  ]
+ },
+ {
+  "name": "Mariam Osei",
+  "grade": "KG 2",
+  "stage": "New",
+  "source": "Instagram",
+  "phone": "+971 55 903 1120",
+  "guardian": "Kwame Osei",
+  "owner": "Front Office",
+  "date": "Today",
+  "temp": "Hot",
+  "idle": 0,
+  "follow": 0,
+  "followType": "Scheduled",
+  "archived": false,
+  "log": [
+   [
+    "Downloaded prospectus",
+    "Today"
+   ]
+  ]
+ },
+ {
+  "name": "Ivan Petrov",
+  "grade": "Grade 7",
+  "stage": "Contacted",
+  "source": "Referral",
+  "phone": "+971 52 771 4408",
+  "guardian": "Anna Petrova",
+  "owner": "Nadia (Admissions)",
+  "date": "12 Jun",
+  "temp": "Hot",
+  "idle": 2,
+  "follow": -1,
+  "followType": "Scheduled",
+  "archived": false,
+  "log": [
+   [
+    "Called — interested, sending brochure",
+    "12 Jun"
+   ],
+   [
+    "Enquiry from parent referral",
+    "10 Jun"
+   ]
+  ]
+ },
+ {
+  "name": "Sara Reyes",
+  "grade": "Grade 2",
+  "stage": "Contacted",
+  "source": "Walk-in",
+  "phone": "+971 50 220 9915",
+  "guardian": "Diego Reyes",
+  "owner": "Nadia (Admissions)",
+  "date": "11 Jun",
+  "temp": "Warm",
+  "idle": 3,
+  "follow": 3,
+  "followType": "Scheduled",
+  "archived": false,
+  "log": [
+   [
+    "Front-desk walk-in, shared fee structure",
+    "11 Jun"
+   ]
+  ]
+ },
+ {
+  "name": "Yusuf Farouk",
+  "grade": "Grade 9",
+  "stage": "Toured",
+  "source": "Event",
+  "phone": "+971 56 640 2231",
+  "guardian": "Hana Farouk",
+  "owner": "Nadia (Admissions)",
+  "date": "09 Jun",
+  "temp": "Hot",
+  "idle": 5,
+  "follow": 1,
+  "followType": "Scheduled",
+  "archived": false,
+  "log": [
+   [
+    "Campus tour completed — very positive",
+    "09 Jun"
+   ],
+   [
+    "Booked tour at open day",
+    "05 Jun"
+   ]
+  ]
+ },
+ {
+  "name": "Elena Novak",
+  "grade": "Grade 5",
+  "stage": "Toured",
+  "source": "Website",
+  "phone": "+971 54 118 7742",
+  "guardian": "Marco Novak",
+  "owner": "Front Office",
+  "date": "08 Jun",
+  "temp": "Warm",
+  "idle": 6,
+  "follow": null,
+  "followType": "Follow later",
+  "archived": false,
+  "log": [
+   [
+    "Toured campus, considering options",
+    "08 Jun"
+   ]
+  ]
+ },
+ {
+  "name": "Kabir Nair",
+  "grade": "Grade 1",
+  "stage": "Application",
+  "source": "Referral",
+  "phone": "+971 50 887 3310",
+  "guardian": "Priya Nair",
+  "owner": "Nadia (Admissions)",
+  "date": "06 Jun",
+  "temp": "Hot",
+  "idle": 8,
+  "follow": 5,
+  "followType": "Scheduled",
+  "archived": false,
+  "log": [
+   [
+    "Started application form",
+    "06 Jun"
+   ],
+   [
+    "Tour + assessment booked",
+    "03 Jun"
+   ]
+  ]
+ },
+ {
+  "name": "Lina Chen",
+  "grade": "KG 1",
+  "stage": "Won",
+  "source": "Agent",
+  "phone": "+971 55 300 1180",
+  "guardian": "Wei Chen",
+  "owner": "Nadia (Admissions)",
+  "date": "01 Jun",
+  "temp": "Hot",
+  "idle": 13,
+  "follow": null,
+  "followType": null,
+  "archived": false,
+  "log": [
+   [
+    "Enrolled",
+    "01 Jun"
+   ],
+   [
+    "Application submitted",
+    "28 May"
+   ]
+  ]
+ },
+ {
+  "name": "Omar Khalil",
+  "grade": "Grade 6",
+  "stage": "Contacted",
+  "source": "Google",
+  "phone": "+971 52 908 1123",
+  "guardian": "Rania Khalil",
+  "owner": "Front Office",
+  "date": "22 May",
+  "temp": "Cold",
+  "idle": 23,
+  "follow": null,
+  "followType": null,
+  "archived": false,
+  "log": [
+   [
+    "Called twice — no answer",
+    "24 May"
+   ],
+   [
+    "Enquiry via Google",
+    "20 May"
+   ]
+  ]
+ },
+ {
+  "name": "Nadia Roy",
+  "grade": "Grade 3",
+  "stage": "New",
+  "source": "Facebook",
+  "phone": "+971 55 771 9902",
+  "guardian": "Sunil Roy",
+  "owner": "Front Office",
+  "date": "25 May",
+  "temp": "Cold",
+  "idle": 20,
+  "follow": null,
+  "followType": null,
+  "archived": false,
+  "log": [
+   [
+    "Enquiry via Facebook ad",
+    "25 May"
+   ]
+  ]
+ },
+ {
+  "name": "Tom Bradley",
+  "grade": "Grade 8",
+  "stage": "Toured",
+  "source": "Event",
+  "phone": "+971 50 334 7781",
+  "guardian": "Karen Bradley",
+  "owner": "Nadia (Admissions)",
+  "date": "02 May",
+  "temp": "Cold",
+  "idle": 44,
+  "follow": null,
+  "followType": null,
+  "archived": true,
+  "archReason": "Chose another school",
+  "log": [
+   [
+    "Archived — chose another school",
+    "10 May"
+   ],
+   [
+    "Toured campus",
+    "02 May"
+   ]
+  ]
+ }
+]

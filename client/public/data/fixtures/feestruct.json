@@ -1,0 +1,47 @@
+[
+ [
+  "Tuition fee",
+  "KG 1 – KG 2",
+  7200
+ ],
+ [
+  "Tuition fee",
+  "Grade 1 – 5",
+  8400
+ ],
+ [
+  "Tuition fee",
+  "Grade 6 – 8",
+  9600
+ ],
+ [
+  "Tuition fee",
+  "Grade 9 – 10",
+  10800
+ ],
+ [
+  "Tuition fee",
+  "Grade 11 – 12",
+  12400
+ ],
+ [
+  "Transport (one-way)",
+  "All grades",
+  2400
+ ],
+ [
+  "Transport (two-way)",
+  "All grades",
+  4200
+ ],
+ [
+  "Activities & resources",
+  "All grades",
+  1800
+ ],
+ [
+  "Registration (one-time)",
+  "New admissions",
+  2500
+ ]
+]

@@ -1,0 +1,111 @@
+import { ApiError } from '../../utils/ApiError';
+import { ISchoolDocument, SchoolDocument } from '../../models/SchoolDocument';
+import * as repo from './documents.repository';
+import { ListDocumentsQuery, PublishDocumentInput } from './documents.validation';
+import { AuthenticatedUser } from '../../middleware/auth';
+import { Role, WRITE_ROLES } from '../../types/roles';
+import { logAudit } from '../audit/audit.service';
+import mongoose from 'mongoose';
+import { Readable } from 'stream';
+
+const MAX_PDF_SIZE = 8 * 1024 * 1024;
+function bucket() {
+  if (!mongoose.connection.db) throw ApiError.internal('Database is not ready');
+  return new mongoose.mongo.GridFSBucket(mongoose.connection.db, { bucketName: 'schoolDocuments' });
+}
+
+function canPublish(role: Role): boolean {
+  return WRITE_ROLES.includes(role);
+}
+
+/** Open read: policies, forms, and circulars exist to be consulted by everyone at the school. */
+export async function listDocuments(query: ListDocumentsQuery) {
+  const { items, total } = await repo.findMany(query);
+  return {
+    items,
+    pagination: { page: query.page, limit: query.limit, total, totalPages: Math.ceil(total / query.limit) },
+  };
+}
+
+/**
+ * Publishing a code that already exists supersedes the current version and creates version N+1.
+ * The "at most one current per code" invariant is NOT maintained by this read-then-write flow
+ * alone - it's guaranteed by the partial unique index on the model: if two publishes race, both
+ * may supersede the old version, but only ONE new "current" insert can land; the loser gets a
+ * real 11000 -> 409. On a failed insert we attempt a compensating restore of the previously
+ * current version so a lone transient failure doesn't leave the code with no current version at
+ * all - best-effort by design (documented), since the index already protects the invariant that
+ * actually matters (never TWO currents), and a restore race with a competing successful publish
+ * is prevented by that same index.
+ */
+export async function publishDocument(
+  input: PublishDocumentInput,
+  requester: AuthenticatedUser,
+  file?: { fileId: string; filename: string; contentType: string; size: number },
+): Promise<ISchoolDocument> {
+  if (!canPublish(requester.role))
+    throw ApiError.forbidden('Only Administrator, Principal, or Teacher may publish a document');
+
+  const previous = await repo.findCurrentByCode(input.code);
+  if (previous) await repo.supersede(previous._id.toString());
+  const nextVersion = (previous?.version ?? 0) + 1;
+
+  let document: ISchoolDocument;
+  try {
+    document = await repo.createVersion(input, nextVersion, requester.id, file);
+  } catch (err) {
+    if (previous) await repo.markCurrent(previous._id.toString()).catch(() => undefined);
+    if (err instanceof Error && (err as Error & { code?: number }).code === 11000) {
+      throw ApiError.conflict('A concurrent publish for this document code just landed - please retry');
+    }
+    throw err;
+  }
+  await logAudit(`Published document ${document.code} v${document.version}`, 'Documents', requester.id);
+  return document;
+}
+
+export async function publishPdf(
+  input: PublishDocumentInput,
+  filename: string,
+  content: Buffer,
+  requester: AuthenticatedUser,
+): Promise<ISchoolDocument> {
+  if (!canPublish(requester.role)) throw ApiError.forbidden('You cannot publish documents');
+  if (!Buffer.isBuffer(content) || content.length < 8 || content.length > MAX_PDF_SIZE)
+    throw ApiError.badRequest('PDF must be between 8 bytes and 8 MB');
+  if (content.subarray(0, 5).toString() !== '%PDF-' ||
+      !content.subarray(Math.max(0, content.length - 1024)).toString().includes('%%EOF'))
+    throw ApiError.badRequest('The uploaded file is not a PDF');
+  const safeName = filename.replace(/[\\/\0\r\n]/g, '_').slice(0, 180);
+  if (!safeName.toLowerCase().endsWith('.pdf')) throw ApiError.badRequest('Filename must end in .pdf');
+  const fileId = new mongoose.mongo.ObjectId();
+  await new Promise<void>((resolve, reject) => {
+    const stream = bucket().openUploadStreamWithId(fileId, safeName, {
+      contentType: 'application/pdf', metadata: { code: input.code.toUpperCase() },
+    });
+    stream.on('finish', resolve);
+    stream.on('error', reject);
+    Readable.from(content).pipe(stream);
+  });
+  try {
+    return await publishDocument(input, requester, {
+      fileId: fileId.toString(), filename: safeName, contentType: 'application/pdf', size: content.length,
+    });
+  } catch (error) {
+    // An audit failure can occur after the document insert; do not orphan that version.
+    const saved = await SchoolDocument.exists({ fileId }).catch(() => null);
+    if (!saved) await bucket().delete(fileId).catch(() => undefined);
+    throw error;
+  }
+}
+
+export async function getPdf(id: string) {
+  const document = await SchoolDocument.findById(id);
+  if (!document) throw ApiError.notFound('Document record not found');
+  if (!document.fileId || !document.filename || !document.size)
+    throw ApiError.notFound('No PDF is attached to this record');
+  return {
+    document,
+    stream: bucket().openDownloadStream(new mongoose.mongo.ObjectId(document.fileId.toString())),
+  };
+}

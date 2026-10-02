@@ -1,0 +1,47 @@
+[
+ {
+  "id": "TKT-2051",
+  "title": "Projector not working — Room 204",
+  "cat": "IT",
+  "by": "Rohan Mehta",
+  "priority": "High",
+  "status": "Open",
+  "date": "Today"
+ },
+ {
+  "id": "TKT-2050",
+  "title": "AC leakage in Science Lab 2",
+  "cat": "Facilities",
+  "by": "Lab Tech",
+  "priority": "High",
+  "status": "In progress",
+  "date": "Today"
+ },
+ {
+  "id": "TKT-2049",
+  "title": "Wi-Fi slow in Block C",
+  "cat": "IT",
+  "by": "Grace Williams",
+  "priority": "Medium",
+  "status": "In progress",
+  "date": "Yesterday"
+ },
+ {
+  "id": "TKT-2048",
+  "title": "Broken chair — Classroom 1A",
+  "cat": "Facilities",
+  "by": "Ms. Reem Adel",
+  "priority": "Low",
+  "status": "Resolved",
+  "date": "13 Jun"
+ },
+ {
+  "id": "TKT-2047",
+  "title": "Email login issue",
+  "cat": "IT",
+  "by": "Joseph Thomas",
+  "priority": "Medium",
+  "status": "Resolved",
+  "date": "12 Jun"
+ }
+]

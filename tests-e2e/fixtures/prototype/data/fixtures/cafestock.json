@@ -1,0 +1,50 @@
+[
+ {
+  "item": "Basmati Rice",
+  "cat": "Grains",
+  "stock": 180,
+  "min": 120,
+  "unit": "kg",
+  "vendor": "Al Maya Foods"
+ },
+ {
+  "item": "Chicken (Halal)",
+  "cat": "Protein",
+  "stock": 45,
+  "min": 60,
+  "unit": "kg",
+  "vendor": "Fresh Farm Co."
+ },
+ {
+  "item": "Fresh Vegetables",
+  "cat": "Produce",
+  "stock": 210,
+  "min": 150,
+  "unit": "kg",
+  "vendor": "Green Valley"
+ },
+ {
+  "item": "Laban & Yoghurt",
+  "cat": "Dairy",
+  "stock": 34,
+  "min": 50,
+  "unit": "L",
+  "vendor": "Al Rawabi"
+ },
+ {
+  "item": "Cooking Oil",
+  "cat": "Pantry",
+  "stock": 96,
+  "min": 60,
+  "unit": "L",
+  "vendor": "Al Maya Foods"
+ },
+ {
+  "item": "Arabic Bread",
+  "cat": "Bakery",
+  "stock": 140,
+  "min": 100,
+  "unit": "packs",
+  "vendor": "Modern Bakery"
+ }
+]

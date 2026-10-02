@@ -1,0 +1,114 @@
+[
+ {
+  "id": "admissions",
+  "label": "Admissions"
+ },
+ {
+  "id": "crm",
+  "label": "Enrolment CRM"
+ },
+ {
+  "id": "attendance",
+  "label": "Attendance"
+ },
+ {
+  "id": "exams",
+  "label": "Examinations"
+ },
+ {
+  "id": "curriculum",
+  "label": "Curriculum"
+ },
+ {
+  "id": "lms",
+  "label": "LMS"
+ },
+ {
+  "id": "behaviour",
+  "label": "Behaviour"
+ },
+ {
+  "id": "health",
+  "label": "Health & Clinic"
+ },
+ {
+  "id": "cafeteria",
+  "label": "Cafeteria"
+ },
+ {
+  "id": "certificates",
+  "label": "Certificates"
+ },
+ {
+  "id": "fees",
+  "label": "Fees & Finance"
+ },
+ {
+  "id": "payroll",
+  "label": "Payroll"
+ },
+ {
+  "id": "expenses",
+  "label": "Expenses"
+ },
+ {
+  "id": "library",
+  "label": "Library"
+ },
+ {
+  "id": "transport",
+  "label": "Transport"
+ },
+ {
+  "id": "hostel",
+  "label": "Hostel"
+ },
+ {
+  "id": "inventory",
+  "label": "Inventory"
+ },
+ {
+  "id": "biometric",
+  "label": "Biometric Sync"
+ },
+ {
+  "id": "visitors",
+  "label": "Visitor Management"
+ },
+ {
+  "id": "comm",
+  "label": "Communication"
+ },
+ {
+  "id": "calendar",
+  "label": "Events Calendar"
+ },
+ {
+  "id": "reports",
+  "label": "Reports & Analytics"
+ },
+ {
+  "id": "aiinsights",
+  "label": "AI Insights"
+ },
+ {
+  "id": "alumni",
+  "label": "Alumni"
+ },
+ {
+  "id": "facilities",
+  "label": "Facilities & Bookings"
+ },
+ {
+  "id": "helpdesk",
+  "label": "Helpdesk"
+ },
+ {
+  "id": "surveys",
+  "label": "Surveys & Feedback"
+ },
+ {
+  "id": "audit",
+  "label": "Audit Log"
+ }
+]

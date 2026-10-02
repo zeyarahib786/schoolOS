@@ -1,0 +1,44 @@
+[
+ {
+  "sub": "Mathematics",
+  "grades": "1–12",
+  "units": 48,
+  "done": 44,
+  "c": "blue"
+ },
+ {
+  "sub": "English",
+  "grades": "1–12",
+  "units": 42,
+  "done": 39,
+  "c": "green"
+ },
+ {
+  "sub": "Science",
+  "grades": "1–8",
+  "units": 36,
+  "done": 30,
+  "c": "amber"
+ },
+ {
+  "sub": "Physics",
+  "grades": "9–12",
+  "units": 28,
+  "done": 22,
+  "c": "amber"
+ },
+ {
+  "sub": "Chemistry",
+  "grades": "9–12",
+  "units": 26,
+  "done": 21,
+  "c": "red"
+ },
+ {
+  "sub": "Islamic Studies",
+  "grades": "1–12",
+  "units": 24,
+  "done": 23,
+  "c": "green"
+ }
+]

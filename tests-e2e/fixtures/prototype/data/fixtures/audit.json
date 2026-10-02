@@ -1,0 +1,38 @@
+[
+ {
+  "user": "Rashid Al Maktoum",
+  "action": "Updated fee structure",
+  "module": "Fees",
+  "time": "09:42"
+ },
+ {
+  "user": "Dr. Salma Haddad",
+  "action": "Approved admission · Ali Haider",
+  "module": "Admissions",
+  "time": "09:18"
+ },
+ {
+  "user": "Joseph Thomas",
+  "action": "Exported payroll WPS file",
+  "module": "Payroll",
+  "time": "08:55"
+ },
+ {
+  "user": "Rohan Mehta",
+  "action": "Submitted Grade 10 attendance",
+  "module": "Attendance",
+  "time": "08:40"
+ },
+ {
+  "user": "System",
+  "action": "Nightly biometric sync completed",
+  "module": "Biometric",
+  "time": "02:00"
+ },
+ {
+  "user": "Grace Williams",
+  "action": "Published announcement",
+  "module": "Communication",
+  "time": "Yesterday"
+ }
+]

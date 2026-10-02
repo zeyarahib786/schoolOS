@@ -1,0 +1,37 @@
+[
+ {
+  "item": "Student Laptops (Dell)",
+  "cat": "IT",
+  "stock": 312,
+  "min": 300,
+  "c": "green"
+ },
+ {
+  "item": "Science Lab Kits",
+  "cat": "Academic",
+  "stock": 28,
+  "min": 40,
+  "c": "red"
+ },
+ {
+  "item": "Library Furniture",
+  "cat": "Facilities",
+  "stock": 96,
+  "min": 60,
+  "c": "green"
+ },
+ {
+  "item": "Sports Equipment Sets",
+  "cat": "Activities",
+  "stock": 34,
+  "min": 45,
+  "c": "amber"
+ },
+ {
+  "item": "Projectors",
+  "cat": "IT",
+  "stock": 52,
+  "min": 48,
+  "c": "green"
+ }
+]

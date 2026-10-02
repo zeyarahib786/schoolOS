@@ -1,0 +1,59 @@
+/* ============ THEME: DARK MODE ============ */
+[data-theme="dark"]{
+  --slate-900:#F1F4F8; --slate-700:#D3DBE4; --slate-600:#AAB4C0; --slate-500:#8996A4; --slate-400:#7C8996;
+  --line:#28323C; --line-soft:#1E272F;
+  --bg:#0B0F14; --surface:#131A21; --surface-2:#182029; --surface-3:#1E2831;
+  --brand-soft:rgba(23,162,74,.16); --brand-line:rgba(23,162,74,.38);
+  --red-soft:rgba(225,29,42,.16); --red-line:rgba(225,29,42,.4);
+  --amber-soft:rgba(226,146,12,.16); --blue-soft:rgba(37,99,235,.16);
+  --sh-1:0 1px 2px rgba(0,0,0,.3),0 1px 3px rgba(0,0,0,.35);
+  --sh-2:0 4px 12px rgba(0,0,0,.4),0 2px 4px rgba(0,0,0,.3);
+  --sh-3:0 18px 48px rgba(0,0,0,.6),0 6px 16px rgba(0,0,0,.4);
+}
+[data-theme="dark"] .topbar{background:rgba(19,26,33,.85)}
+[data-theme="dark"] .field input,[data-theme="dark"] .field select{background:var(--surface-2);color:var(--slate-700)}
+[data-theme="dark"] .drawer{background:var(--surface)}
+[data-theme="dark"] input,[data-theme="dark"] select,[data-theme="dark"] textarea{background:var(--surface-2);color:var(--slate-900);border-color:var(--line)}
+[data-theme="dark"] [style*="background:#fff"]{background:var(--surface)!important}
+[data-theme="dark"] .kcard,[data-theme="dark"] .kcol{background:var(--surface-2)}
+[data-theme="dark"] .role-pill{background:var(--surface-2);color:var(--slate-700)}
+[data-theme="dark"] .tb-search .kbd{background:var(--surface-3);color:var(--slate-500)}
+[data-theme="dark"] .seg button.on{background:var(--surface);color:var(--slate-900)}
+[data-theme="dark"] .att-row,[data-theme="dark"] .att-row .seg2 button{background:var(--surface-2)}
+[data-theme="dark"] .kcard{background:var(--surface-2)}
+[data-theme="dark"] .sb-ctx{background:var(--ink-3)}
+[data-theme="dark"] .donut .in{background:var(--surface)}
+[data-theme="dark"] .cmdk .box{background:var(--surface)}
+[data-theme="dark"] .cmdk .cfoot kbd{background:var(--surface-3);color:var(--slate-500)}
+[data-theme="dark"] .nav-item .tag.soft{background:var(--ink-3);color:var(--slate-400)}
+[data-theme="dark"] .iconbtn .dot{border-color:var(--surface)}
+[data-theme="dark"] .btn:not(.primary){background:var(--surface-2);color:var(--slate-700);border-color:var(--line)}
+[data-theme="dark"] .tt .cellx .s{color:var(--slate-900)!important}
+[data-theme="dark"] .tt .cellx{border-color:var(--line)!important}
+[data-theme="dark"] .avatar{color:var(--slate-900)!important}
+[data-theme="dark"] .trend.down{color:#FF8087}
+[data-theme="dark"] .trend.up{color:#4ADE80}
+[data-theme="dark"] .cellx .s{color:var(--slate-900)!important}
+[data-theme="dark"] .sec-head .link,[data-theme="dark"] .link{color:var(--brand)}
+[data-theme="dark"] .b-green{color:#4ADE80}
+[data-theme="dark"] .b-amber{color:#F0B45E}
+[data-theme="dark"] .b-blue{color:#93B4FF}
+[data-theme="dark"] .b-red{color:#FF8087}
+[data-theme="dark"] .b-gray{color:var(--slate-600)}
+[data-theme="dark"] [style*="var(--brand-deep)"]{color:#4ADE80!important}
+[data-theme="dark"] [style*="var(--red)"]{color:#FF8087!important}
+[data-theme="dark"] .subtabs button.on{color:var(--brand)}
+[data-theme="dark"] .theme-opt.on{color:var(--brand)}
+[data-theme="dark"] .form-section{color:var(--brand)}
+[data-theme="dark"] .bot-link{color:#4ADE80;border-color:rgba(74,222,128,.35)}
+[data-theme="dark"] .bot-link:hover{color:#fff}
+
+/* accessibility */
+.skip-link{position:absolute;left:12px;top:-48px;z-index:100;background:var(--brand-strong);color:#fff;padding:10px 16px;border-radius:0 0 8px 0;font-weight:600;font-size:13px;transition:top .15s}
+.skip-link:focus{top:0}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.swatch{width:26px;height:26px;border-radius:8px;cursor:pointer;border:2px solid transparent;transition:transform .12s,border-color .12s}
+.swatch:hover{transform:scale(1.08)}
+.swatch.on{border-color:var(--slate-900)}
+.theme-opt{display:flex;align-items:center;gap:8px;padding:9px 14px;border:1px solid var(--line);border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;color:var(--slate-700);background:var(--surface)}
+.theme-opt.on{border-color:var(--brand);background:var(--brand-soft);color:var(--brand-deep)}

@@ -1,0 +1,62 @@
+/* ---- Attendance ---- */
+M.attendance=()=>{const tab=getSubTab('attendance','daily');const canSeeStaff=['Administrator','Principal','Accountant'].includes(state.role);
+  const head=`<div class="page-head"><div class="ph-l"><h2>Attendance</h2><p>${tab==='daily'?'Mark the '+(state.attSession||'AM')+' register for Grade 10 · A — Saturday, 14 June.':tab==='monthly'?'Month-at-a-glance register with per-student rates.':tab==='staff'?'Staff self-marked daily attendance — feeds into payroll.':'Attendance trends, grade bands and chronic-absence follow-up.'}</p></div>
+  <div class="ph-r">${tab==='daily'?(canWrite()?`<button class="btn" onclick="markAll('P')">Mark all present</button><button class="btn primary" onclick="submitRegister()">Submit register</button>`:`<span class="badge b-gray"><span class="bd"></span>View only</span>`):tab==='staff'?`<button class="btn" onclick="go('payroll')">${ic('payroll',16)} Open payroll</button>`:`<button class="btn" onclick="exportCSV('attendance-grade10A.csv',['Student','ID','Attendance %'],STUDENTS.map(s=>[s.name,s.id,s.att]))">${ic('download',16)} Export</button>`}</div></div>
+  ${subTabs('attendance',[['daily','Daily register','att'],['monthly','Monthly summary','cal'],...(canSeeStaff?[['staff','Staff attendance','staff']]:[]),['analytics','Analytics','reports']])}`;
+  const teacherNudge=(state.role==='Teacher'&&tab==='daily'&&!myStaffAttendanceToday())?`<div class="card pad" style="margin-bottom:14px;background:rgba(37,99,235,.06);border-color:rgba(37,99,235,.25)"><div class="flex ac jb" style="flex-wrap:wrap;gap:10px"><div class="flex ac" style="gap:8px"><span style="font-size:18px">👋</span><span style="font-size:12.5px;font-weight:600;color:var(--blue)">Mark your own attendance before taking the class register</span></div><div class="flex ac" style="gap:6px"><button class="btn sm primary" onclick="markMyAttendance('Present');render()">I'm present</button><button class="btn sm" onclick="markMyAttendance('Remote');render()">Remote</button></div></div></div>`:'';
+  return head+teacherNudge+(tab==='monthly'?attMonthly():tab==='staff'&&canSeeStaff?attStaffView():tab==='analytics'?attAnalytics():attDaily());};
+function attStaffView(){const names={Administrator:'Rashid Al Maktoum',Principal:'Dr. Salma Haddad',Accountant:'Joseph Thomas',Teacher:'Rohan Mehta'};
+ const rows=Object.entries(names).map(([role,name])=>({role,name,a:STAFF_ATTENDANCE[name]}));
+ const marked=rows.filter(r=>r.a).length;
+ return `<div class="grid cols-4" style="margin-bottom:16px">
+   ${kpi('att','#17A24A','Marked today',marked+'/'+rows.length,null)}${kpi('students','#2563EB','Present',String(rows.filter(r=>r.a&&r.a.status==='Present').length),null)}
+   ${kpi('comm','#E2920C','Remote',String(rows.filter(r=>r.a&&r.a.status==='Remote').length),null)}${kpi('payroll','#0E7C39','Not marked',String(rows.length-marked),null,"toast('Reminder sent to unmarked staff')")}</div>
+  <div class="card pad"><div class="sec-head" style="margin-bottom:6px"><h3 style="font-size:15px">All staff · today</h3><span class="muted" style="font-size:12px">Self-marked - feeds payroll attendance column</span></div>
+  <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Employee</th><th>Role</th><th>Status</th><th>Time</th></tr></thead><tbody>
+  ${rows.map(r=>`<tr><td>${cellUser(r.name,'')}</td><td class="muted">${r.role}</td><td>${r.a?chip(r.a.status,r.a.status==='Present'?'green':r.a.status==='Remote'?'blue':'amber'):chip('Not marked','gray')}</td><td class="num muted">${r.a?r.a.time:'-'}</td></tr>`).join('')}
+  </tbody></table></div></div>`}
+function attInitialStatus(i){if(state.attSession==='PM')return i%9!==7&&i!==5?'P':i===7?'L':i===5?'A':'P';return i%9!==4&&i!==9?'P':i===4?'L':i===9?'A':'P'}
+function attCounts(){const rows=document.querySelectorAll('.seg2');
+ if(rows.length===STUDENTS.length){const p=[],l=[],a=[];rows.forEach((seg,i)=>{const st=seg.querySelector('.P.on')?'P':seg.querySelector('.L.on')?'L':seg.querySelector('.A.on')?'A':attInitialStatus(i);(st==='P'?p:st==='L'?l:a).push(STUDENTS[i])});return{p,l,a}}
+ const p=[],l=[],a=[];STUDENTS.forEach((s,i)=>{const st=attInitialStatus(i);(st==='P'?p:st==='L'?l:a).push(s)});return{p,l,a}}
+function attKpiDrilldown(status){const c=attCounts();const list=status==='P'?c.p:status==='L'?c.l:c.a;const label=status==='P'?'Present':status==='L'?'Late':'Absent';
+ return detailDrawer({title:label+' - '+(state.attSession||'AM')+' session',sub:list.length+' student'+(list.length===1?'':'s')+' - Grade 10 A, Sat 14 Jun',color:status==='P'?'#17A24A':status==='L'?'#E2920C':'#E11D2A',badge:ic('att',18),
+  sections:[{h:'Students',html:list.length?'<div class="card pad" style="box-shadow:none">'+list.map(s=>'<div class="lrow" style="cursor:pointer;border-bottom:1px solid var(--line-soft)" onclick="closeDrawer();openDrawer(studentProfile(\''+s.id+'\'))">'+avatar(s.name)+'<div style="flex:1"><div style="font-weight:600;color:var(--slate-900);font-size:12.5px">'+s.name+'</div><div class="muted" style="font-size:11px">Roll '+s.roll+' - '+s.id+'</div></div></div>').join('')+'</div>':'<div class="muted" style="font-size:12.5px">None.</div>'}],
+  footer:[['Close','closeDrawer()',true]]})}
+function attDaily(){const c=attCounts();const tot=STUDENTS.length||1;
+ return `<div class="grid cols-4" style="margin-bottom:16px">
+    ${kpi('att','#17A24A','Present',String(c.p.length),null,"openDrawer(attKpiDrilldown('P'))")}${kpi('students','#E2920C','Late',String(c.l.length),null,"openDrawer(attKpiDrilldown('L'))")}${kpi('comm','#E11D2A','Absent',String(c.a.length),null,"openDrawer(attKpiDrilldown('A'))")}${kpi('reports','#2563EB','Class rate',Math.round(c.p.length/tot*100)+'%',null)}
+  </div>
+  <div class="card pad"><div class="flex ac jb" style="margin-bottom:12px"><div class="field search"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input placeholder="Find student" oninput="document.querySelectorAll('.att-row').forEach(r=>r.style.display=r.dataset.n.includes(this.value.toLowerCase())?'flex':'none')"></div>
+  <div class="seg"><button class="${(state.attSession||'AM')==='AM'?'on':''}" onclick="state.attSession='AM';render()">AM Session</button><button class="${state.attSession==='PM'?'on':''}" onclick="state.attSession='PM';render()">PM Session</button></div></div>
+  <div class="att" id="attList">${STUDENTS.map((s,i)=>`<div class="att-row" data-n="${s.name.toLowerCase()}">${avatar(s.name)}<div><div style="font-weight:600;color:var(--slate-900);font-size:13.5px">${s.name}</div><div class="muted" style="font-size:11.5px">Roll ${s.roll} · ${s.id}</div></div>
+    <div class="seg2" data-i="${i}"><button class="P${(state.attSession==='PM'?(i%9!==7&&i!==5):(i%9!==4&&i!==9))?' on':''}" onclick="mark(${i},'P')">P</button><button class="L${(state.attSession==='PM'?i===7:i===4)?' on':''}" onclick="mark(${i},'L')">L</button><button class="A${(state.attSession==='PM'?i===5:i===9)?' on':''}" onclick="mark(${i},'A')">A</button></div></div>`).join('')}</div>
+  </div>`}
+function attMonthly(){const days=Array.from({length:18},(_,i)=>i+1);const status=(s,d)=>{const h=hashStr(s.id+'_'+d);return h%20===0?'A':h%13===0?'L':'P'};
+  return `<div class="card pad"><div class="flex ac jb" style="margin-bottom:14px;flex-wrap:wrap;gap:10px"><div><h3 style="font-size:15px">Monthly register · June 2025</h3><div class="muted" style="font-size:12px">Grade 10 · A — ${days.length} school days</div></div>
+    <div class="field sel"><select onchange="toast('Loaded '+this.value)"><option>June 2025</option><option>May 2025</option><option>April 2025</option></select></div></div>
+  <div class="tbl-wrap"><table class="tbl"><thead><tr><th style="position:sticky;left:0;background:#fff;z-index:1">Student</th>${days.map(d=>`<th style="text-align:center;padding:6px 3px;font-size:10px">${d}</th>`).join('')}<th class="right">Rate</th></tr></thead><tbody>
+  ${STUDENTS.slice(0,12).map(s=>{let p=0;const cells=days.map(d=>{const st=status(s,d);if(st==='P')p++;const c=st==='P'?'#17A24A':st==='L'?'#E2920C':'#E11D2A';return `<td style="text-align:center;padding:4px 3px"><span style="display:inline-block;width:17px;height:17px;line-height:17px;border-radius:5px;font-size:9.5px;font-weight:700;color:#fff;background:${c}">${st}</span></td>`}).join('');
+    const pct=Math.round(p/days.length*100);return `<tr><td style="position:sticky;left:0;background:#fff;font-weight:600;color:var(--slate-900);font-size:12.5px">${s.name}</td>${cells}<td class="right num" style="font-weight:700;color:${pct>=90?'var(--brand)':pct>=80?'var(--amber)':'var(--red)'}">${pct}%</td></tr>`}).join('')}
+  </tbody></table></div>
+  <div class="flex" style="gap:16px;margin-top:12px;font-size:11.5px;color:var(--slate-500)"><span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#17A24A;vertical-align:middle"></span> Present</span><span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#E2920C;vertical-align:middle"></span> Late</span><span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#E11D2A;vertical-align:middle"></span> Absent</span></div></div>`}
+function attAnalytics(){const chronic=STUDENTS.filter(s=>s.att<85);
+  return `<div class="grid cols-4" style="margin-bottom:18px">
+    ${kpi('att','#17A24A','Avg attendance','94.2%',{dir:'up',v:'+1.1%',note:'vs last month'})}
+    ${kpi('students','#E11D2A','Chronic absentees',String(chronic.length),{dir:'down',v:'<85%',note:'flagged'})}
+    ${kpi('cert','#0E7C39','Perfect attendance','38',{dir:'up',v:'this month',note:''})}
+    ${kpi('reports','#2563EB','Working days','18',null)}</div>
+  <div class="grid cols-2" style="margin-bottom:18px">
+    <div class="card pad"><div class="sec-head"><h3>Attendance trend — 6 months</h3></div>${vbars([{lb:'Jan',val:'92%',pct:92},{lb:'Feb',val:'93%',pct:93},{lb:'Mar',val:'91%',pct:91,alt:true},{lb:'Apr',val:'94%',pct:94},{lb:'May',val:'93%',pct:93},{lb:'Jun',val:'94%',pct:94}])}</div>
+    <div class="card pad"><div class="sec-head"><h3>By grade band</h3></div>
+    ${[['KG–Grade 2',96],['Grade 3–5',95],['Grade 6–8',93],['Grade 9–10',92],['Grade 11–12',90]].map(g=>`<div style="margin-bottom:13px"><div class="flex ac jb" style="margin-bottom:5px"><span style="font-size:13px;color:var(--slate-700)">${g[0]}</span><span class="num" style="font-weight:600">${g[1]}%</span></div>${cbar(g[1],g[1]>=94?'green':g[1]>=90?'blue':'amber')}</div>`).join('')}</div>
+  </div>
+  <div class="card pad"><div class="sec-head"><h3>Chronic absentees · needs follow-up</h3><span class="muted" style="font-size:12px">Below 85% attendance</span></div>
+  <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Student</th><th>Grade</th><th class="right">Attendance</th><th>Action</th></tr></thead><tbody>
+  ${(chronic.length?chronic:STUDENTS.slice(0,3)).map(s=>`<tr style="cursor:pointer" onclick="openDrawer(studentProfile('${s.id}'))"><td>${cellUser(s.name,s.id)}</td><td>${s.grade}</td><td class="right num" style="color:var(--red);font-weight:700">${s.att}%</td><td><button class="btn sm" onclick="event.stopPropagation();toast('Guardian notified')">Notify guardian</button></td></tr>`).join('')}
+  </tbody></table></div></div>`}
+window.submitRegister=function(){if(!guardWrite('Submitting the register'))return;logAudit('Submitted '+(state.attSession||'AM')+' register - Grade 10 A','Attendance');toast('Register submitted - locked - parents notified')};
+function mark(i,v){if(!canWrite())return;const seg=document.querySelector('.seg2[data-i="'+i+'"]');seg.querySelectorAll('button').forEach(b=>b.classList.remove('on'));seg.querySelector('.'+v).classList.add('on');updateAttKpis()}
+function markAll(v){if(!guardWrite('Marking attendance'))return;document.querySelectorAll('.seg2').forEach(seg=>{seg.querySelectorAll('button').forEach(b=>b.classList.remove('on'));seg.querySelector('.'+v).classList.add('on')});updateAttKpis();toast('All marked present')}
+function updateAttKpis(){let p=0,l=0,a=0;document.querySelectorAll('.seg2').forEach(s=>{if(s.querySelector('.P.on'))p++;else if(s.querySelector('.L.on'))l++;else if(s.querySelector('.A.on'))a++});const tot=p+l+a||1;const k=document.querySelectorAll('#view .kp-val');if(k.length>=4){k[0].textContent=p;k[1].textContent=l;k[2].textContent=a;k[3].textContent=Math.round(p/tot*100)+'%'}}
+

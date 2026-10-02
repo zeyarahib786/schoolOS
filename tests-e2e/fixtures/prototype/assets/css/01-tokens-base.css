@@ -1,0 +1,32 @@
+
+:root{
+  --brand:#17A24A; --brand-strong:#0E7C39; --brand-deep:#0A5E2C;
+  --brand-soft:#E9F8EF; --brand-line:#CFEEDB; --brand-glow:rgba(23,162,74,.20);
+  --red:#E11D2A; --red-soft:#FDECEC; --red-line:#F6C9CC;
+  --amber:#E2920C; --amber-soft:#FCF3E2;
+  --blue:#2563EB; --blue-soft:#EAF0FE;
+  --ink:#0C1015; --ink-2:#141A22; --ink-3:#1D2530; --ink-line:rgba(255,255,255,.08);
+  --slate-900:#0F141A; --slate-700:#2C3744; --slate-600:#475467; --slate-500:#616B7A; --slate-400:#66717F;
+  --line:#E6EAF0; --line-soft:#EFF2F7;
+  --bg:#F5F7FB; --surface:#FFFFFF; --surface-2:#FAFBFD; --surface-3:#F3F6FA;
+  --r-xs:8px; --r-sm:10px; --r-md:14px; --r-lg:18px; --r-xl:24px;
+  --sh-1:0 1px 2px rgba(16,24,40,.05),0 1px 3px rgba(16,24,40,.06);
+  --sh-2:0 4px 12px rgba(16,24,40,.07),0 2px 4px rgba(16,24,40,.04);
+  --sh-3:0 18px 48px rgba(13,20,30,.16),0 6px 16px rgba(13,20,30,.08);
+  --sb-w:262px;
+  --ff-display:'Sora',system-ui,sans-serif;
+  --ff:'Plus Jakarta Sans',system-ui,-apple-system,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+/* ===== Language scripts (AR / UR / HI) ===== */
+html[lang="ar"]{--ff:'Noto Sans Arabic','Plus Jakarta Sans',system-ui,sans-serif;--ff-display:'Noto Sans Arabic','Sora',system-ui,sans-serif}
+html[lang="ur"]{--ff:'Noto Nastaliq Urdu','Noto Sans Arabic','Plus Jakarta Sans',system-ui,serif;--ff-display:'Noto Nastaliq Urdu','Noto Sans Arabic','Sora',serif}
+html[lang="hi"]{--ff:'Noto Sans Devanagari','Plus Jakarta Sans',system-ui,sans-serif;--ff-display:'Noto Sans Devanagari','Sora',system-ui,sans-serif}
+html[lang="ur"] body{line-height:2}
+html[lang="ur"] .nav-item,html[lang="ur"] .btn,html[lang="ur"] h1,html[lang="ur"] h2,html[lang="ur"] h3{line-height:1.9}
+html[dir="rtl"] .nav-item{flex-direction:row}
+html[dir="rtl"] .sec-head .link{margin-left:0;margin-right:auto}
+html[dir="rtl"] .kp-sub,html[dir="rtl"] .flex{direction:rtl}
+html[dir="rtl"] .tbl th,html[dir="rtl"] .tbl td{text-align:right}
+html[dir="rtl"] .right,html[dir="rtl"] .num.right{text-align:left}

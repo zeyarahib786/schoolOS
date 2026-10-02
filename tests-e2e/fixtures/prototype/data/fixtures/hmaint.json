@@ -1,0 +1,52 @@
+[
+ {
+  "id": "HM-118",
+  "room": "FB-203",
+  "issue": "AC not cooling — unit needs regas",
+  "cat": "HVAC",
+  "prio": "High",
+  "by": "Warden",
+  "status": "Open",
+  "date": "13 Jun"
+ },
+ {
+  "id": "HM-117",
+  "room": "OB-110",
+  "issue": "Leaking tap in washroom",
+  "cat": "Plumbing",
+  "prio": "Medium",
+  "by": "Boarder",
+  "status": "In progress",
+  "date": "12 Jun"
+ },
+ {
+  "id": "HM-116",
+  "room": "FB-105",
+  "issue": "Broken study chair",
+  "cat": "Furniture",
+  "prio": "Low",
+  "by": "Warden",
+  "status": "Open",
+  "date": "12 Jun"
+ },
+ {
+  "id": "HM-115",
+  "room": "OB-208",
+  "issue": "Light flickering — replace ballast",
+  "cat": "Electrical",
+  "prio": "Medium",
+  "by": "Boarder",
+  "status": "In progress",
+  "date": "11 Jun"
+ },
+ {
+  "id": "HM-114",
+  "room": "FB-101",
+  "issue": "Wardrobe door hinge",
+  "cat": "Furniture",
+  "prio": "Low",
+  "by": "Boarder",
+  "status": "Resolved",
+  "date": "10 Jun"
+ }
+]

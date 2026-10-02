@@ -1,0 +1,56 @@
+/* ---- LMS ---- */
+function lmsInit(c){if(!c.assignments)c.assignments=[
+ {title:'Homework 1',type:'Assignment',due:'18 Jun',status:'Open',submissions:Math.round((c.prog||50)/100*28),total:28,graded:Math.round((c.prog||50)/100*28*0.7),myStatus:'Submitted',myGrade:'A-'},
+ {title:'Quiz - Chapter review',type:'Quiz',due:'22 Jun',status:'Open',submissions:Math.round((c.prog||50)/100*28*0.6),total:28,graded:0,myStatus:'Not submitted',myGrade:null},
+ {title:'Project proposal',type:'Assignment',due:'05 Jul',status:'Scheduled',submissions:0,total:28,graded:0,myStatus:'Not open yet',myGrade:null}];return c}
+function lmsAllAssignments(){const list=[];roleScopedCourses().forEach(c=>{lmsInit(c);c.assignments.forEach((a,i)=>list.push({course:c.t,idx:i,...a}))});return list}
+function lmsPendingCount(){return roleScopedCourses().reduce((a,c)=>a+lmsInit(c).assignments.reduce((x,y)=>x+(y.submissions-y.graded),0),0)}
+function courseDetail(title){const c=COURSES.find(x=>x.t===title);if(!c)return '';lmsInit(c);const readOnly=!canWrite();
+ const isStudentView=state.role==='Student'||state.role==='Parent';
+ return detailDrawer({title:c.t,sub:c.teacher+' · '+c.cls,color:'#2563EB',badge:ic('lms',18),
+  stats:isStudentView?[['Progress',c.prog+'%',c.prog>=80?'green':c.prog>=50?'blue':'amber'],['Assignments',String(c.assignments.length),'blue'],['To do',String(c.assignments.filter(a=>a.myStatus==='Not submitted').length),'red']]
+   :[['Progress',c.prog+'%',c.prog>=80?'green':c.prog>=50?'blue':'amber'],['Assignments',String(c.assignments.length),'blue'],['Pending grading',String(c.assignments.reduce((a,x)=>a+(x.submissions-x.graded),0)),'red']],
+  sections:[{h:isStudentView?'My work':'Assignments & quizzes',html:'<div class="card pad" style="box-shadow:none">'+c.assignments.map((a,i)=>{
+    if(isStudentView)return '<div class="lrow" style="border-bottom:1px solid var(--line-soft);padding:9px 0"><div style="flex:1"><div style="font-weight:600;color:var(--slate-900);font-size:13px">'+a.title+'</div><div class="muted" style="font-size:11px">'+a.type+' - due '+a.due+(a.myGrade?' - grade: '+a.myGrade:'')+'</div></div>'+chip(a.myStatus,a.myStatus==='Submitted'?'green':a.myStatus==='Not open yet'?'gray':'amber')+'</div>';
+    return '<div class="lrow" style="border-bottom:1px solid var(--line-soft);padding:9px 0"><div style="flex:1"><div style="font-weight:600;color:var(--slate-900);font-size:13px">'+a.title+'</div><div class="muted" style="font-size:11px">'+a.type+' - due '+a.due+' - '+a.submissions+'/'+a.total+' submitted, '+a.graded+' graded</div></div>'+chip(a.status,a.status==='Open'?'green':a.status==='Scheduled'?'amber':'gray')+(canWrite()&&a.submissions>a.graded?'<button class="btn sm" style="margin-left:8px" onclick="gradeSubmissions(\''+title.replace(/\x27/g,"\\\x27")+'\','+i+')">Grade</button>':'')+'</div>';
+   }).join('')+'</div>'},
+   {h:'Course info',rows:[['Class',c.cls],['Teacher',c.teacher],['Content types','PDF, video, worksheet, quiz, live class link']]}],
+  footer:isStudentView?[['Close','closeDrawer()',true]]:readOnly?[['Close','closeDrawer()',true]]
+   :[['Message class',"logAudit('Messaged class - "+c.cls.replace(/'/g,"\\'")+"','LMS');closeDrawer();toast('Message sent to "+c.cls.replace(/'/g,"\\'")+"')"],['New assignment',"newAssignmentForm('"+title.replace(/'/g,"\\'")+"')",true]]})}
+window.gradeSubmissions=function(title,idx){if(!guardWrite('Grading'))return;const c=COURSES.find(x=>x.t===title);if(!c)return;const a=c.assignments[idx];const toGrade=a.submissions-a.graded;a.graded=a.submissions;logAudit('Graded '+toGrade+' submissions - '+a.title+' ('+title+')','LMS');openDrawer(courseDetail(title));toast(toGrade+' submission'+(toGrade>1?'s':'')+' graded & feedback released')};
+function newAssignmentForm(title){if(!guardWrite('Publishing assignments'))return;state._lmsCourse=title;formDrawer('New assignment',title,[{label:'Title',key:'title',req:true},{label:'Type',key:'type',opts:['Assignment','Quiz','Project'],half:true},{label:'Due date',key:'due',type:'date',half:true},{label:'Visibility',key:'vis',opts:['Publish now','Schedule']}],'Create & publish','','saveAssignment')}
+window.saveAssignment=function(v){if(!guardWrite('Publishing assignments'))return false;const c=COURSES.find(x=>x.t===state._lmsCourse);if(!c)return false;lmsInit(c);const title=(v.title||'').trim();if(!title){toast('Title is required');return false}
+ c.assignments.unshift({title,type:v.type||'Assignment',due:v.due||'TBC',status:v.vis==='Schedule'?'Scheduled':'Open',submissions:0,total:28,graded:0,myStatus:'Not open yet',myGrade:null});
+ logAudit('Published assignment - '+title+' ('+c.t+')','LMS');closeDrawer();render();openDrawer(courseDetail(c.t));toast('Assignment published - '+title);return false};
+function assignmentStatusOf(a){if(a.status==='Scheduled')return 'Ready to allocate';if(a.graded<a.submissions)return 'Pending';if(a.submissions>=a.total&&a.graded>=a.submissions)return 'Complete';return 'Open'}
+function lmsStatusBoard(){const list=lmsAllAssignments().map(a=>({...a,bucket:assignmentStatusOf(a)}));
+ const buckets=['Ready to allocate','Open','Pending','Complete'];
+ return detailDrawer({title:'Assignment status board',sub:list.length+' items across '+roleScopedCourses().length+' course'+(roleScopedCourses().length===1?'':'s'),color:'#2563EB',badge:ic('exam',18),
+  sections:buckets.map(bk=>({h:bk+' ('+list.filter(x=>x.bucket===bk).length+')',html:'<div class="card pad" style="box-shadow:none">'+(list.filter(x=>x.bucket===bk).map(a=>'<div class="lrow" style="cursor:pointer;border-bottom:1px solid var(--line-soft)" onclick="closeDrawer();openDrawer(courseDetail(\''+a.course.replace(/\x27/g,"\\\x27")+'\'))"><div style="flex:1"><div style="font-weight:600;color:var(--slate-900);font-size:13px">'+a.title+'</div><div class="muted" style="font-size:11px">'+a.course+' - due '+a.due+'</div></div>'+chip(a.type,'gray')+'</div>').join('')||'<div class="muted" style="font-size:12px;padding:6px 0">None</div>')+'</div>'})),
+  footer:[['Close','closeDrawer()',true]]})}
+function lmsAssignmentsDrawer(){const list=lmsAllAssignments();
+ return detailDrawer({title:'Assignments & quizzes',sub:list.length+' across '+roleScopedCourses().length+' course'+(roleScopedCourses().length===1?'':'s'),color:'#2563EB',badge:ic('exam',18),
+  sections:[{h:'All items',html:'<div class="card pad" style="box-shadow:none">'+list.map(a=>'<div class="lrow" style="border-bottom:1px solid var(--line-soft);padding:9px 0" onclick="closeDrawer();openDrawer(courseDetail(\''+a.course.replace(/\x27/g,"\\\x27")+'\'))" style="cursor:pointer"><div style="flex:1"><div style="font-weight:600;color:var(--slate-900);font-size:13px">'+a.title+'</div><div class="muted" style="font-size:11px">'+a.course+' - due '+a.due+'</div></div>'+chip(a.status,a.status==='Open'?'green':a.status==='Scheduled'?'amber':'gray')+'</div>').join('')+'</div>'}],
+  footer:[['Close','closeDrawer()',true]]})}
+function lmsPendingDrawer(){const list=lmsAllAssignments().filter(a=>a.submissions>a.graded);
+ return detailDrawer({title:'Pending grading',sub:list.length+' assignment'+(list.length===1?'':'s')+' with ungraded submissions',color:'#B45309',badge:ic('students',18),
+  sections:[{h:'Needs grading',html:list.length?'<div class="card pad" style="box-shadow:none">'+list.map(a=>'<div class="lrow" style="border-bottom:1px solid var(--line-soft);padding:9px 0"><div style="flex:1"><div style="font-weight:600;color:var(--slate-900);font-size:13px">'+a.title+'</div><div class="muted" style="font-size:11px">'+a.course+' - '+(a.submissions-a.graded)+' ungraded of '+a.submissions+'</div></div>'+(canWrite()?'<button class="btn sm" onclick="gradeSubmissions(\''+a.course.replace(/\x27/g,"\\\x27")+'\','+a.idx+')">Grade</button>':'')+'</div>').join('')+'</div>':'<div class="muted" style="font-size:12.5px">Nothing pending - all caught up.</div>'}],
+  footer:[['Close','closeDrawer()',true]]})}
+function lmsEngagementDrawer(){const cs=roleScopedCourses();
+ return detailDrawer({title:'Engagement by course',sub:'Average '+Math.round(cs.reduce((a,c)=>a+c.prog,0)/(cs.length||1))+'% across '+cs.length+' course'+(cs.length===1?'':'s'),color:'#0E7C39',badge:ic('reports',18),
+  sections:[{h:'Courses',html:'<div class="card pad" style="box-shadow:none">'+cs.map(c=>'<div class="lrow" style="border-bottom:1px solid var(--line-soft);padding:9px 0"><div style="flex:1"><div style="font-weight:600;color:var(--slate-900);font-size:13px">'+c.t+'</div><div class="muted" style="font-size:11px">'+c.teacher+' - '+c.cls+'</div></div><b class="num">'+c.prog+'%</b></div>').join('')+'</div>'}],
+  footer:[['Close','closeDrawer()',true]]})}
+M.lms=()=>{const cs=roleScopedCourses();const totAssign=cs.reduce((a,c)=>a+lmsInit(c).assignments.length,0);const pending=lmsPendingCount();const readOnly=!canWrite();
+ const scopeNote=state.role==='Teacher'?'Showing your courses only.':state.role==='Student'?'Showing courses for your grade.':state.role==='Parent'?"Showing your child's courses (read-only).":'';
+ return `
+  <div class="page-head"><div class="ph-l"><h2>Learning (LMS)</h2><p>${cs.length} course${cs.length===1?'':'s'}${scopeNote?' - '+scopeNote:''} Click a course for assignments${readOnly?'':', submissions and grading'}.</p></div>
+  <div class="ph-r"><button class="btn" onclick="openDrawer(lmsStatusBoard())">${ic('exam',16)} Status board</button>${readOnly?'':'<button class="btn primary" onclick="formDrawer(\'New course\',\'LMS course\',[{label:\'Course title\',req:true},{label:\'Teacher\'},{label:\'Class\'},{label:\'Start date\',type:\'date\'}],\'Create course\',\'\',\'addCourse\')">'+ic('plus',16)+' New course</button>'}</div></div>
+  <div class="grid cols-4" style="margin-bottom:18px">
+    ${kpi('lms','#17A24A','Active courses',String(cs.length),null,"go('lms')")}${kpi('exam','#2563EB','Assignments',String(totAssign),null,"openDrawer(lmsAssignmentsDrawer())")}
+    ${kpi('students','#B45309','Pending grading',String(pending),pending?{dir:'down',v:'action needed',note:''}:null,"openDrawer(lmsPendingDrawer())")}${kpi('reports','#0E7C39','Avg. engagement',cs.length?Math.round(cs.reduce((a,c)=>a+c.prog,0)/cs.length)+'%':'0%',null,"openDrawer(lmsEngagementDrawer())")}</div>
+  <div class="grid cols-2">
+  ${cs.map(c=>`<div class="card pad" style="cursor:pointer" onclick="openDrawer(courseDetail('${c.t}'))"><div class="flex ac jb"><div style="font-weight:600;color:var(--slate-900);font-size:14.5px">${c.t}</div><span class="badge b-gray"><span class="bd"></span>${c.cls}</span></div>
+    <div class="muted" style="font-size:12.5px;margin:6px 0 14px">${c.teacher} · ${c.due}</div>
+    <div class="flex ac" style="gap:10px">${cbar(c.prog,c.prog>=80?'green':c.prog>=50?'blue':'amber')}<span class="num" style="font-size:12px;font-weight:600;color:var(--slate-700);min-width:34px">${c.prog}%</span></div>
+  </div>`).join('')||`<div class="empty" style="grid-column:1/-1"><div class="ei">${ic('lms',26)}</div><h3>No courses in view</h3><p>${state.role==='Teacher'?'You are not assigned to any course yet.':'No courses found for your grade.'}</p></div>`}</div>`};
+

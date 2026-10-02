@@ -1,0 +1,66 @@
+[
+ {
+  "name": "Fatima Al Hashimi",
+  "id": "ANS-1042",
+  "grade": "Grade 10 · A",
+  "plan": "Premium · Full board",
+  "bal": 145,
+  "last": "12 Jun"
+ },
+ {
+  "name": "Yusuf Rahman",
+  "id": "ANS-1043",
+  "grade": "Grade 10 · A",
+  "plan": "Standard · Lunch only",
+  "bal": 14,
+  "last": "05 Jun"
+ },
+ {
+  "name": "Aisha Noor",
+  "id": "ANS-1058",
+  "grade": "Grade 9 · B",
+  "plan": "Premium · Full board",
+  "bal": 88,
+  "last": "11 Jun"
+ },
+ {
+  "name": "Sara Abdullah",
+  "id": "ANS-1061",
+  "grade": "Grade 9 · A",
+  "plan": "Allergy-safe (nut-free)",
+  "bal": 132,
+  "last": "10 Jun"
+ },
+ {
+  "name": "Daniel George",
+  "id": "ANS-1066",
+  "grade": "Grade 12 · A",
+  "plan": "Halal Special",
+  "bal": 9,
+  "last": "03 Jun"
+ },
+ {
+  "name": "Omar Siddiqui",
+  "id": "ANS-1088",
+  "grade": "Grade 11 · C",
+  "plan": "Standard · Lunch only",
+  "bal": 56,
+  "last": "12 Jun"
+ },
+ {
+  "name": "Layla Mansour",
+  "id": "ANS-1052",
+  "grade": "Grade 8 · A",
+  "plan": "Premium · Full board",
+  "bal": 120,
+  "last": "12 Jun"
+ },
+ {
+  "name": "Hamza Ali",
+  "id": "ANS-1071",
+  "grade": "Grade 12 · B",
+  "plan": "Halal Special",
+  "bal": 7,
+  "last": "01 Jun"
+ }
+]

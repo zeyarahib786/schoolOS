@@ -1,0 +1,751 @@
+[
+ {
+  "k": [
+   "student",
+   "students",
+   "add student",
+   "new student",
+   "enrol",
+   "enroll",
+   "register",
+   "pupil",
+   "learner",
+   "admission number"
+  ],
+  "a": "The Students module holds every learner’s profile — identity, guardian, medical, transport and fee status. Use “Add student” for a full multi-section intake form, or open any record for academic history and downloadable report cards.",
+  "links": [
+   [
+    "students",
+    "Students"
+   ],
+   [
+    "admissions",
+    "Admissions"
+   ]
+  ]
+ },
+ {
+  "k": [
+   "admission",
+   "admissions",
+   "apply",
+   "application",
+   "enquiry",
+   "lead",
+   "prospect",
+   "pipeline",
+   "crm"
+  ],
+  "a": "Admissions manages applications from enquiry to enrolment. The Enrolment CRM tracks leads through New → Contacted → Toured → Application → Won, with follow-ups and conversion.",
+  "links": [
+   [
+    "admissions",
+    "Admissions"
+   ],
+   [
+    "crm",
+    "Enrolment CRM"
+   ]
+  ]
+ },
+ {
+  "k": [
+   "staff",
+   "teacher",
+   "teachers",
+   "employee",
+   "hr",
+   "human resource",
+   "hire",
+   "onboard",
+   "leave",
+   "department"
+  ],
+  "a": "Staff & HR covers employee profiles, departments, onboarding and leave requests. Payroll handles salaries and payslips.",
+  "links": [
+   [
+    "staff",
+    "Staff & HR"
+   ],
+   [
+    "payroll",
+    "Payroll"
+   ]
+  ]
+ },
+ {
+  "k": [
+   "parent",
+   "parents",
+   "guardian",
+   "family",
+   "mother",
+   "father"
+  ],
+  "a": "Parents lists guardians linked to each student, with contacts and communication tools.",
+  "links": [
+   [
+    "parents",
+    "Parents"
+   ]
+  ]
+ },
+ {
+  "k": [
+   "attendance",
+   "present",
+   "absent",
+   "register",
+   "check in",
+   "late"
+  ],
+  "a": "Attendance lets you mark and review daily attendance by class, with present/absent KPIs and below-90% review flags.",
+  "links": [
+   [
+    "attendance",
+    "Attendance"
+   ]
+  ]
+ },
+ {
+  "k": [
+   "exam",
+   "exams",
+   "grade",
+   "grades",
+   "gradebook",
+   "marks",
+   "result",
+   "results",
+   "report card",
+   "assessment"
+  ],
+  "a": "Exams & Gradebook records marks and grades. Enter marks and generate downloadable report cards from a student’s profile.",
+  "links": [
+   [
+    "exams",
+    "Exams & Gradebook"
+   ],
+   [
+    "students",
+    "Students"
+   ]
+  ]
+ },
+ {
+  "k": [
+   "fee",
+   "fees",
+   "invoice",
+   "invoices",
+   "payment",
+   "pay",
+   "billing",
+   "due",
+   "overdue",
+   "finance",
+   "tuition",
+   "statement"
+  ],
+  "a": "Fees & Invoicing tracks tuition, transport and activity charges with paid/due/overdue status. Record payments and download fee statements (which include the local tax framework).",
+  "links": [
+   [
+    "fees",
+    "Fees & Invoicing"
+   ]
+  ]
+ },
+ {
+  "k": [
+   "timetable",
+   "schedule",
+   "period",
+   "periods",
+   "class schedule",
+   "lessons"
+  ],
+  "a": "Timetable shows the weekly class schedule grid, colour-coded by subject.",
+  "links": [
+   [
+    "timetable",
+    "Timetable"
+   ]
+  ]
+ },
+ {
+  "k": [
+   "class",
+   "classes",
+   "section",
+   "sections",
+   "stream",
+   "division"
+  ],
+  "a": "Classes & Sections manages grade sections, streams, class teachers and capacity.",
+  "links": [
+   [
+    "classes",
+    "Classes & Sections"
+   ]
+  ]
+ },
+ {
+  "k": [
+   "curriculum",
+   "syllabus",
+   "unit",
+   "units",
+   "learning outcome",
+   "scheme"
+  ],
+  "a": "Curriculum organises subjects into units, terms and learning outcomes.",
+  "links": [
+   [
+    "curriculum",
+    "Curriculum"
+   ]
+  ]
+ },
+ {
+  "k": [
+   "lms",
+   "learning",
+   "course",
+   "courses",
+   "online",
+   "elearning",
+   "quiz",
+   "assignment",
+   "homework"
+  ],
+  "a": "Learning (LMS) hosts courses, assignments and quizzes for blended learning.",
+  "links": [
+   [
+    "lms",
+    "Learning (LMS)"
+   ]
+  ]
+ },
+ {
+  "k": [
+   "behaviour",
+   "behavior",
+   "discipline",
+   "merit",
+   "demerit",
+   "incident",
+   "conduct"
+  ],
+  "a": "Behaviour logs merits and incidents to track conduct over time.",
+  "links": [
+   [
+    "behaviour",
+    "Behaviour"
+   ]
+  ]
+ },
+ {
+  "k": [
+   "health",
+   "clinic",
+   "medical",
+   "nurse",
+   "sick",
+   "infirmary",
+   "allergy"
+  ],
+  "a": "Health & Clinic records clinic visits, reasons and actions taken, plus medical alerts.",
+  "links": [
+   [
+    "health",
+    "Health & Clinic"
+   ]
+  ]
+ },
+ {
+  "k": [
+   "cafeteria",
+   "canteen",
+   "meal",
+   "meals",
+   "food",
+   "wallet",
+   "lunch",
+   "top up"
+  ],
+  "a": "Cafeteria manages meal plans and student wallets — you can top up a wallet balance.",
+  "links": [
+   [
+    "cafeteria",
+    "Cafeteria"
+   ]
+  ]
+ },
+ {
+  "k": [
+   "library",
+   "book",
+   "books",
+   "borrow",
+   "issue book",
+   "catalogue",
+   "loan",
+   "return"
+  ],
+  "a": "Library manages the catalogue, book issues and returns. Add titles and issue books to members.",
+  "links": [
+   [
+    "library",
+    "Library"
+   ]
+  ]
+ },
+ {
+  "k": [
+   "transport",
+   "bus",
+   "buses",
+   "route",
+   "routes",
+   "vehicle",
+   "fleet",
+   "driver",
+   "pickup"
+  ],
+  "a": "Transport covers routes, fleet vehicles and riders. Add routes and vehicles to the fleet.",
+  "links": [
+   [
+    "transport",
+    "Transport"
+   ]
+  ]
+ },
+ {
+  "k": [
+   "hostel",
+   "boarding",
+   "dorm",
+   "room",
+   "bed",
+   "accommodation"
+  ],
+  "a": "Hostel manages boarding blocks and room/bed allocation.",
+  "links": [
+   [
+    "hostel",
+    "Hostel"
+   ]
+  ]
+ },
+ {
+  "k": [
+   "inventory",
+   "asset",
+   "assets",
+   "stock",
+   "supply",
+   "store",
+   "reorder"
+  ],
+  "a": "Inventory tracks stock items, quantities and reorder levels.",
+  "links": [
+   [
+    "inventory",
+    "Inventory"
+   ]
+  ]
+ },
+ {
+  "k": [
+   "biometric",
+   "fingerprint",
+   "device",
+   "devices",
+   "sync",
+   "face"
+  ],
+  "a": "Biometric Sync manages attendance devices and their sync status.",
+  "links": [
+   [
+    "biometric",
+    "Biometric Sync"
+   ]
+  ]
+ },
+ {
+  "k": [
+   "visitor",
+   "visitors",
+   "gate",
+   "guest",
+   "check in visitor",
+   "front desk",
+   "reception"
+  ],
+  "a": "Visitor Management logs visitor check-ins, purpose and host.",
+  "links": [
+   [
+    "visitors",
+    "Visitor Management"
+   ]
+  ]
+ },
+ {
+  "k": [
+   "facility",
+   "facilities",
+   "booking",
+   "bookings",
+   "hall",
+   "reserve",
+   "venue",
+   "lab"
+  ],
+  "a": "Facilities & Bookings lets you reserve halls, labs and other facilities.",
+  "links": [
+   [
+    "facilities",
+    "Facilities & Bookings"
+   ]
+  ]
+ },
+ {
+  "k": [
+   "helpdesk",
+   "ticket",
+   "tickets",
+   "support",
+   "issue",
+   "maintenance request"
+  ],
+  "a": "Helpdesk manages support tickets by category and priority.",
+  "links": [
+   [
+    "helpdesk",
+    "Helpdesk"
+   ]
+  ]
+ },
+ {
+  "k": [
+   "communication",
+   "announce",
+   "announcement",
+   "message",
+   "notice",
+   "circular",
+   "sms",
+   "email",
+   "broadcast"
+  ],
+  "a": "Communication sends announcements and messages to parents and staff across channels.",
+  "links": [
+   [
+    "comm",
+    "Communication"
+   ]
+  ]
+ },
+ {
+  "k": [
+   "event",
+   "events",
+   "calendar",
+   "holiday",
+   "ptm",
+   "parent teacher meeting",
+   "activity"
+  ],
+  "a": "Events Calendar schedules school events, holidays and parent-teacher meetings.",
+  "links": [
+   [
+    "calendar",
+    "Events Calendar"
+   ]
+  ]
+ },
+ {
+  "k": [
+   "survey",
+   "surveys",
+   "feedback",
+   "poll",
+   "questionnaire"
+  ],
+  "a": "Surveys & Feedback creates polls and collects responses from your community.",
+  "links": [
+   [
+    "surveys",
+    "Surveys & Feedback"
+   ]
+  ]
+ },
+ {
+  "k": [
+   "certificate",
+   "certificates",
+   "bonafide",
+   "transfer certificate",
+   "character",
+   "document",
+   "tc"
+  ],
+  "a": "Certificates issues official documents — transfer, bonafide and character certificates — as downloadable, print-ready files.",
+  "links": [
+   [
+    "certificates",
+    "Certificates"
+   ]
+  ]
+ },
+ {
+  "k": [
+   "alumni",
+   "graduate",
+   "graduates",
+   "ex student",
+   "former student"
+  ],
+  "a": "Alumni maintains records of graduates and their current paths.",
+  "links": [
+   [
+    "alumni",
+    "Alumni"
+   ]
+  ]
+ },
+ {
+  "k": [
+   "expense",
+   "expenses",
+   "spend",
+   "cost",
+   "vendor",
+   "purchase"
+  ],
+  "a": "Expenses logs operational spending by category and vendor.",
+  "links": [
+   [
+    "expenses",
+    "Expenses"
+   ]
+  ]
+ },
+ {
+  "k": [
+   "payroll",
+   "salary",
+   "salaries",
+   "payslip",
+   "wages"
+  ],
+  "a": "Payroll handles staff salaries and payslips.",
+  "links": [
+   [
+    "payroll",
+    "Payroll"
+   ]
+  ]
+ },
+ {
+  "k": [
+   "report",
+   "reports",
+   "analytics",
+   "insight",
+   "insights",
+   "kpi",
+   "statistic",
+   "data",
+   "trend"
+  ],
+  "a": "Reports & Analytics and AI Insights surface trends across attendance, finance and performance. The Dashboard gives an at-a-glance overview.",
+  "links": [
+   [
+    "reports",
+    "Reports & Analytics"
+   ],
+   [
+    "aiinsights",
+    "AI Insights"
+   ],
+   [
+    "dashboard",
+    "Dashboard"
+   ]
+  ]
+ },
+ {
+  "k": [
+   "role",
+   "roles",
+   "access",
+   "permission",
+   "permissions",
+   "rights",
+   "security"
+  ],
+  "a": "Roles & Access controls what each role can see and do via a permission matrix. You can add custom roles.",
+  "links": [
+   [
+    "roles",
+    "Roles & Access"
+   ]
+  ]
+ },
+ {
+  "k": [
+   "audit",
+   "log",
+   "logs",
+   "history",
+   "activity trail",
+   "track changes"
+  ],
+  "a": "Audit Log records system activity for accountability and compliance.",
+  "links": [
+   [
+    "audit",
+    "Audit Log"
+   ]
+  ]
+ },
+ {
+  "k": [
+   "dark",
+   "light",
+   "theme",
+   "themes",
+   "appearance",
+   "accent",
+   "mode",
+   "colour scheme"
+  ],
+  "a": "Open Settings → Appearance to switch Light, Dark or System themes and pick a brand accent — or use the moon icon in the top bar. Your choice is saved on this device.",
+  "links": [
+   [
+    "settings",
+    "Open Settings"
+   ]
+  ]
+ },
+ {
+  "k": [
+   "language",
+   "languages",
+   "arabic",
+   "urdu",
+   "hindi",
+   "english",
+   "translate",
+   "translation",
+   "rtl"
+  ],
+  "a": "SchoolOS supports English, Arabic, Urdu and Hindi — with right-to-left layout for Arabic and Urdu. Use the language button in the top bar, or Settings → Region & localization. Your choice is remembered.",
+  "links": [
+   [
+    "settings",
+    "Open Settings"
+   ]
+  ]
+ },
+ {
+  "k": [
+   "compliance",
+   "privacy",
+   "gdpr",
+   "dpdp",
+   "pdpl",
+   "ferpa",
+   "tax",
+   "vat",
+   "gst",
+   "data protection",
+   "residency",
+   "grading system"
+  ],
+  "a": "Settings → Data & compliance shows the privacy framework, authority, data residency and tax treatment for the selected country (India DPDP, UAE/Saudi PDPL, GDPR, FERPA…) and the regional grading system.",
+  "links": [
+   [
+    "settings",
+    "Open Settings"
+   ]
+  ]
+ },
+ {
+  "k": [
+   "region",
+   "country",
+   "currency",
+   "localization",
+   "locale",
+   "market"
+  ],
+  "a": "Settings → Region & localization adapts currency, language, direction and the grading/compliance framework across India, the GCC and global regions.",
+  "links": [
+   [
+    "settings",
+    "Open Settings"
+   ]
+  ]
+ },
+ {
+  "k": [
+   "export",
+   "csv",
+   "download data",
+   "backup"
+  ],
+  "a": "Many modules support export — the Students list exports to CSV, and report cards, fee statements and certificates download as print-ready documents.",
+  "links": [
+   [
+    "students",
+    "Students"
+   ]
+  ]
+ },
+ {
+  "k": [
+   "search",
+   "find",
+   "command",
+   "shortcut",
+   "palette",
+   "jump"
+  ],
+  "a": "Press ⌘K / Ctrl-K (or click the search bar) to open the command palette and jump to any module or action.",
+  "links": []
+ },
+ {
+  "k": [
+   "switch role",
+   "view as",
+   "change role",
+   "principal",
+   "administrator",
+   "accountant",
+   "impersonate"
+  ],
+  "a": "Use the role pill in the top bar to switch between Administrator, Principal, Teacher, Accountant, Parent and Student views — navigation and data adapt to each role.",
+  "links": []
+ },
+ {
+  "k": [
+   "what",
+   "who are you",
+   "help",
+   "capabilities",
+   "about",
+   "schoolos",
+   "features",
+   "can you do"
+  ],
+  "a": "I’m the SchoolOS assistant. I help you navigate this platform — ask about any area (students, fees, attendance, exams, timetable, HR, transport, compliance, themes, languages…) and I’ll explain it and open the right screen for you. I only cover Solvagence SchoolOS.",
+  "links": [
+   [
+    "dashboard",
+    "Dashboard"
+   ]
+  ]
+ }
+]

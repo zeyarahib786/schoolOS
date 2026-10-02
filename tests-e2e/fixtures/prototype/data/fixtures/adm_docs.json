@@ -1,0 +1,32 @@
+[
+ {
+  "key": "id",
+  "label": "Passport / Emirates ID",
+  "req": true
+ },
+ {
+  "key": "birth",
+  "label": "Birth certificate",
+  "req": true
+ },
+ {
+  "key": "photo",
+  "label": "Passport-size photo",
+  "req": true
+ },
+ {
+  "key": "report",
+  "label": "Previous school report",
+  "req": false
+ },
+ {
+  "key": "immun",
+  "label": "Immunisation record",
+  "req": false
+ },
+ {
+  "key": "tc",
+  "label": "Transfer certificate",
+  "req": false
+ }
+]

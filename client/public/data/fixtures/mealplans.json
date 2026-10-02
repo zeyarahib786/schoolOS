@@ -1,0 +1,30 @@
+[
+ {
+  "plan": "Premium · Full board",
+  "price": 1800,
+  "subs": 412,
+  "meals": "Breakfast · Lunch · Snack · Dinner",
+  "c": "green"
+ },
+ {
+  "plan": "Standard · Lunch only",
+  "price": 1100,
+  "subs": 686,
+  "meals": "Lunch",
+  "c": "blue"
+ },
+ {
+  "plan": "Halal Special",
+  "price": 1250,
+  "subs": 208,
+  "meals": "Lunch · Snack",
+  "c": "green"
+ },
+ {
+  "plan": "Allergy-safe (nut-free)",
+  "price": 1400,
+  "subs": 64,
+  "meals": "Lunch · Snack",
+  "c": "amber"
+ }
+]

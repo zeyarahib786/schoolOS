@@ -1,0 +1,24 @@
+[
+ {
+  "block": "Falcon Block (Boys)",
+  "code": "FB",
+  "beds": 120,
+  "filled": 108,
+  "rooms": 34,
+  "floors": 3,
+  "warden": "Mr. Idris Rahman",
+  "assist": "Mr. Samuel Oke",
+  "c": "blue"
+ },
+ {
+  "block": "Oryx Block (Girls)",
+  "code": "OB",
+  "beds": 120,
+  "filled": 104,
+  "rooms": 34,
+  "floors": 3,
+  "warden": "Ms. Farah Al Amiri",
+  "assist": "Ms. Priya Nair",
+  "c": "green"
+ }
+]

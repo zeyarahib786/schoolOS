@@ -1,0 +1,38 @@
+import { Schema, model, Document, Types } from 'mongoose';
+
+/** A bookable parent-teacher meeting slot. `bookedBy` doubles as the availability flag: null
+ * means open, set means taken - and the claim is a single atomic findOneAndUpdate guarded on
+ * `bookedBy: null` (Library's borrow-guard technique applied to booking), so two parents racing
+ * for the same slot can never both win. */
+export interface IMeetingSlot extends Document {
+  _id: Types.ObjectId;
+  teacher: Types.ObjectId;
+  date: Date;
+  startTime: string;
+  bookedBy?: Types.ObjectId | null;
+  bookedForStudent?: Types.ObjectId | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const meetingSlotSchema = new Schema<IMeetingSlot>(
+  {
+    teacher: { type: Schema.Types.ObjectId, ref: 'Staff', required: true, index: true },
+    date: { type: Date, required: true, index: true },
+    startTime: {
+      type: String,
+      required: true,
+      trim: true,
+      match: [/^([01]\d|2[0-3]):[0-5]\d$/, 'startTime must be HH:MM'],
+    },
+    bookedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null, index: true },
+    bookedForStudent: { type: Schema.Types.ObjectId, ref: 'Student', default: null },
+  },
+  { timestamps: true },
+);
+
+// The same teacher can't publish two slots at the same date+time - compound uniqueness again
+// (Attendance/LMS/Timetable's technique), here preventing double-publication rather than clash.
+meetingSlotSchema.index({ teacher: 1, date: 1, startTime: 1 }, { unique: true });
+
+export const MeetingSlot = model<IMeetingSlot>('MeetingSlot', meetingSlotSchema);

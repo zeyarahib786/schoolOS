@@ -1,0 +1,45 @@
+[
+ {
+  "id": "UT3",
+  "name": "Unit Test 3",
+  "term": "Term 2",
+  "classes": [
+   "9-B",
+   "10-A",
+   "10-B"
+  ],
+  "subjects": [
+   "Mathematics",
+   "Science",
+   "English"
+  ],
+  "maxMarks": 100,
+  "weightage": "20% of term grade",
+  "passMark": 50,
+  "gradeScale": [
+   [
+    85,
+    "A+"
+   ],
+   [
+    70,
+    "A"
+   ],
+   [
+    60,
+    "B"
+   ],
+   [
+    50,
+    "C"
+   ],
+   [
+    0,
+    "D"
+   ]
+  ],
+  "publishDate": "25 Jun 2026",
+  "status": "Draft",
+  "locked": false
+ }
+]

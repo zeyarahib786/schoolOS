@@ -1,0 +1,37 @@
+[
+ {
+  "item": "Chicken Biryani",
+  "price": 22,
+  "sold": 186,
+  "cat": "Main",
+  "cal": 680
+ },
+ {
+  "item": "Shawarma Wrap",
+  "price": 18,
+  "sold": 142,
+  "cat": "Main",
+  "cal": 720
+ },
+ {
+  "item": "Fruit Cup + Laban",
+  "price": 9,
+  "sold": 210,
+  "cat": "Snack",
+  "cal": 180
+ },
+ {
+  "item": "Hummus & Veg Sticks",
+  "price": 8,
+  "sold": 98,
+  "cat": "Snack",
+  "cal": 160
+ },
+ {
+  "item": "Fresh Juice",
+  "price": 10,
+  "sold": 164,
+  "cat": "Beverage",
+  "cal": 120
+ }
+]

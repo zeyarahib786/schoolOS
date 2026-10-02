@@ -1,0 +1,34 @@
+[
+ {
+  "title": "Term 2 Parent Satisfaction",
+  "audience": "All parents",
+  "responses": 642,
+  "sent": 980,
+  "status": "Live",
+  "c": "green"
+ },
+ {
+  "title": "Staff Wellbeing Pulse",
+  "audience": "All staff",
+  "responses": 118,
+  "sent": 148,
+  "status": "Live",
+  "c": "green"
+ },
+ {
+  "title": "Cafeteria Menu Feedback",
+  "audience": "Students Gr 6–12",
+  "responses": 0,
+  "sent": 0,
+  "status": "Draft",
+  "c": "gray"
+ },
+ {
+  "title": "Transport Service Review",
+  "audience": "Bus riders",
+  "responses": 410,
+  "sent": 642,
+  "status": "Closed",
+  "c": "blue"
+ }
+]

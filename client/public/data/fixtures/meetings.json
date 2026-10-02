@@ -1,0 +1,79 @@
+[
+ {
+  "id": "PTM-001",
+  "time": "09:00",
+  "date": "18 Jun",
+  "parent": "Khalid Al Hashimi",
+  "student": "Fatima Al Hashimi - Gr 10",
+  "teacher": "Rohan Mehta",
+  "status": "Confirmed",
+  "link": "https://meet.alnoor.ae/ptm-001",
+  "room": "Room 12"
+ },
+ {
+  "id": "PTM-002",
+  "time": "09:20",
+  "date": "18 Jun",
+  "parent": "Imran Rahman",
+  "student": "Yusuf Rahman - Gr 10",
+  "teacher": "Rohan Mehta",
+  "status": "Confirmed",
+  "link": "https://meet.alnoor.ae/ptm-002",
+  "room": "Room 12"
+ },
+ {
+  "id": "PTM-003",
+  "time": "09:40",
+  "date": "18 Jun",
+  "parent": "Salim Noor",
+  "student": "Aisha Noor - Gr 9",
+  "teacher": "Sana Iqbal",
+  "status": "Pending",
+  "link": "https://meet.alnoor.ae/ptm-003",
+  "room": "Room 14"
+ },
+ {
+  "id": "PTM-004",
+  "time": "10:00",
+  "date": "18 Jun",
+  "parent": "Tariq Siddiqui",
+  "student": "Omar Siddiqui - Gr 11",
+  "teacher": "Grace Williams",
+  "status": "Confirmed",
+  "link": "https://meet.alnoor.ae/ptm-004",
+  "room": "Room 9"
+ },
+ {
+  "id": "PTM-005",
+  "time": "10:20",
+  "date": "18 Jun",
+  "parent": null,
+  "student": null,
+  "teacher": "Rohan Mehta",
+  "status": "Available",
+  "link": null,
+  "room": "Room 12"
+ },
+ {
+  "id": "PTM-006",
+  "time": "10:40",
+  "date": "18 Jun",
+  "parent": null,
+  "student": null,
+  "teacher": "Rohan Mehta",
+  "status": "Available",
+  "link": null,
+  "room": "Room 12"
+ },
+ {
+  "id": "PTM-007",
+  "time": "11:00",
+  "date": "18 Jun",
+  "parent": null,
+  "student": null,
+  "teacher": "Sana Iqbal",
+  "status": "Available",
+  "link": null,
+  "room": "Room 14"
+ }
+]

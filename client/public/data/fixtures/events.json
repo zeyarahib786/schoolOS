@@ -1,0 +1,42 @@
+[
+ {
+  "d": "16",
+  "mon": "JUN",
+  "t": "Term 2 Unit Test 3 — Grade 10",
+  "tag": "Exam",
+  "c": "amber",
+  "sub": "08:00 · All Grade 10 sections"
+ },
+ {
+  "d": "18",
+  "mon": "JUN",
+  "t": "Science Exhibition submissions close",
+  "tag": "Academic",
+  "c": "blue",
+  "sub": "Grades 8–12"
+ },
+ {
+  "d": "21",
+  "mon": "JUN",
+  "t": "Parent–Teacher Conference",
+  "tag": "Event",
+  "c": "green",
+  "sub": "09:00–13:00 · Main Hall"
+ },
+ {
+  "d": "24",
+  "mon": "JUN",
+  "t": "Library Week — Author Visit",
+  "tag": "Event",
+  "c": "blue",
+  "sub": "11:00 · Library · Grades 4–7"
+ },
+ {
+  "d": "30",
+  "mon": "JUN",
+  "t": "Eid Al Adha Break begins",
+  "tag": "Holiday",
+  "c": "red",
+  "sub": "School closed · resumes 07 Jul"
+ }
+]

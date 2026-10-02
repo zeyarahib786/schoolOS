@@ -1,0 +1,66 @@
+[
+ {
+  "id": "EMP-204",
+  "name": "Dr. Amina Yusuf",
+  "role": "Head of Science",
+  "dept": "Science",
+  "type": "Teaching",
+  "phone": "+971 50 220 1144",
+  "status": "Active"
+ },
+ {
+  "id": "EMP-209",
+  "name": "Rohan Mehta",
+  "role": "Mathematics Teacher",
+  "dept": "Mathematics",
+  "type": "Teaching",
+  "phone": "+971 55 661 7782",
+  "status": "Active"
+ },
+ {
+  "id": "EMP-218",
+  "name": "Grace Williams",
+  "role": "English Coordinator",
+  "dept": "Languages",
+  "type": "Teaching",
+  "phone": "+971 52 110 9930",
+  "status": "Active"
+ },
+ {
+  "id": "EMP-231",
+  "name": "Khalid Noori",
+  "role": "IT Administrator",
+  "dept": "Operations",
+  "type": "Non-Teaching",
+  "phone": "+971 50 447 2218",
+  "status": "Active"
+ },
+ {
+  "id": "EMP-240",
+  "name": "Sana Iqbal",
+  "role": "School Counsellor",
+  "dept": "Student Support",
+  "type": "Teaching",
+  "phone": "+971 56 778 1290",
+  "status": "On Leave"
+ },
+ {
+  "id": "EMP-255",
+  "name": "Joseph Thomas",
+  "role": "Accounts Officer",
+  "dept": "Finance",
+  "type": "Non-Teaching",
+  "phone": "+971 55 330 6612",
+  "status": "Active"
+ },
+ {
+  "id": "EMP-262",
+  "name": "Fatima Bello",
+  "role": "Physics Teacher",
+  "dept": "Science",
+  "type": "Teaching",
+  "phone": "+971 50 901 2245",
+  "status": "Onboarding",
+  "joined": "Today"
+ }
+]

@@ -1,0 +1,749 @@
+[
+ {
+  "id": "GRD-101",
+  "name": "Khalid Al Hashimi",
+  "relation": "Parent",
+  "phone": "+971 50 442 1180",
+  "email": "khalid.al.hashimi@family.ae",
+  "children": [
+   "ANS-1042",
+   "ANS-1219",
+   "ANS-1239"
+  ],
+  "portal": "Active",
+  "lastLogin": "Today",
+  "pickup": true,
+  "financial": true,
+  "custody": "Full",
+  "consents": {
+   "media": false,
+   "trips": true,
+   "medical": true
+  },
+  "note": "Linked siblings across grades"
+ },
+ {
+  "id": "GRD-102",
+  "name": "Imran Rahman",
+  "relation": "Parent",
+  "phone": "+971 55 209 7741",
+  "email": "imran.rahman@family.ae",
+  "children": [
+   "ANS-1043"
+  ],
+  "portal": "Invited",
+  "lastLogin": "—",
+  "pickup": true,
+  "financial": true,
+  "custody": "Full",
+  "consents": {
+   "media": true,
+   "trips": true,
+   "medical": true
+  }
+ },
+ {
+  "id": "GRD-103",
+  "name": "Salim Noor",
+  "relation": "Parent",
+  "phone": "+971 52 778 3320",
+  "email": "salim.noor@family.ae",
+  "children": [
+   "ANS-1058"
+  ],
+  "portal": "Active",
+  "lastLogin": "3d ago",
+  "pickup": false,
+  "financial": true,
+  "custody": "Court order on file",
+  "consents": {
+   "media": true,
+   "trips": true,
+   "medical": true
+  }
+ },
+ {
+  "id": "GRD-104",
+  "name": "Tariq Siddiqui",
+  "relation": "Parent",
+  "phone": "+971 50 116 2093",
+  "email": "tariq.siddiqui@family.ae",
+  "children": [
+   "ANS-1061"
+  ],
+  "portal": "Active",
+  "lastLogin": "1w ago",
+  "pickup": true,
+  "financial": true,
+  "custody": "Full",
+  "consents": {
+   "media": false,
+   "trips": true,
+   "medical": true
+  }
+ },
+ {
+  "id": "GRD-105",
+  "name": "Hassan Mansour",
+  "relation": "Parent",
+  "phone": "+971 56 330 8812",
+  "email": "hassan.mansour@family.ae",
+  "children": [
+   "ANS-1077"
+  ],
+  "portal": "Active",
+  "lastLogin": "Today",
+  "pickup": true,
+  "financial": true,
+  "custody": "Full",
+  "consents": {
+   "media": true,
+   "trips": true,
+   "medical": true
+  }
+ },
+ {
+  "id": "GRD-106",
+  "name": "Mary George",
+  "relation": "Parent",
+  "phone": "+971 50 991 4420",
+  "email": "mary.george@family.ae",
+  "children": [
+   "ANS-1090"
+  ],
+  "portal": "Active",
+  "lastLogin": "Yesterday",
+  "pickup": true,
+  "financial": true,
+  "custody": "Full",
+  "consents": {
+   "media": true,
+   "trips": true,
+   "medical": true
+  }
+ },
+ {
+  "id": "GRD-107",
+  "name": "Adeel Sheikh",
+  "relation": "Parent",
+  "phone": "+971 55 612 0098",
+  "email": "adeel.sheikh@family.ae",
+  "children": [
+   "ANS-1103"
+  ],
+  "portal": "Active",
+  "lastLogin": "3d ago",
+  "pickup": true,
+  "financial": true,
+  "custody": "Full",
+  "consents": {
+   "media": false,
+   "trips": true,
+   "medical": true
+  }
+ },
+ {
+  "id": "GRD-108",
+  "name": "Nadia Khan",
+  "relation": "Parent",
+  "phone": "+971 52 447 1900",
+  "email": "nadia.khan@family.ae",
+  "children": [
+   "ANS-1118"
+  ],
+  "portal": "Active",
+  "lastLogin": "1w ago",
+  "pickup": true,
+  "financial": true,
+  "custody": "Full",
+  "consents": {
+   "media": true,
+   "trips": true,
+   "medical": true
+  }
+ },
+ {
+  "id": "GRD-109",
+  "name": "Yousef Abdullah",
+  "relation": "Parent",
+  "phone": "+971 50 778 5512",
+  "email": "yousef.abdullah@family.ae",
+  "children": [
+   "ANS-1124"
+  ],
+  "portal": "Active",
+  "lastLogin": "Today",
+  "pickup": true,
+  "financial": true,
+  "custody": "Full",
+  "consents": {
+   "media": true,
+   "trips": true,
+   "medical": true
+  }
+ },
+ {
+  "id": "GRD-110",
+  "name": "Linda Pereira",
+  "relation": "Parent",
+  "phone": "+971 56 220 7741",
+  "email": "linda.pereira@family.ae",
+  "children": [
+   "ANS-1131"
+  ],
+  "portal": "Active",
+  "lastLogin": "Yesterday",
+  "pickup": true,
+  "financial": true,
+  "custody": "Full",
+  "consents": {
+   "media": false,
+   "trips": true,
+   "medical": true
+  }
+ },
+ {
+  "id": "GRD-111",
+  "name": "Fahad Saleh",
+  "relation": "Parent",
+  "phone": "+971 55 901 3340",
+  "email": "fahad.saleh@family.ae",
+  "children": [
+   "ANS-1145"
+  ],
+  "portal": "Active",
+  "lastLogin": "3d ago",
+  "pickup": true,
+  "financial": true,
+  "custody": "Full",
+  "consents": {
+   "media": true,
+   "trips": true,
+   "medical": true
+  }
+ },
+ {
+  "id": "GRD-112",
+  "name": "Reema Ali",
+  "relation": "Parent",
+  "phone": "+971 50 334 9921",
+  "email": "reema.ali@family.ae",
+  "children": [
+   "ANS-1152"
+  ],
+  "portal": "Active",
+  "lastLogin": "1w ago",
+  "pickup": true,
+  "financial": true,
+  "custody": "Full",
+  "consents": {
+   "media": true,
+   "trips": true,
+   "medical": true
+  }
+ },
+ {
+  "id": "GRD-113",
+  "name": "Salma Haddad",
+  "relation": "Parent",
+  "phone": "+971 50 552 1133",
+  "email": "salma.haddad@family.ae",
+  "children": [
+   "ANS-1161"
+  ],
+  "portal": "Active",
+  "lastLogin": "Today",
+  "pickup": true,
+  "financial": true,
+  "custody": "Full",
+  "consents": {
+   "media": false,
+   "trips": true,
+   "medical": true
+  }
+ },
+ {
+  "id": "GRD-114",
+  "name": "Nabil Farouk",
+  "relation": "Parent",
+  "phone": "+971 55 419 7740",
+  "email": "nabil.farouk@family.ae",
+  "children": [
+   "ANS-1168"
+  ],
+  "portal": "Active",
+  "lastLogin": "Yesterday",
+  "pickup": true,
+  "financial": true,
+  "custody": "Full",
+  "consents": {
+   "media": true,
+   "trips": true,
+   "medical": true
+  }
+ },
+ {
+  "id": "GRD-115",
+  "name": "Omar Saeed",
+  "relation": "Parent",
+  "phone": "+971 52 880 4421",
+  "email": "omar.saeed@family.ae",
+  "children": [
+   "ANS-1174"
+  ],
+  "portal": "Active",
+  "lastLogin": "3d ago",
+  "pickup": true,
+  "financial": true,
+  "custody": "Full",
+  "consents": {
+   "media": true,
+   "trips": true,
+   "medical": true
+  }
+ },
+ {
+  "id": "GRD-116",
+  "name": "Huda Nasser",
+  "relation": "Parent",
+  "phone": "+971 56 233 9081",
+  "email": "huda.nasser@family.ae",
+  "children": [
+   "ANS-1182"
+  ],
+  "portal": "Active",
+  "lastLogin": "1w ago",
+  "pickup": true,
+  "financial": true,
+  "custody": "Full",
+  "consents": {
+   "media": false,
+   "trips": true,
+   "medical": true
+  }
+ },
+ {
+  "id": "GRD-117",
+  "name": "Tarek Yousef",
+  "relation": "Parent",
+  "phone": "+971 50 661 2204",
+  "email": "tarek.yousef@family.ae",
+  "children": [
+   "ANS-1190"
+  ],
+  "portal": "Active",
+  "lastLogin": "Today",
+  "pickup": true,
+  "financial": true,
+  "custody": "Full",
+  "consents": {
+   "media": true,
+   "trips": true,
+   "medical": true
+  }
+ },
+ {
+  "id": "GRD-118",
+  "name": "Khan family",
+  "relation": "Parent",
+  "phone": "+971 50 100 1000",
+  "email": "khan.family@family.ae",
+  "children": [
+   "ANS-1200",
+   "ANS-1220",
+   "ANS-1240"
+  ],
+  "portal": "Active",
+  "lastLogin": "Yesterday",
+  "pickup": true,
+  "financial": true,
+  "custody": "Full",
+  "consents": {
+   "media": true,
+   "trips": true,
+   "medical": true
+  }
+ },
+ {
+  "id": "GRD-119",
+  "name": "Haddad family",
+  "relation": "Parent",
+  "phone": "+971 51 101 3761",
+  "email": "haddad.family@family.ae",
+  "children": [
+   "ANS-1201",
+   "ANS-1221",
+   "ANS-1241"
+  ],
+  "portal": "Active",
+  "lastLogin": "3d ago",
+  "pickup": true,
+  "financial": true,
+  "custody": "Full",
+  "consents": {
+   "media": false,
+   "trips": true,
+   "medical": true
+  }
+ },
+ {
+  "id": "GRD-120",
+  "name": "Mensah family",
+  "relation": "Parent",
+  "phone": "+971 52 102 1226",
+  "email": "mensah.family@family.ae",
+  "children": [
+   "ANS-1202",
+   "ANS-1222",
+   "ANS-1242"
+  ],
+  "portal": "Active",
+  "lastLogin": "1w ago",
+  "pickup": true,
+  "financial": true,
+  "custody": "Full",
+  "consents": {
+   "media": true,
+   "trips": true,
+   "medical": true
+  }
+ },
+ {
+  "id": "GRD-121",
+  "name": "Ahmed family",
+  "relation": "Parent",
+  "phone": "+971 53 103 3987",
+  "email": "ahmed.family@family.ae",
+  "children": [
+   "ANS-1203",
+   "ANS-1223",
+   "ANS-1243"
+  ],
+  "portal": "Active",
+  "lastLogin": "Today",
+  "pickup": true,
+  "financial": true,
+  "custody": "Full",
+  "consents": {
+   "media": true,
+   "trips": true,
+   "medical": true
+  }
+ },
+ {
+  "id": "GRD-122",
+  "name": "Farouk family",
+  "relation": "Parent",
+  "phone": "+971 54 104 1452",
+  "email": "farouk.family@family.ae",
+  "children": [
+   "ANS-1204",
+   "ANS-1224",
+   "ANS-1244"
+  ],
+  "portal": "Active",
+  "lastLogin": "Yesterday",
+  "pickup": true,
+  "financial": true,
+  "custody": "Full",
+  "consents": {
+   "media": false,
+   "trips": true,
+   "medical": true
+  }
+ },
+ {
+  "id": "GRD-123",
+  "name": "Nair family",
+  "relation": "Parent",
+  "phone": "+971 55 105 7917",
+  "email": "nair.family@family.ae",
+  "children": [
+   "ANS-1205",
+   "ANS-1225"
+  ],
+  "portal": "Active",
+  "lastLogin": "3d ago",
+  "pickup": true,
+  "financial": true,
+  "custody": "Full",
+  "consents": {
+   "media": true,
+   "trips": true,
+   "medical": true
+  }
+ },
+ {
+  "id": "GRD-124",
+  "name": "Silva family",
+  "relation": "Parent",
+  "phone": "+971 56 106 1678",
+  "email": "silva.family@family.ae",
+  "children": [
+   "ANS-1206",
+   "ANS-1226"
+  ],
+  "portal": "Active",
+  "lastLogin": "1w ago",
+  "pickup": true,
+  "financial": true,
+  "custody": "Full",
+  "consents": {
+   "media": true,
+   "trips": true,
+   "medical": true
+  }
+ },
+ {
+  "id": "GRD-125",
+  "name": "Osei family",
+  "relation": "Parent",
+  "phone": "+971 57 107 8143",
+  "email": "osei.family@family.ae",
+  "children": [
+   "ANS-1207",
+   "ANS-1227"
+  ],
+  "portal": "Active",
+  "lastLogin": "Today",
+  "pickup": true,
+  "financial": true,
+  "custody": "Full",
+  "consents": {
+   "media": false,
+   "trips": true,
+   "medical": true
+  }
+ },
+ {
+  "id": "GRD-126",
+  "name": "Yousef family",
+  "relation": "Parent",
+  "phone": "+971 58 108 1904",
+  "email": "yousef.family@family.ae",
+  "children": [
+   "ANS-1208",
+   "ANS-1228"
+  ],
+  "portal": "Active",
+  "lastLogin": "Yesterday",
+  "pickup": true,
+  "financial": true,
+  "custody": "Full",
+  "consents": {
+   "media": true,
+   "trips": true,
+   "medical": true
+  }
+ },
+ {
+  "id": "GRD-127",
+  "name": "Rahman family",
+  "relation": "Parent",
+  "phone": "+971 50 109 8369",
+  "email": "rahman.family@family.ae",
+  "children": [
+   "ANS-1209",
+   "ANS-1229"
+  ],
+  "portal": "Active",
+  "lastLogin": "3d ago",
+  "pickup": true,
+  "financial": true,
+  "custody": "Full",
+  "consents": {
+   "media": true,
+   "trips": true,
+   "medical": true
+  }
+ },
+ {
+  "id": "GRD-128",
+  "name": "Reyes family",
+  "relation": "Parent",
+  "phone": "+971 51 110 5834",
+  "email": "reyes.family@family.ae",
+  "children": [
+   "ANS-1210",
+   "ANS-1230"
+  ],
+  "portal": "Active",
+  "lastLogin": "1w ago",
+  "pickup": true,
+  "financial": true,
+  "custody": "Full",
+  "consents": {
+   "media": false,
+   "trips": true,
+   "medical": true
+  }
+ },
+ {
+  "id": "GRD-129",
+  "name": "Costa family",
+  "relation": "Parent",
+  "phone": "+971 52 111 8595",
+  "email": "costa.family@family.ae",
+  "children": [
+   "ANS-1211",
+   "ANS-1231"
+  ],
+  "portal": "Active",
+  "lastLogin": "Today",
+  "pickup": true,
+  "financial": true,
+  "custody": "Full",
+  "consents": {
+   "media": true,
+   "trips": true,
+   "medical": true
+  }
+ },
+ {
+  "id": "GRD-130",
+  "name": "Patel family",
+  "relation": "Parent",
+  "phone": "+971 53 112 6060",
+  "email": "patel.family@family.ae",
+  "children": [
+   "ANS-1212",
+   "ANS-1232"
+  ],
+  "portal": "Active",
+  "lastLogin": "Yesterday",
+  "pickup": true,
+  "financial": true,
+  "custody": "Full",
+  "consents": {
+   "media": true,
+   "trips": true,
+   "medical": true
+  }
+ },
+ {
+  "id": "GRD-131",
+  "name": "Mansour family",
+  "relation": "Parent",
+  "phone": "+971 54 113 3525",
+  "email": "mansour.family@family.ae",
+  "children": [
+   "ANS-1213",
+   "ANS-1233"
+  ],
+  "portal": "Active",
+  "lastLogin": "3d ago",
+  "pickup": true,
+  "financial": true,
+  "custody": "Full",
+  "consents": {
+   "media": false,
+   "trips": true,
+   "medical": true
+  }
+ },
+ {
+  "id": "GRD-132",
+  "name": "Novak family",
+  "relation": "Parent",
+  "phone": "+971 55 114 6286",
+  "email": "novak.family@family.ae",
+  "children": [
+   "ANS-1214",
+   "ANS-1234"
+  ],
+  "portal": "Active",
+  "lastLogin": "1w ago",
+  "pickup": true,
+  "financial": true,
+  "custody": "Full",
+  "consents": {
+   "media": true,
+   "trips": true,
+   "medical": true
+  }
+ },
+ {
+  "id": "GRD-133",
+  "name": "Chen family",
+  "relation": "Parent",
+  "phone": "+971 56 115 3751",
+  "email": "chen.family@family.ae",
+  "children": [
+   "ANS-1215",
+   "ANS-1235"
+  ],
+  "portal": "Active",
+  "lastLogin": "Today",
+  "pickup": true,
+  "financial": true,
+  "custody": "Full",
+  "consents": {
+   "media": true,
+   "trips": true,
+   "medical": true
+  }
+ },
+ {
+  "id": "GRD-134",
+  "name": "Petrov family",
+  "relation": "Parent",
+  "phone": "+971 57 116 6512",
+  "email": "petrov.family@family.ae",
+  "children": [
+   "ANS-1216",
+   "ANS-1236"
+  ],
+  "portal": "Active",
+  "lastLogin": "Yesterday",
+  "pickup": true,
+  "financial": true,
+  "custody": "Full",
+  "consents": {
+   "media": false,
+   "trips": true,
+   "medical": true
+  }
+ },
+ {
+  "id": "GRD-135",
+  "name": "Noor family",
+  "relation": "Parent",
+  "phone": "+971 58 117 3977",
+  "email": "noor.family@family.ae",
+  "children": [
+   "ANS-1217",
+   "ANS-1237"
+  ],
+  "portal": "Active",
+  "lastLogin": "3d ago",
+  "pickup": true,
+  "financial": true,
+  "custody": "Full",
+  "consents": {
+   "media": true,
+   "trips": true,
+   "medical": true
+  }
+ },
+ {
+  "id": "GRD-136",
+  "name": "Ali family",
+  "relation": "Parent",
+  "phone": "+971 50 118 1442",
+  "email": "ali.family@family.ae",
+  "children": [
+   "ANS-1218",
+   "ANS-1238"
+  ],
+  "portal": "Active",
+  "lastLogin": "1w ago",
+  "pickup": true,
+  "financial": true,
+  "custody": "Full",
+  "consents": {
+   "media": true,
+   "trips": true,
+   "medical": true
+  }
+ }
+]

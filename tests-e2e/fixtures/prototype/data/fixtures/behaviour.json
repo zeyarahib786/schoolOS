@@ -1,0 +1,47 @@
+[
+ {
+  "name": "Omar Siddiqui",
+  "cls": "11-C",
+  "type": "Merit",
+  "note": "Outstanding peer mentoring",
+  "pts": "+5",
+  "date": "13 Jun",
+  "c": "green"
+ },
+ {
+  "name": "Ethan Pereira",
+  "cls": "11-A",
+  "type": "Incident",
+  "note": "Late submission — 3rd this term",
+  "pts": "−2",
+  "date": "12 Jun",
+  "c": "red"
+ },
+ {
+  "name": "Aisha Noor",
+  "cls": "9-B",
+  "type": "Merit",
+  "note": "Science fair leadership",
+  "pts": "+8",
+  "date": "11 Jun",
+  "c": "green"
+ },
+ {
+  "name": "Yusuf Rahman",
+  "cls": "10-A",
+  "type": "Detention",
+  "note": "Disrupting class",
+  "pts": "−5",
+  "date": "10 Jun",
+  "c": "amber"
+ },
+ {
+  "name": "Zara Sheikh",
+  "cls": "7-B",
+  "type": "Merit",
+  "note": "Perfect attendance badge",
+  "pts": "+3",
+  "date": "09 Jun",
+  "c": "green"
+ }
+]

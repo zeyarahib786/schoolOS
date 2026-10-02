@@ -1,0 +1,90 @@
+[
+ {
+  "cls": "KG 1 · A",
+  "rep": "Maya Haddad",
+  "teacher": "Ms. Reem Adel",
+  "filled": 18,
+  "cap": 22,
+  "stream": "Foundation"
+ },
+ {
+  "cls": "KG 2 · B",
+  "rep": "Adam Farouk",
+  "teacher": "Ms. Hala Aziz",
+  "filled": 20,
+  "cap": 24,
+  "stream": "Foundation"
+ },
+ {
+  "cls": "Grade 1 · A",
+  "rep": "Lina Saeed",
+  "teacher": "Ms. Joan Mathew",
+  "filled": 22,
+  "cap": 26,
+  "stream": "Primary"
+ },
+ {
+  "cls": "Grade 3 · B",
+  "rep": "Karim Nasser",
+  "teacher": "Mr. Suhail Rana",
+  "filled": 24,
+  "cap": 28,
+  "stream": "Primary"
+ },
+ {
+  "cls": "Grade 5 · A",
+  "rep": "Hana Yousef",
+  "teacher": "Ms. Priya Nair",
+  "filled": 26,
+  "cap": 28,
+  "stream": "Primary"
+ },
+ {
+  "cls": "Grade 8 · A",
+  "rep": "Layla Mansour",
+  "teacher": "Grace Williams",
+  "filled": 24,
+  "cap": 28,
+  "stream": "General"
+ },
+ {
+  "cls": "Grade 9 · B",
+  "rep": "Aisha Noor",
+  "teacher": "Sana Iqbal",
+  "filled": 25,
+  "cap": 28,
+  "stream": "General"
+ },
+ {
+  "cls": "Grade 10 · A",
+  "rep": "Fatima Al Hashimi",
+  "teacher": "Rohan Mehta",
+  "filled": 29,
+  "cap": 30,
+  "stream": "General"
+ },
+ {
+  "cls": "Grade 10 · B",
+  "rep": "Ibrahim Khan",
+  "teacher": "Dr. Amina Yusuf",
+  "filled": 27,
+  "cap": 30,
+  "stream": "General"
+ },
+ {
+  "cls": "Grade 11 · C",
+  "rep": "Omar Siddiqui",
+  "teacher": "Grace Williams",
+  "filled": 28,
+  "cap": 30,
+  "stream": "Commerce"
+ },
+ {
+  "cls": "Grade 12 · A",
+  "rep": "Daniel George",
+  "teacher": "D. George · Homeroom",
+  "filled": 26,
+  "cap": 30,
+  "stream": "Science"
+ }
+]

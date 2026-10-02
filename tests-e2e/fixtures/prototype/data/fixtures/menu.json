@@ -1,0 +1,140 @@
+[
+ {
+  "day": "Sunday",
+  "b": {
+   "item": "Foul Medames & Zaatar Manakish",
+   "cal": 420,
+   "veg": true,
+   "alg": [
+    "Gluten"
+   ]
+  },
+  "l": {
+   "item": "Chicken Biryani + Garden Salad",
+   "cal": 680,
+   "veg": false,
+   "alg": []
+  },
+  "s": {
+   "item": "Fresh Fruit Cup + Laban",
+   "cal": 180,
+   "veg": true,
+   "alg": [
+    "Dairy"
+   ]
+  }
+ },
+ {
+  "day": "Monday",
+  "b": {
+   "item": "Shakshuka & Arabic Bread",
+   "cal": 390,
+   "veg": true,
+   "alg": [
+    "Egg",
+    "Gluten"
+   ]
+  },
+  "l": {
+   "item": "Grilled Fish + Steamed Rice",
+   "cal": 610,
+   "veg": false,
+   "alg": [
+    "Fish"
+   ]
+  },
+  "s": {
+   "item": "Hummus & Veg Sticks",
+   "cal": 160,
+   "veg": true,
+   "alg": [
+    "Sesame"
+   ]
+  }
+ },
+ {
+  "day": "Tuesday",
+  "b": {
+   "item": "Oats Porridge + Honey & Dates",
+   "cal": 350,
+   "veg": true,
+   "alg": [
+    "Dairy",
+    "Gluten"
+   ]
+  },
+  "l": {
+   "item": "Beef Kofta + Freekeh",
+   "cal": 700,
+   "veg": false,
+   "alg": [
+    "Gluten"
+   ]
+  },
+  "s": {
+   "item": "Banana Muffin",
+   "cal": 220,
+   "veg": true,
+   "alg": [
+    "Egg",
+    "Gluten"
+   ]
+  }
+ },
+ {
+  "day": "Wednesday",
+  "b": {
+   "item": "Cheese & Spinach Fatayer",
+   "cal": 410,
+   "veg": true,
+   "alg": [
+    "Dairy",
+    "Gluten"
+   ]
+  },
+  "l": {
+   "item": "Vegetable Machboos (Veg)",
+   "cal": 560,
+   "veg": true,
+   "alg": []
+  },
+  "s": {
+   "item": "Yoghurt & Granola",
+   "cal": 200,
+   "veg": true,
+   "alg": [
+    "Dairy",
+    "Nuts"
+   ]
+  }
+ },
+ {
+  "day": "Thursday",
+  "b": {
+   "item": "Pancakes & Maple Syrup",
+   "cal": 440,
+   "veg": true,
+   "alg": [
+    "Egg",
+    "Dairy",
+    "Gluten"
+   ]
+  },
+  "l": {
+   "item": "Chicken Shawarma Wrap + Fries",
+   "cal": 720,
+   "veg": false,
+   "alg": [
+    "Gluten"
+   ]
+  },
+  "s": {
+   "item": "Fruit Smoothie",
+   "cal": 190,
+   "veg": true,
+   "alg": [
+    "Dairy"
+   ]
+  }
+ }
+]

@@ -1,0 +1,42 @@
+[
+ {
+  "name": "Mariam Yousef",
+  "purpose": "Parent meeting",
+  "host": "Dr. Salma Haddad",
+  "in": "08:42",
+  "out": "—",
+  "status": "On-site"
+ },
+ {
+  "name": "Ahmed Bakr",
+  "purpose": "Vendor — IT supplies",
+  "host": "Khalid Noori",
+  "in": "09:15",
+  "out": "09:58",
+  "status": "Checked out"
+ },
+ {
+  "name": "Reema Al Suwaidi",
+  "purpose": "Admissions tour",
+  "host": "Front Office",
+  "in": "10:05",
+  "out": "—",
+  "status": "On-site"
+ },
+ {
+  "name": "KHDA Inspector",
+  "purpose": "Scheduled inspection",
+  "host": "Principal Office",
+  "in": "10:30",
+  "out": "—",
+  "status": "On-site"
+ },
+ {
+  "name": "Daniel Fereira",
+  "purpose": "Guest speaker",
+  "host": "Grace Williams",
+  "in": "—",
+  "out": "—",
+  "status": "Pre-approved"
+ }
+]
