@@ -9,7 +9,18 @@ function a11yEnhance(root){root=root||document;
   root.querySelectorAll('button:not([aria-label])').forEach(btn=>{if(btn.textContent.trim())return;const ti=btn.getAttribute('title');btn.setAttribute('aria-label',ti||'Action');});
   root.querySelectorAll('img:not([alt])').forEach(im=>im.setAttribute('alt',''));
 }
-function render(){const fn=M[state.module];$('#view').innerHTML=fn?fn():M.dashboard();
+function render(){
+  if (typeof window.__IS_REACT_MODULE === 'function' && window.__IS_REACT_MODULE(state.module)) {
+    $('#view').innerHTML = '';
+    if (typeof window.__NAVIGATE_REACT === 'function') {
+      window.__NAVIGATE_REACT(state.module);
+    }
+    return;
+  }
+  if (typeof window.__NAVIGATE_REACT === 'function') {
+    window.__NAVIGATE_REACT(null);
+  }
+  const fn=M[state.module];$('#view').innerHTML=fn?fn():M.dashboard();
   if(state.module==='students')filterStudents();
   if(state.module==='attendance')updateAttKpis();
   a11yEnhance($('#view'));localizeView($('#view'));

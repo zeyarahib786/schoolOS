@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { APP_SCRIPTS } from '../features/registry';
 import appMarkup from './app-shell.html?raw';
+import { ReactBridge } from './ReactBridge';
 
 /**
  * Owns the application markup and loads the product modules in their required order.
@@ -39,5 +40,10 @@ export function AppShell(): JSX.Element {
     });
   }, []);
 
-  return <div ref={hostRef} dangerouslySetInnerHTML={{ __html: appMarkup }} />;
+  return (
+    <>
+      <div ref={hostRef} dangerouslySetInnerHTML={{ __html: appMarkup }} />
+      <ReactBridge />
+    </>
+  );
 }
