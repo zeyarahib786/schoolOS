@@ -28,7 +28,7 @@ export function CrmPage(): JSX.Element {
       setItems(data);
     } catch {
       setError('Could not load CRM leads - Administrator or Principal access is required');
-    } final: {
+    } finally {
       setLoading(false);
     }
   }, []);

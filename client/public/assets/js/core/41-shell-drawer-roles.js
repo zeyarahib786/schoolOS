@@ -43,7 +43,6 @@ function setRole(r){
   const av=$('.sb-user .ua'), nm=$('.sb-user .ut .n');
   const profiles={Administrator:['Rashid Al Maktoum','RA'],Principal:['Dr. Salma Haddad','SH'],Teacher:['Rohan Mehta','RM'],Accountant:['Joseph Thomas','JT'],Parent:['Khalid Al Hashimi','KA'],Student:['Fatima Al Hashimi','FA']};
   nm.textContent=profiles[r][0];av.textContent=profiles[r][1];
-  if(typeof window.__SYNC_REACT_ROLE === 'function') window.__SYNC_REACT_ROLE(r);
   if(state.module!=='dashboard'){const allowed=flatItems().find(x=>x.id===state.module);if(allowed&&allowed.roles&&!allowed.roles.includes(r))state.module='dashboard'}
   renderNav();render();
 }

@@ -287,9 +287,6 @@
 
   function enterAuthenticatedApp() {
     if (!adapter.user || typeof baseEnterApp !== 'function') return;
-    if (typeof window.__SYNC_REACT_SESSION === 'function') {
-      window.__SYNC_REACT_SESSION(adapter.user, adapter.token, adapter.refreshToken);
-    }
     baseEnterApp(adapter.user.role);
     installLmsWorkflow();
     var name = document.querySelector('.sb-user .ut .n');
