@@ -127,3 +127,4 @@ export function ReactBridge(): JSX.Element | null {
   const PageComponent = REACT_PAGE_MAP[activeModule];
   return ReactDOM.createPortal(<PageComponent />, viewEl);
 }
+

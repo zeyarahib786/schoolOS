@@ -129,3 +129,4 @@ export function ClassesPage(): JSX.Element {
     </div>
   );
 }
+
