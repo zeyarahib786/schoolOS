@@ -38,7 +38,7 @@ describe('Enrolment CRM API', () => {
   it('advances only one pipeline stage at a time and stops at Won', async () => {
     const admin = await register('Administrator', 'crm-stages@alnoor.ae');
     const created = await request(app).post('/api/v1/crm').set(auth(admin)).send(lead);
-    let id = created.body.data._id as string;
+    const id = created.body.data._id as string;
     for (const stage of ['Contacted', 'Toured', 'Application', 'Won']) {
       const moved = await request(app).post(`/api/v1/crm/${id}/advance`).set(auth(admin));
       expect(moved.status).toBe(200);
