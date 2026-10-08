@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { APP_SCRIPTS } from '../features/registry';
+import runtimeUrl from 'virtual:schoolos-runtime';
 import appMarkup from './app-shell.html?raw';
 import { ReactBridge } from './ReactBridge';
 
@@ -22,22 +22,12 @@ export function AppShell(): JSX.Element {
       (window as unknown as { SCHOOLOS_API?: { base: string } }).SCHOOLOS_API = { base };
     }
 
-    const loadSequentially = async (): Promise<void> => {
-      for (const src of APP_SCRIPTS) {
-        await new Promise<void>((resolve, reject) => {
-          const el = document.createElement('script');
-          el.src = '/' + src;
-          el.onload = () => resolve();
-          el.onerror = () => reject(new Error('Failed to load ' + src));
-          document.body.appendChild(el);
-        });
-      }
+    const script = document.createElement('script');
+    script.src = runtimeUrl;
+    script.onerror = () => {
+      console.error('[SchoolOS client] application runtime failed to load');
     };
-
-    loadSequentially().catch((e) => {
-      // Surface loudly in dev; the render test fails on any pageerror.
-      console.error('[SchoolOS client] application script chain failed:', e);
-    });
+    document.body.appendChild(script);
   }, []);
 
   return (
