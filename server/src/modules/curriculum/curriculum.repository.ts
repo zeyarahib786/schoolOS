@@ -3,7 +3,10 @@ import { CurriculumUnit, ICurriculumUnit } from '../../models/CurriculumUnit';
 import { ListUnitsQuery, CreateUnitInput, UpdateUnitInput } from './curriculum.validation';
 
 export async function findMany(query: ListUnitsQuery): Promise<{ items: ICurriculumUnit[]; total: number }> {
-  const filter: FilterQuery<ICurriculumUnit> = {};
+  const filter: FilterQuery<ICurriculumUnit> = { archived: query.archived ? true : { $ne: true } };
+  if (query.grade) filter.grade = query.grade;
+  if (query.academicYear) filter.academicYear = query.academicYear;
+  if (query.term) filter.term = query.term;
   if (query.subject) filter.subject = query.subject;
   if (query.search) filter.$text = { $search: query.search };
 
@@ -23,9 +26,11 @@ export function findDuplicate(
   subject: string,
   term: string,
   title: string,
+  grade: string,
+  academicYear: string,
   excludeId?: string,
 ): Promise<ICurriculumUnit | null> {
-  const filter: FilterQuery<ICurriculumUnit> = { subject, term, title };
+  const filter: FilterQuery<ICurriculumUnit> = { subject, term, title, grade, academicYear };
   if (excludeId) filter._id = { $ne: new Types.ObjectId(excludeId) };
   return CurriculumUnit.findOne(filter).collation({ locale: 'en', strength: 2 });
 }
@@ -43,5 +48,5 @@ export function deleteById(id: string): Promise<ICurriculumUnit | null> {
 }
 
 export function distinctSubjects(): Promise<string[]> {
-  return CurriculumUnit.distinct('subject');
+  return CurriculumUnit.distinct('subject', { archived: { $ne: true } });
 }

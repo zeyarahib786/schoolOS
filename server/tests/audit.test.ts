@@ -111,36 +111,56 @@ describe('Audit Log API', () => {
     const admin = await registerAndLogin('Administrator', 'admin-pagination@alnoor.ae');
     const me = await request(app).get('/api/v1/auth/me').set('Authorization', `Bearer ${admin.token}`);
     const { AuditLog } = await import('../src/models/AuditLog');
-    await AuditLog.insertMany(Array.from({ length: 105 }, (_, index) => ({
-      action: `Pagination event ${index}`, module: 'Audit Test',
-      performedBy: me.body.data.user._id, severity: index === 104 ? 'Critical' : 'Info',
-    })));
-    const first = await request(app).get('/api/v1/audit-log').set('Authorization', `Bearer ${admin.token}`)
+    await AuditLog.insertMany(
+      Array.from({ length: 105 }, (_, index) => ({
+        action: `Pagination event ${index}`,
+        module: 'Audit Test',
+        performedBy: me.body.data.user._id,
+        severity: index === 104 ? 'Critical' : 'Info',
+      })),
+    );
+    const first = await request(app)
+      .get('/api/v1/audit-log')
+      .set('Authorization', `Bearer ${admin.token}`)
       .query({ page: 1, limit: 100, module: 'Audit Test' });
-    const second = await request(app).get('/api/v1/audit-log').set('Authorization', `Bearer ${admin.token}`)
+    const second = await request(app)
+      .get('/api/v1/audit-log')
+      .set('Authorization', `Bearer ${admin.token}`)
       .query({ page: 2, limit: 100, module: 'Audit Test' });
     expect(first.status).toBe(200);
     expect(second.status).toBe(200);
     expect(first.body.meta.pagination).toMatchObject({ page: 1, limit: 100, total: 105, totalPages: 2 });
     expect(second.body.data).toHaveLength(5);
     expect(new Set([...first.body.data, ...second.body.data].map((row: { _id: string }) => row._id)).size).toBe(105);
-    expect([...first.body.data, ...second.body.data].some((row: { severity: string }) => row.severity === 'Critical')).toBe(true);
+    expect(
+      [...first.body.data, ...second.body.data].some((row: { severity: string }) => row.severity === 'Critical'),
+    ).toBe(true);
   });
 
   it('records an audit export with server-authored text and rejects fabricated payloads', async () => {
     const admin = await registerAndLogin('Administrator', 'admin-export@alnoor.ae');
     const teacher = await registerAndLogin('Teacher', 'teacher-export@alnoor.ae');
-    const forbidden = await request(app).post('/api/v1/audit-log/exports')
-      .set('Authorization', `Bearer ${teacher.token}`).send({});
+    const forbidden = await request(app)
+      .post('/api/v1/audit-log/exports')
+      .set('Authorization', `Bearer ${teacher.token}`)
+      .send({});
     expect(forbidden.status).toBe(403);
-    const fabricated = await request(app).post('/api/v1/audit-log/exports')
-      .set('Authorization', `Bearer ${admin.token}`).send({ action: 'Fake export' });
+    const fabricated = await request(app)
+      .post('/api/v1/audit-log/exports')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({ action: 'Fake export' });
     expect(fabricated.status).toBe(400);
-    const exported = await request(app).post('/api/v1/audit-log/exports')
-      .set('Authorization', `Bearer ${admin.token}`).send({});
+    const exported = await request(app)
+      .post('/api/v1/audit-log/exports')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({});
     expect(exported.status).toBe(200);
-    const audit = await request(app).get('/api/v1/audit-log')
-      .set('Authorization', `Bearer ${admin.token}`).query({ module: 'Audit', severity: 'Warning' });
-    expect(audit.body.data).toEqual(expect.arrayContaining([expect.objectContaining({ action: 'Exported audit log', severity: 'Warning' })]));
+    const audit = await request(app)
+      .get('/api/v1/audit-log')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .query({ module: 'Audit', severity: 'Warning' });
+    expect(audit.body.data).toEqual(
+      expect.arrayContaining([expect.objectContaining({ action: 'Exported audit log', severity: 'Warning' })]),
+    );
   });
 });

@@ -1,147 +1,771 @@
-/* ---- Parents ---- */
-/* Guardians modelled independently from students — multi-child linkage, custody & consent flags */
-let GUARDIANS=null;
-function buildGuardians(){if(GUARDIANS)return GUARDIANS;const map={};
- STUDENTS.forEach(st=>{const g=(st.guardian||'—').trim();if(g==='—')return;
-  if(!map[g])map[g]={id:'GRD-'+String(Object.keys(map).length+101),name:g,relation:'Parent',phone:st.phone,email:g.toLowerCase().replace(/[^a-z]+/g,'.')+'@family.ae',children:[],portal:'Active',lastLogin:['Today','Yesterday','3d ago','1w ago'][Object.keys(map).length%4],pickup:true,financial:true,custody:'Full',consents:{media:Object.keys(map).length%3!==0,trips:true,medical:true}};
-  map[g].children.push(st.id)});
- GUARDIANS=Object.values(map);
- if(GUARDIANS.length>1&&GUARDIANS[0].children.length===1){const donor=GUARDIANS.pop();GUARDIANS[0].children=GUARDIANS[0].children.concat(donor.children);GUARDIANS[0].note='Linked siblings across grades';}
- GUARDIANS[1]&&(GUARDIANS[1].portal='Invited',GUARDIANS[1].lastLogin='—');
- GUARDIANS[2]&&(GUARDIANS[2].custody='Court order on file',GUARDIANS[2].pickup=false);
- return GUARDIANS}
-function guardianDetail(gid){const g=buildGuardians().find(x=>x.id===gid);if(!g)return '';const kids=g.children.map(id=>STUDENTS.find(s=>s.id===id)).filter(Boolean);
- return detailDrawer({title:g.name,sub:g.id+' · '+g.relation+' · '+g.children.length+' linked child'+(g.children.length>1?'ren':''),color:avc(g.name),
-  stats:[['Portal',g.portal,g.portal==='Active'?'green':'amber'],['Last login',g.lastLogin,'blue'],['Custody',g.custody==='Full'?'Full':'Restricted',g.custody==='Full'?'green':'red'],['Pickup',g.pickup?'Authorised':'Not authorised',g.pickup?'green':'red']],
-  sections:[
-   {h:'Linked children',html:'<div class="card pad" style="box-shadow:none">'+ (kids.length?kids.map(k=>'<div class="lrow" style="cursor:pointer" onclick="openDrawer(studentProfile(\''+k.id+'\'))">'+avatar(k.name)+'<div style="flex:1"><div style="font-weight:600;color:var(--slate-900);font-size:13px">'+k.name+'</div><div class="muted" style="font-size:11.5px">'+k.id+' · '+k.grade+'</div></div><span class="badge b-'+(k.fee==='Paid'?'green':'amber')+'"><span class="bd"></span>Fees '+k.fee+'</span></div>').join(''):'<div class="muted" style="font-size:12.5px">No active students linked.</div>')+'</div>'},
-   {h:'Relationship & legal access',rows:[['Relation',g.relation],['Custody',g.custody],['Pickup authorisation',g.pickup?'Yes':'No — see custody note'],['Financial responsibility',g.financial?'Primary payer':'—'],['Emergency priority','1']]},
-   {h:'Consents',rows:[['Photo / media',g.consents.media?'Granted':'Declined'],['Trips',g.consents.trips?'Granted':'Declined'],['Medical treatment',g.consents.medical?'Granted':'Declined']]},
-   {h:'Contact',rows:[['Phone',g.phone||'—'],['Email',g.email]]}],
-  footer:[[ic('comm',15)+' Message',"openDrawer(guardianThread('"+g.id+"'))"],[g.portal==='Active'?'Suspend portal':'Resend invite','toggleGuardianPortal(\'' + g.id + '\')',true]]})}
-window.toggleGuardianPortal=function(gid){const g=buildGuardians().find(x=>x.id===gid);if(!g)return;g.portal=g.portal==='Active'?'Suspended':'Active';g.lastLogin=g.portal==='Active'?'Just now':g.lastLogin;logAudit((g.portal==='Active'?'Re-activated':'Suspended')+' guardian portal · '+g.id,'Parents');openDrawer(guardianDetail(gid));toast('Portal '+g.portal.toLowerCase()+' · '+g.name)};
-M.parents=()=>{const tab=getSubTab('parents-v','directory');const list=buildGuardians();
-  return `<div class="page-head"><div class="ph-l"><h2>Parents & Guardians</h2><p>Linked guardian accounts with portal access, communication and meetings.</p></div>
-  <div class="ph-r"><button class="btn primary" onclick="sendToParentsForm()">${ic('comm',16)} Message parents</button></div></div>
-  <div class="grid cols-4" style="margin-bottom:16px">
-    ${kpi('parents','#17A24A','Guardian accounts',String(list.length),{dir:'flat',v:list.reduce((a,g)=>a+g.children.length,0)+' children linked',note:''})}${kpi('att','#2563EB','Portal active','98%',{dir:'up',v:'engaged',note:''})}
-    ${kpi('fees','#0E7C39','Fees cleared',String(list.filter(s=>s.fee==='Paid').length)+'/'+list.length,null)}${kpi('cal','#E2920C','PTM bookings','46',{dir:'flat',v:'this term',note:''})}</div>
-  ${subTabs('parents-v',[['directory','Directory','parents'],['comm','Communication','comm'],['meetings','Meetings','cal']])}
-  ${tab==='comm'?parentComm():tab==='meetings'?parentMeetings():parentDirectory()}`};
-function sendToParentsForm(){const grades=[...new Set(STUDENTS.map(s=>s.grade.split(' · ')[0]))].sort();const classes=[...new Set(STUDENTS.map(s=>s.grade.replace('Grade ','').replace(' · ','-')))].sort();const guardians=buildGuardians();
- formDrawer('Send to parents','Only the field matching your chosen audience is used',[
-  {label:'Audience',key:'audience',opts:['All parents','By grade','Single class','Individual guardian'],req:true},
-  {label:'Grade (if By grade)',key:'grade',opts:grades,half:true},{label:'Class (if Single class)',key:'cls',opts:classes,half:true},
-  {label:'Guardian (if Individual)',key:'guardian',opts:guardians.map(g=>g.name+' ('+g.id+')')},
-  {label:'Channel',key:'channel',opts:['In-app only','In-app + Email','SMS + Email']},
-  {label:'Subject',key:'subject',req:true},{label:'Message',area:true,key:'message',req:true,aiContext:'parents-broadcast',maxlen:600,val:AI_DEFAULT_MESSAGES['parents-broadcast']}
- ],'Preview & send','','sendToParents')}
-window.sendToParents=function(v){const audience=v.audience||'All parents';const guardians=buildGuardians();let targets=[];
- if(audience==='By grade'){if(!v.grade){toast('Select a grade');return false}targets=guardians.filter(g=>g.children.some(id=>{const st=STUDENTS.find(s=>s.id===id);return st&&(st.grade===v.grade||st.grade.startsWith(v.grade+' · '))}))}
- else if(audience==='Single class'){if(!v.cls){toast('Select a class');return false}targets=guardians.filter(g=>g.children.some(id=>{const st=STUDENTS.find(s=>s.id===id);return st&&st.grade.replace('Grade ','').replace(' · ','-')===v.cls}))}
- else if(audience==='Individual guardian'){if(!v.guardian){toast('Select a guardian');return false}const gid=v.guardian.match(/\(([^)]+)\)$/);const g=guardians.find(x=>gid&&x.id===gid[1]);if(g)targets=[g]}
- else targets=guardians;
- if(!targets.length){toast('No guardians match that audience');return false}
- const delivered=targets.length,read=0;
- PARENT_BROADCASTS.unshift({subject:v.subject,audience:audience+(v.grade?' - '+v.grade:'')+(v.cls?' - '+v.cls:'')+(audience==='Individual guardian'&&targets[0]?' - '+targets[0].name:''),channel:v.channel||'In-app only',delivered,read,sent:'Just now'});
- targets.forEach(g=>{seedThread(g.id).push({dir:'out',from:'You - '+state.role,text:v.message,time:'Just now'})});
- logAudit('Sent broadcast "'+v.subject+'" to '+targets.length+' guardian'+(targets.length===1?'':'s')+' ('+audience+')','Communication');
- closeDrawer();render();openDrawer(broadcastConfirmation(v.subject,targets.length,v.channel||'In-app only',audience));return false};
-function broadcastConfirmation(subject,count,channel,audience){return detailDrawer({title:'Message sent',sub:'Confirmed - '+audience,color:'#17A24A',badge:ic('comm',18),
- stats:[['Recipients',String(count),'blue'],['Channel',channel,'blue'],['Status','Delivered','green']],
- sections:[{h:'Summary',rows:[['Subject',subject],['Audience',audience],['Sent',count+' guardian'+(count===1?'':'s')]]}],
- footer:[['Done','closeDrawer()',true]]})}
-function parentDirectory(){return `<div class="card pad"><div class="flex ac" style="gap:10px;margin-bottom:14px;flex-wrap:wrap">
-    <div class="field" style="flex:1;min-width:200px"><input id="parSearch" placeholder="Search guardian or student" oninput="filterParents()" style="width:100%;height:40px;border:1px solid var(--line);border-radius:10px;padding:0 12px"></div>
-    <div class="field sel"><select id="parFee" onchange="filterParents()"><option value="">Any fee status</option><option>Paid</option><option>Due</option><option>Overdue</option></select></div>
-    <span class="muted" id="parCount" style="font-size:12.5px;margin-left:auto">${STUDENTS.slice(0,12).length} shown</span></div>
-  <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Guardian</th><th>Linked children</th><th>Phone</th><th>Portal</th><th>Custody</th></tr></thead><tbody id="parBody">${parentRows(buildGuardians())}</tbody></table></div></div>`}
-function parentRows(list){return list.map(g=>`<tr style="cursor:pointer" onclick="openDrawer(guardianDetail('${g.id}'))"><td>${cellUser(g.name,g.id+' · '+g.relation)}</td><td>${g.children.map(id=>{const k=STUDENTS.find(x=>x.id===id);return k?k.name.split(' ')[0]+' ('+k.grade.replace('Grade ','G').replace(' · ','')+')':id}).join(', ')}</td><td class="num">${g.phone||'—'}</td><td><span class="badge ${g.portal==='Active'?'b-green':g.portal==='Suspended'?'b-red':'b-amber'}"><span class="bd"></span>${g.portal}</span></td><td>${g.custody==='Full'?'<span class="badge b-green"><span class="bd"></span>Full</span>':'<span class="badge b-red"><span class="bd"></span>Restricted</span>'}</td></tr>`).join('')||`<tr><td colspan="5"><div class="empty"><div class="ei">${ic('parents',26)}</div><h3>No guardians match</h3></div></td></tr>`}
-function filterParents(){const q=($('#parSearch')?.value||'').toLowerCase(),fee=$('#parFee')?.value||'';const rows=buildGuardians().filter(g=>{const kids=g.children.map(id=>STUDENTS.find(x=>x.id===id)).filter(Boolean);return (g.name.toLowerCase().includes(q)||kids.some(k=>k.name.toLowerCase().includes(q)))&&(!fee||kids.some(k=>k.fee===fee))});$('#parCount').textContent=rows.length+' shown';$('#parBody').innerHTML=parentRows(rows)}
-let PARENT_BROADCASTS=[
- {subject:'Term 2 fee reminder',audience:'Due-fee parents',channel:'SMS + Email',delivered:86,read:71,sent:'Today'},
- {subject:'Parent-teacher meeting invite',audience:'All parents',channel:'In-app + Email',delivered:980,read:742,sent:'Yesterday'},
- {subject:'Sports day schedule',audience:'Gr 1-8 parents',channel:'In-app',delivered:540,read:498,sent:'12 Jun'},
- {subject:'Exam timetable released',audience:'Gr 9-12 parents',channel:'Email',delivered:320,read:289,sent:'10 Jun'},
-];
-let MSG_THREADS={};
-function seedThread(gid){if(MSG_THREADS[gid])return MSG_THREADS[gid];
- MSG_THREADS[gid]=[
-  {dir:'out',from:'Front Office',text:'Hello, this is a reminder that Term 2 fees are due by 01 September. Please let us know if you need a payment plan.',time:'3 days ago'},
-  {dir:'in',from:'Guardian',text:'Thank you for the reminder. I will make the payment by this weekend.',time:'2 days ago'},
-  {dir:'out',from:'Class Teacher',text:'Just a note that your child did wonderfully in the science exhibition today!',time:'Yesterday'},
- ];return MSG_THREADS[gid]}
-function parentComm(){const gs=buildGuardians();
- return `<div class="card pad" style="margin-bottom:14px"><div class="sec-head" style="margin-bottom:6px"><h3 style="font-size:15px">Recent broadcasts</h3></div>
-  <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Subject</th><th>Audience</th><th>Channel</th><th class="right">Delivered</th><th class="right">Read</th><th>Sent</th></tr></thead><tbody>
-  ${PARENT_BROADCASTS.map(m=>`<tr><td style="font-weight:600;color:var(--slate-900)">${m.subject}</td><td>${m.audience}</td><td>${m.channel}</td><td class="right num">${m.delivered}</td><td class="right num muted">${m.read}</td><td class="num muted">${m.sent}</td></tr>`).join('')}
-  </tbody></table></div></div>
-  <div class="card pad"><div class="sec-head" style="margin-bottom:6px"><h3 style="font-size:15px">Conversation threads</h3><span class="muted" style="font-size:12px">Click a guardian to see the full chain</span></div>
-  ${gs.slice(0,6).map(g=>{const th=seedThread(g.id);const last=th[th.length-1]||{text:'No messages yet',time:'—'};return `<div class="lrow" style="cursor:pointer" onclick="openDrawer(guardianThread('${g.id}'))">${avatar(g.name)}<div style="flex:1;min-width:0"><div style="font-weight:600;color:var(--slate-900);font-size:13.5px">${g.name}</div><div class="muted" style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${last.text}</div></div><span class="muted" style="font-size:11px">${last.time}</span></div>`}).join('')}
-  </div>`}
-function guardianThread(gid){const g=buildGuardians().find(x=>x.id===gid);if(!g)return '';const th=seedThread(gid);
- return `<div class="dh"><span class="avatar" style="width:40px;height:40px">${initials(g.name)}</span><div style="flex:1"><h3 style="font-size:15px">${g.name}</h3><div class="muted" style="font-size:12px">${g.id} - ${g.relation}</div></div><button class="iconbtn" onclick="closeDrawer()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
- <div class="db" id="threadBody" style="display:flex;flex-direction:column;gap:10px">
-  ${th.map(m=>`<div style="align-self:${m.dir==='out'?'flex-end':'flex-start'};max-width:80%"><div style="background:${m.dir==='out'?'var(--brand-soft)':'var(--surface-2)'};border:1px solid ${m.dir==='out'?'var(--brand-line)':'var(--line)'};border-radius:14px;padding:9px 13px"><div style="font-size:13px;color:var(--slate-800)">${m.text}</div></div><div class="muted" style="font-size:10.5px;margin-top:3px;text-align:${m.dir==='out'?'right':'left'}">${m.from} - ${m.time}</div></div>`).join('')}
- </div>
- <div class="df" style="gap:8px"><input id="threadReply" placeholder="Type a reply..." style="flex:1;height:40px;border:1px solid var(--line);border-radius:10px;padding:0 12px"><button class="btn primary" onclick="sendThreadReply('${gid}')">${ic('comm',15)} Send</button></div>`}
-window.sendThreadReply=function(gid){const input=document.getElementById('threadReply');const text=(input&&input.value||'').trim();if(!text){toast('Type a message first');return}
- seedThread(gid).push({dir:'out',from:'You - '+state.role,text,time:'Just now'});logAudit('Replied to guardian thread - '+gid,'Communication');openDrawer(guardianThread(gid));toast('Message sent')};
-let MEETINGS=[
- {id:'PTM-001',time:'09:00',date:'18 Jun',parent:'Khalid Al Hashimi',student:'Fatima Al Hashimi - Gr 10',teacher:'Rohan Mehta',status:'Confirmed',link:'https://meet.alnoor.ae/ptm-001',room:'Room 12'},
- {id:'PTM-002',time:'09:20',date:'18 Jun',parent:'Imran Rahman',student:'Yusuf Rahman - Gr 10',teacher:'Rohan Mehta',status:'Confirmed',link:'https://meet.alnoor.ae/ptm-002',room:'Room 12'},
- {id:'PTM-003',time:'09:40',date:'18 Jun',parent:'Salim Noor',student:'Aisha Noor - Gr 9',teacher:'Sana Iqbal',status:'Pending',link:'https://meet.alnoor.ae/ptm-003',room:'Room 14'},
- {id:'PTM-004',time:'10:00',date:'18 Jun',parent:'Tariq Siddiqui',student:'Omar Siddiqui - Gr 11',teacher:'Grace Williams',status:'Confirmed',link:'https://meet.alnoor.ae/ptm-004',room:'Room 9'},
- {id:'PTM-005',time:'10:20',date:'18 Jun',parent:null,student:null,teacher:'Rohan Mehta',status:'Available',link:null,room:'Room 12'},
- {id:'PTM-006',time:'10:40',date:'18 Jun',parent:null,student:null,teacher:'Rohan Mehta',status:'Available',link:null,room:'Room 12'},
- {id:'PTM-007',time:'11:00',date:'18 Jun',parent:null,student:null,teacher:'Sana Iqbal',status:'Available',link:null,room:'Room 14'},
-];
-function meetingsToday(){return MEETINGS.filter(m=>m.date==='18 Jun')}
-function meetingSlotDetail(id){const m=MEETINGS.find(x=>x.id===id);if(!m)return '';
- if(m.status==='Available'){return detailDrawer({title:'Available slot',sub:m.time+' - '+m.date+' - '+m.teacher,color:'#17A24A',badge:ic('cal',18),
-  sections:[{h:'Slot',rows:[['Teacher',m.teacher],['Room',m.room],['Time',m.time+' - '+m.date],['Duration','20 minutes']]}],
-  footer:[['Book this slot',"bookMeetingForm('"+id+"')",true]]})}
- return detailDrawer({title:m.parent+' - '+m.student,sub:m.time+' - '+m.date+' with '+m.teacher,color:m.status==='Confirmed'?'#17A24A':'#E2920C',badge:ic('cal',18),
-  stats:[['Status',m.status,m.status==='Confirmed'?'green':'amber'],['Room',m.room,'blue'],['Time',m.time,'gray']],
-  sections:[{h:'Details',rows:[['Parent',m.parent],['Student',m.student],['Teacher',m.teacher],['Video link',m.link||'-'],['Room (in-person alt.)',m.room]]}],
-  footer:m.status==='Pending'?[['Cancel',"cancelMeeting('"+id+"')"],['Confirm',"confirmMeeting('"+id+"')",true]]:[['Cancel',"cancelMeeting('"+id+"')"],['Reschedule',"rescheduleMeetingForm('"+id+"')"],['Notify participants',"notifyMeeting('"+id+"')",true]]})}
-function bookMeetingForm(id){state._meetingSlot=id;const gs=buildGuardians();
- formDrawer('Book this slot','Select the guardian and student attending',[
-  {label:'Guardian',key:'guardian',opts:gs.map(g=>g.name+' ('+g.id+')'),req:true},
-  {label:'Student',key:'student',opts:STUDENTS.map(s=>s.name+' - '+s.grade),req:true},
-  {label:'Note to teacher',key:'note',area:true}
- ],'Book slot','','confirmBooking')}
-window.confirmBooking=function(v){const id=state._meetingSlot;const m=MEETINGS.find(x=>x.id===id);if(!m||m.status!=='Available'){toast('Slot no longer available');return false}
- const gname=(v.guardian||'').split(' (')[0].trim();const sname=(v.student||'').split(' - ')[0].trim();
- if(!gname||!sname){toast('Select guardian and student');return false}
- m.parent=gname;m.student=v.student;m.status='Confirmed';m.link='https://meet.alnoor.ae/'+id.toLowerCase();
- logAudit('Booked PTM slot '+id+' - '+gname+' with '+m.teacher,'Communication');closeDrawer();render();toast('Slot booked - confirmation sent to '+gname);return false};
-window.confirmMeeting=function(id){const m=MEETINGS.find(x=>x.id===id);if(m)m.status='Confirmed';logAudit('Confirmed PTM '+id,'Communication');closeDrawer();render();toast('Meeting confirmed')};
-window.cancelMeeting=function(id){const m=MEETINGS.find(x=>x.id===id);if(!m)return;const who=m.parent;m.status='Available';m.parent=null;m.student=null;m.link=null;
- logAudit('Cancelled PTM '+id+(who?' - notified '+who:''),'Communication');closeDrawer();render();toast(who?'Cancelled - '+who+' notified':'Slot cleared')};
-function rescheduleMeetingForm(id){const m=MEETINGS.find(x=>x.id===id);if(!m)return;const avail=MEETINGS.filter(x=>x.status==='Available'&&x.teacher===m.teacher);
- if(!avail.length){toast('No other open slots with '+m.teacher+' - cancel and ask parent to rebook');return}
- state._reschedFrom=id;
- formDrawer('Reschedule meeting',m.parent+' - choose a new slot with '+m.teacher,[
-  {label:'New slot',key:'slot',opts:avail.map(a=>a.time+' - '+a.date+' ('+a.id+')'),req:true}
- ],'Reschedule','','doReschedule')}
-window.doReschedule=function(v){const oldId=state._reschedFrom;const old=MEETINGS.find(x=>x.id===oldId);if(!old)return false;
- const newIdM=(v.slot||'').match(/\(([^)]+)\)$/);const newSlot=newIdM&&MEETINGS.find(x=>x.id===newIdM[1]);if(!newSlot){toast('Select a slot');return false}
- newSlot.parent=old.parent;newSlot.student=old.student;newSlot.status='Confirmed';newSlot.link='https://meet.alnoor.ae/'+newSlot.id.toLowerCase();
- const who=old.parent;old.status='Available';old.parent=null;old.student=null;old.link=null;
- logAudit('Rescheduled PTM '+oldId+' -> '+newSlot.id+' - notified '+who,'Communication');closeDrawer();render();toast('Rescheduled to '+newSlot.time+' - '+who+' notified');return false};
-window.notifyMeeting=function(id){const m=MEETINGS.find(x=>x.id===id);if(!m)return;logAudit('Notified participants - PTM '+id,'Communication');closeDrawer();toast('Reminder sent to '+m.parent+' and '+m.teacher)};
-function newMeetingSlotForm(){formDrawer('Draft a new slot','Creates an open slot parents can book',[
- {label:'Teacher',key:'teacher',opts:[...new Set(STAFF.filter(s=>s.type==='Teaching').map(s=>s.name))],req:true,half:true},
- {label:'Time',key:'time',type:'time',half:true},{label:'Date',key:'date',ph:'e.g. 18 Jun',half:true},{label:'Room',key:'room',ph:'e.g. Room 12',half:true}
- ],'Save as draft (open slot)','','saveMeetingSlot')}
-window.saveMeetingSlot=function(v){const teacher=v.teacher||STAFF.find(s=>s.type==='Teaching').name;
- const id='PTM-'+String(100+MEETINGS.length);
- MEETINGS.push({id,time:v.time||'12:00',date:v.date||'18 Jun',parent:null,student:null,teacher,status:'Available',link:null,room:v.room||'TBC'});
- logAudit('Drafted new PTM slot '+id+' - '+teacher,'Communication');closeDrawer();render();toast('Slot saved - open for booking')};
-function parentMeetings(){const today=meetingsToday();const avail=today.filter(m=>m.status==='Available').length;
- return `<div class="card pad"><div class="flex ac jb" style="margin-bottom:10px;flex-wrap:wrap;gap:8px"><h3 style="font-size:15px">Parent-teacher meetings · 18 June</h3><div class="flex ac" style="gap:8px"><span class="badge b-green"><span class="bd"></span>${avail} open</span><button class="btn sm" onclick="newMeetingSlotForm()">${ic('plus',14)} New slot</button></div></div>
-  <div class="muted" style="font-size:11.5px;margin-bottom:10px">Click any slot for details. Booked slots show the parent & student; open slots can be booked directly.</div>
-  <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Time</th><th>Parent</th><th>Student</th><th>Teacher</th><th>Room</th><th>Status</th></tr></thead><tbody>
-  ${today.map(m=>`<tr style="cursor:pointer" onclick="openDrawer(meetingSlotDetail('${m.id}'))"><td class="num" style="font-weight:600">${m.time}</td><td>${m.parent||'<span class="muted">-</span>'}</td><td>${m.student||'<span class="muted">-</span>'}</td><td>${m.teacher}</td><td class="muted">${m.room}</td><td>${chip(m.status,m.status==='Confirmed'?'green':m.status==='Pending'?'amber':'blue')}</td></tr>`).join('')}
-  </tbody></table></div></div>`}
+/* Parents: guardian records, owned family conversations and school meetings. */
+let GUARDIANS = null;
+let PARENT_BROADCASTS = [];
+let MSG_THREADS = {};
+let MEETINGS = [];
+function buildGuardians() {
+  return GUARDIANS || [];
+}
+function parentManager() {
+  return ["Administrator", "Principal"].includes(state.role);
+}
+function parentAllowed() {
+  return parentManager() || state.role === "Parent";
+}
+function parentEscape(value) {
+  return studentEscape(value);
+}
+function parentCall(fn, ...args) {
+  return parentEscape(fn + "(" + args.map(JSON.stringify).join(",") + ")");
+}
+function parentForm(title, subtitle, fields, label, handler) {
+  return studentFormDrawer(title, subtitle, fields, label, "", handler);
+}
+function parentDate(value) {
+  return value ? new Date(value).toLocaleString((typeof schoolLocale==='function'?schoolLocale():'en-GB')) : "Not recorded";
+}
+function parentConsent(value) {
+  return value === true
+    ? "Granted"
+    : value === false
+      ? "Declined"
+      : "Not recorded";
+}
+function parentFilters() {
+  if (state.parentsFilterRole !== state.role) {
+    state.parentsFilters = null;
+    state.parentsFilterRole = state.role;
+  }
+  return (
+    state.parentsFilters ||
+    (state.parentsFilters = {
+      q: "",
+      portal: "",
+      grade: "",
+      pickup: "",
+      page: 1,
+      size: 25,
+    })
+  );
+}
+function parentFilteredRows() {
+  const f = parentFilters(),
+    q = f.q.toLowerCase().trim();
+  return buildGuardians().filter((g) => {
+    const kids = g.children
+      .map((id) => STUDENTS.find((s) => s.id === id))
+      .filter(Boolean);
+    return (
+      (!q ||
+        [
+          g.id,
+          g.name,
+          studentSearchName(g,"name"),
+          g.phone,
+          g.email,
+          ...kids.flatMap((s) => [s.name, s.id,studentSearchName(s,"name")]),
+        ].some((v) =>
+          String(v || "")
+            .toLowerCase()
+            .includes(q),
+        )) &&
+      (!f.portal ||
+        (f.portal === "Unlinked"
+          ? !g.userId
+          : g.userId && g.portal === f.portal)) &&
+      (!f.grade || kids.some((s) => s.grade === f.grade)) &&
+      (!f.pickup || Boolean(g.pickup) === (f.pickup === "Yes"))
+    );
+  });
+}
+function parentSetFilter(key, value) {
+  const f = parentFilters();
+  f[key] = key === "size" ? Number(value) : value;
+  f.page = 1;
+  filterParents();
+}
+function parentResetFilters() {
+  state.parentsFilters = null;
+  render();
+}
+function filterParents() {
+  const target = $("#parBody");
+  if (!target) return;
+  const f = parentFilters(),
+    rows = parentFilteredRows(),
+    pages = Math.max(1, Math.ceil(rows.length / f.size));
+  f.page = Math.min(f.page, pages);
+  target.innerHTML = parentRows(
+    rows.slice((f.page - 1) * f.size, f.page * f.size),
+  );
+  $("#parCount").textContent =
+    rows.length + " of " + buildGuardians().length + " guardians";
+  $("#parPagination").innerHTML =
+    `<button class="btn sm" ${f.page <= 1 ? "disabled" : ""} onclick="parentFilters().page--;filterParents()">Previous</button><span>Page ${f.page} of ${pages}</span><button class="btn sm" ${f.page >= pages ? "disabled" : ""} onclick="parentFilters().page++;filterParents()">Next</button>`;
+  if(typeof localizeView==="function") ["#parBody","#parCount","#parPagination"].forEach(selector=>localizeView($(selector)));
+}
+M.parents = () => {
+  if (!parentAllowed())
+    return '<div class="card pad"><h2>Parents access is restricted</h2><p>This directory is available to school leadership and linked Parent accounts.</p></div>';
+  if (state.parentsLoad !== "ready")
+    return `<div class="card pad"><h2>Parents & Guardians</h2><p>${state.parentsLoad === "error" ? parentEscape(state.parentsError) : "Loading authenticated guardian records…"}</p>${state.parentsLoad === "error" ? '<button class="btn" onclick="refreshParents()">Retry</button>' : ""}</div>`;
+  const rows = buildGuardians(),
+    tab = getSubTab("parents-v", "directory");
+  return `<div class="parents-hub"><style>.parents-hub .parent-toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}.parents-hub .parent-toolbar input,.parents-hub .parent-toolbar select{min-width:0;max-width:100%;border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--surface);color:inherit}.parents-hub .parent-toolbar input{flex:1 1 240px}.parents-hub .parent-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}.parents-hub .parent-kpis strong{display:block;font-size:24px}.parents-hub .parent-name{background:none;border:0;padding:0;text-align:left;color:var(--brand);cursor:pointer;font:inherit;font-weight:600}.parents-hub .parent-name:focus-visible{outline:2px solid var(--brand)}@media(max-width:650px){.parents-hub .parent-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.parents-hub .parent-toolbar>*{flex:1 1 140px}.parents-hub .page-head{flex-wrap:wrap;gap:10px}}</style>
+  <div class="page-head"><div class="ph-l"><h2>${parentManager() ? "Parents & Guardians" : "My family"}</h2><p>${parentManager() ? "Guardian contacts, recorded permissions, family access and school conversations." : "Your linked family profile, school conversations and available meetings."}</p></div><div class="ph-r" style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" onclick="refreshParents()">Refresh</button>${parentManager() ? '<button class="btn" onclick="exportParentsCSV()">Export contacts</button><button class="btn primary" onclick="guardianEditForm()">Add guardian</button><button class="btn" onclick="sendToParentsForm()">Message parents</button>' : ""}</div></div>
+  <div class="parent-kpis">${[
+    ["Guardian records", rows.length],
+    ["Linked children", new Set(rows.flatMap((g) => g.children)).size],
+    [
+      "Active portals",
+      rows.filter((g) => g.userId && g.portal === "Active").length,
+    ],
+    [
+      "Booked meetings",
+      MEETINGS.filter((m) => m.status !== "Available").length,
+    ],
+  ]
+    .map(
+      ([label, value]) =>
+        `<div class="card pad"><span class="muted">${label}</span><strong>${value}</strong></div>`,
+    )
+    .join("")}</div>
+  ${subTabs("parents-v", [
+    ["directory", parentManager() ? "Directory" : "Family profile", "parents"],
+    ["comm", "Conversations", "comm"],
+    ["meetings", "Meetings", "cal"],
+  ])}
+  ${tab === "comm" ? parentComm() : tab === "meetings" ? parentMeetings() : parentDirectory()}</div>`;
+};
+function parentDirectory() {
+  const f = parentFilters(),
+    rows = parentFilteredRows(),
+    grades = [...new Set(STUDENTS.map((s) => s.grade))].sort();
+  return `<div class="card pad"><div class="parent-toolbar"><input id="parSearch" aria-label="Search guardians" placeholder="Guardian, child, admission, phone or email" value="${parentEscape(f.q)}" oninput="parentSetFilter('q',this.value)"><select aria-label="Portal filter" onchange="parentSetFilter('portal',this.value)">${["", "Active", "Suspended", "Invited", "Unlinked"].map((v) => `<option ${f.portal === v ? "selected" : ""} value="${v}">${v || "Any portal status"}</option>`).join("")}</select><select aria-label="Class filter" onchange="parentSetFilter('grade',this.value)"><option value="">Any class</option>${grades.map((v) => `<option value="${parentEscape(v)}" ${v === f.grade ? "selected" : ""}>${parentEscape(v)}</option>`).join("")}</select><select aria-label="Pickup filter" onchange="parentSetFilter('pickup',this.value)">${["", "Yes", "No"].map((v) => `<option value="${v}" ${v === f.pickup ? "selected" : ""}>${v ? "Pickup: " + v : "Any pickup permission"}</option>`).join("")}</select><select aria-label="Rows per page" onchange="parentSetFilter('size',this.value)">${[25, 50, 100].map((n) => `<option ${n === f.size ? "selected" : ""}>${n}</option>`).join("")}</select><button class="btn" onclick="parentResetFilters()">Clear filters</button></div><p id="parCount" class="muted">${rows.length} of ${buildGuardians().length} guardians</p><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Guardian</th><th>Linked children</th><th>Contact</th><th>Portal</th><th>Pickup</th></tr></thead><tbody id="parBody">${parentRows(rows.slice((f.page - 1) * f.size, f.page * f.size))}</tbody></table></div><div id="parPagination" style="display:flex;gap:10px;align-items:center;margin-top:12px"><button class="btn sm" onclick="filterParents()">Show pagination</button></div></div>`;
+}
+function parentRows(rows) {
+  return (
+    rows
+      .map(
+        (g) =>
+          `<tr><td><button class="parent-name" onclick="${parentCall("openGuardian", g.id)}">${studentNameHtml(g)}</button><div class="muted">${studentIdentityHtml(g.id)} · <span>${parentEscape(g.relation)}</span></div></td><td>${
+            g.children
+              .map((id) => {
+                const child = STUDENTS.find((s) => s.id === id);
+                return child ? studentNameHtml(child)+" · <span>"+parentEscape(child.grade)+"</span>" : studentIdentityHtml(id);
+              })
+              .join("<br>") || "No children linked"
+          }</td><td>${studentPhoneHtml(g.phone)}<div class="muted">${g.email?studentIdentityHtml(g.email):"No email recorded"}</div></td><td>${parentEscape(g.userId ? g.portal : "Not linked")}</td><td>${g.pickup ? "Authorized" : "Not authorized"}</td></tr>`,
+      )
+      .join("") ||
+    '<tr><td colspan="5"><div class="empty"><h3>No guardians found</h3><p>Use Clear filters, or ask school administration to create and link your guardian record.</p></div></td></tr>'
+  );
+}
+function openGuardian(id) {
+  openDrawer(guardianDetail(id));
+}
+function guardianDetail(id) {
+  const g = buildGuardians().find((g) => g.id === id);
+  if (!g) return '<div class="db">Guardian is no longer available.</div>';
+  return `<div class="dh"><div style="flex:1;min-width:0"><h3 style="overflow-wrap:anywhere">${studentNameHtml(g)}</h3><p class="muted">${studentIdentityHtml(g.id)} · <span>${parentEscape(g.relation)}</span></p></div><button class="iconbtn" aria-label="Close guardian profile" onclick="closeDrawer()">${ic("close", 20)}</button></div><div class="db">${studentInfoRows(
+    [
+      ["Phone", g.phone],
+      ["Email", g.email],
+      ["Portal", g.userId ? g.portal : "No account linked"],
+      ["Last login", parentDate(g.lastLogin)],
+      ["Pickup", g.pickup ? "Authorized" : "Not authorized"],
+      ["Financial responsibility", g.financial ? "Yes" : "No"],
+      ["Custody / access note", g.custody],
+      ["Photo / media consent", parentConsent(g.consents.media)],
+      ["Trips consent", parentConsent(g.consents.trips)],
+      ["Medical consent", parentConsent(g.consents.medical)],
+      ...(parentManager() ? [["Office note", g.note]] : []),
+    ],
+  )}<p class="muted">Permissions and consent reflect the school's recorded instructions. Changes require school leadership.</p><h4>Linked children</h4>${
+    g.children
+      .map((id) => {
+        const s = STUDENTS.find((s) => s.id === id);
+        return s
+          ? `<button class="btn" style="white-space:normal;margin:4px" onclick="${parentCall("parentOpenChild", id)}">${studentNameHtml(s)} · <span>${parentEscape(s.grade)}</span></button>`
+          : "";
+      })
+      .join("") || "<p>No visible children linked.</p>"
+  }<div class="df" style="gap:8px;flex-wrap:wrap"><button class="btn" onclick="${parentCall("openGuardianThread", g.id)}">Conversation</button>${parentManager() ? `<button class="btn primary" onclick="${parentCall("guardianEditForm", g.id)}">Edit guardian</button><button class="btn" onclick="${parentCall("guardianAccountForm", g.id)}">Portal account</button>${g.userId ? `<button class="btn" onclick="${parentCall("toggleGuardianPortal", g.id)}">${g.portal === "Suspended" ? "Activate portal" : "Suspend portal"}</button>` : ""}` : ""}</div></div>`;
+}
+function parentOpenChild(id) {
+  state._spTab = "overview";
+  openDrawer(studentProfile(id));
+}
+function guardianEditForm(id) {
+  if (!parentManager()) return;
+  if (state.parentSaving)
+    return toast("Please wait for the current save to finish");
+  const g = buildGuardians().find((g) => g.id === id) || {};
+  state.guardianEditId = id || null;
+  state.guardianVersion = g.updatedAt;
+  parentForm(
+    id ? "Edit guardian" : "Add guardian",
+    "Select linked children by admission number. Additional contacts do not automatically receive portal access.",
+    [
+      ...(!id
+        ? [{ label: "Guardian reference", key: "refId", req: true, maxlen: 30 }]
+        : []),
+      { label: "Full name", key: "name", val: g.name, req: true },
+      {
+        label: "Relationship",
+        key: "relation",
+        opts: ["Parent", "Father", "Mother", "Guardian", "Other"],
+        val: g.relation || "Parent",
+      },
+      { label: "Phone", key: "phone", type: "tel", req: true, val: g.phone },
+      { label: "Email (optional)", key: "email", type: "email", val: g.email },
+      {
+        label: "Linked admission numbers (comma-separated)",
+        key: "children",
+        val: (g.children || []).join(", "),
+        ph: "QA-001, QA-002",
+      },
+      {
+        label: "Pickup authorized",
+        key: "pickup",
+        opts: ["No", "Yes"],
+        val: g.pickup ? "Yes" : "No",
+      },
+      {
+        label: "Financial responsibility",
+        key: "financial",
+        opts: ["No", "Yes"],
+        val: g.financial ? "Yes" : "No",
+      },
+      {
+        label: "Custody / access instructions",
+        key: "custody",
+        val: g.custody || "Not recorded",
+        req: true,
+        maxlen: 300,
+      },
+      ...["media", "trips", "medical"].map((key) => ({
+        label:
+          key === "media"
+            ? "Photo / media consent"
+            : key === "trips"
+              ? "Trips consent"
+              : "Medical treatment consent",
+        key,
+        opts: ["Not recorded", "Granted", "Declined"],
+        val: parentConsent(g.consents?.[key]),
+      })),
+      {
+        label: "Office note",
+        key: "note",
+        area: true,
+        maxlen: 600,
+        val: g.note,
+      },
+    ],
+    "Save guardian",
+    "saveGuardianRecord",
+  );
+}
+async function parentSave(action, after, message = "Saved successfully") {
+  if (state.parentSaving) return false;
+  state.parentSaving = true;
+  try {
+    const result = await action();
+    if (!(await refreshParents()))
+      throw Error("Saved, but refresh failed. Use Refresh before retrying.");
+    if (after) await after(result);
+    toast(typeof message === "function" ? message(result) : message);
+    return result;
+  } catch (error) {
+    toast(error.message);
+    return false;
+  } finally {
+    state.parentSaving = false;
+  }
+}
+window.saveGuardianRecord = async function (v) {
+  if (!parentManager()) return false;
+  const refs = String(v.children || "")
+      .split(",")
+      .map((r) => r.trim().toUpperCase())
+      .filter(Boolean),
+    students = refs.map((ref) =>
+      STUDENTS.find((s) => s.id.toUpperCase() === ref),
+    );
+  if (students.some((s) => !s)) {
+    toast("Unknown admission number. Check the Students directory.");
+    return false;
+  }
+  const body = {
+    ...v,
+    studentIds: students.map((s) => s.mongoId),
+    pickupAuthorized: v.pickup === "Yes",
+    financialResponsible: v.financial === "Yes",
+    consents: Object.fromEntries(
+      ["media", "trips", "medical"].map((key) => [
+        key,
+        v[key] === "Granted" ? true : v[key] === "Declined" ? false : null,
+      ]),
+    ),
+  };
+  const g = buildGuardians().find((g) => g.id === state.guardianEditId);
+  if (g) {
+    delete body.refId;
+    body.expectedUpdatedAt = state.guardianVersion;
+  }
+  return parentSave(
+    () =>
+      SCHOOLOS_ADAPTER.api("/guardians" + (g ? "/" + g.mongoId : ""), {
+        method: g ? "PATCH" : "POST",
+        body: JSON.stringify(body),
+      }),
+    (res) => {
+      closeDrawer();
+      openGuardian(res.data.refId);
+    },
+  );
+};
+function guardianAccountForm(id) {
+  if (!parentManager()) return;
+  if (state.parentSaving)
+    return toast("Please wait for the current save to finish");
+  const g = buildGuardians().find((g) => g.id === id);
+  if (!g) return;
+  state.guardianAccountId = id;
+  state.guardianVersion = g.updatedAt;
+  parentForm(
+    "Parent portal account",
+    "Use an existing active Parent login. Linking grants access to these children. A child can have one primary Parent portal account; contact records can be additional guardians.",
+    [
+      {
+        label: "Action",
+        key: "action",
+        opts: ["Link existing account", "Unlink account"],
+      },
+      {
+        label: "Parent login email",
+        key: "parentEmail",
+        type: "email",
+        val: g.email,
+      },
+    ],
+    "Save portal link",
+    "saveGuardianAccount",
+  );
+}
+window.saveGuardianAccount = async function (v) {
+  if (!parentManager()) return false;
+  const g = buildGuardians().find((g) => g.id === state.guardianAccountId);
+  if (!g) return false;
+  return parentSave(
+    () =>
+      SCHOOLOS_ADAPTER.api("/guardians/" + g.mongoId + "/account", {
+        method: "PATCH",
+        body: JSON.stringify({
+          parentEmail: v.action === "Unlink account" ? null : v.parentEmail,
+          expectedUpdatedAt: state.guardianVersion,
+        }),
+      }),
+    async () => {
+      await SCHOOLOS_ADAPTER.hydrate();
+      openGuardian(g.id);
+    },
+  );
+};
+window.toggleGuardianPortal = async function (id) {
+  if (!parentManager()) return;
+  const g = buildGuardians().find((g) => g.id === id);
+  if (!g?.userId) return;
+  const status = g.portal === "Suspended" ? "Active" : "Suspended";
+  if (
+    !window.confirm(
+      status +
+        " portal access for " +
+        g.name +
+        "? Suspension blocks current sessions and new logins.",
+    )
+  )
+    return;
+  return parentSave(
+    () =>
+      SCHOOLOS_ADAPTER.api("/guardians/" + g.mongoId + "/portal", {
+        method: "PATCH",
+        body: JSON.stringify({ status }),
+      }),
+    () => openGuardian(g.id),
+  );
+};
+window.exportParentsCSV = function () {
+  if (!parentManager()) return;
+  studentDownloadCSV("Guardian_contacts.csv", [
+    [
+      "Reference",
+      "Guardian",
+      "Relationship",
+      "Phone",
+      "Email",
+      "Children",
+      "Portal",
+      "Pickup",
+    ],
+    ...parentFilteredRows().map((g) => [
+      g.id,
+      g.name,
+      g.relation,
+      g.phone,
+      g.email,
+      g.children.join("; "),
+      g.userId ? g.portal : "Not linked",
+      g.pickup ? "Authorized" : "Not authorized",
+    ]),
+  ]);
+};
+function parentComm() {
+  const guardians = buildGuardians();
+  return `${parentManager() ? `<div class="card pad"><h3>In-app broadcasts</h3><p class="muted">Messages saved to guardian conversations. Email/SMS delivery and read receipts are not configured.</p><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Subject</th><th>Audience</th><th>Recipients</th><th>Saved</th></tr></thead><tbody>${PARENT_BROADCASTS.map((b) => `<tr><td>${parentEscape(b.subject)}</td><td>${parentEscape(b.audienceLabel)}</td><td>${b.recipientCount}</td><td>${parentEscape(parentDate(b.createdAt))}</td></tr>`).join("") || '<tr><td colspan="4">No broadcasts yet.</td></tr>'}</tbody></table></div></div>` : ""}<div class="card pad" style="margin-top:14px"><h3>${parentManager() ? "Guardian conversations" : "Contact school administration"}</h3>${guardians.map((g) => `<button class="btn" style="display:block;width:100%;text-align:left;white-space:normal;margin-top:10px" onclick="${parentCall("openGuardianThread", g.id)}">${studentNameHtml(g)} · ${studentIdentityHtml(g.id)}</button>`).join("") || "<p>No guardian record linked. Ask school administration to link your existing Parent account.</p>"}</div>`;
+}
+async function openGuardianThread(id) {
+  const g = buildGuardians().find((g) => g.id === id);
+  if (!g || !parentAllowed()) return;
+  const userId = SCHOOLOS_ADAPTER.user?._id;
+  state.guardianThreadId = id;
+  openDrawer(
+    '<div class="dh"><h3>Conversation</h3><button class="btn" onclick="closeDrawer()">Close</button></div><div class="db" id="parentThreadLoading">Loading conversation…</div>',
+  );
+  const loading = $("#parentThreadLoading");
+  try {
+    const response = await SCHOOLOS_ADAPTER.api(
+      "/guardians/" + g.mongoId + "/messages",
+    );
+    if (
+      SCHOOLOS_ADAPTER.user?._id !== userId ||
+      state.guardianThreadId !== id ||
+      !loading?.isConnected ||
+      !$("#drawer").classList.contains("on")
+    )
+      return;
+    MSG_THREADS[id] = response.data;
+    openDrawer(guardianThread(id));
+  } catch (error) {
+    toast(error.message);
+  }
+}
+function seedThread(id) {
+  return MSG_THREADS[id] || [];
+}
+function guardianThread(id) {
+  const g = buildGuardians().find((g) => g.id === id);
+  if (!g) return "";
+  return `<div class="dh"><div style="flex:1"><h3>${state.role === "Parent" ? "School conversation" : studentNameHtml(g)}</h3><p class="muted">${studentIdentityHtml(g.id)} · <span>In-app messages</span></p></div><button class="iconbtn" aria-label="Close conversation" onclick="closeDrawer()">${ic("close", 20)}</button></div><div class="db" id="threadBody" style="display:flex;flex-direction:column;gap:10px">${
+    seedThread(id)
+      .map((m) => {
+        const mine = m.direction === (state.role === "Parent" ? "in" : "out");
+        return `<div style="align-self:${mine ? "flex-end" : "flex-start"};max-width:90%;overflow-wrap:anywhere"><div class="card pad" style="white-space:pre-wrap">${parentEscape(m.text)}</div><small class="muted">${parentEscape(m.from)} · ${parentEscape(parentDate(m.createdAt))}</small></div>`;
+      })
+      .join("") ||
+    "<p>No messages yet. Start a conversation with the school.</p>"
+  }</div><div class="df" style="gap:8px"><input id="threadReply" aria-label="Message text" maxlength="600" placeholder="Type a message…" style="flex:1;min-width:0"><button class="btn primary" onclick="${parentCall("sendThreadReply", id)}">Send</button></div>`;
+}
+window.sendThreadReply = async function (id) {
+  const g = buildGuardians().find((g) => g.id === id),
+    text = String($("#threadReply")?.value || "").trim();
+  if (!g || !text || !parentAllowed()) return toast("Type a message first");
+  return parentSave(
+    () =>
+      SCHOOLOS_ADAPTER.api("/guardians/" + g.mongoId + "/messages", {
+        method: "POST",
+        body: JSON.stringify({ text }),
+      }),
+    () => openGuardianThread(id),
+  );
+};
+function sendToParentsForm() {
+  if (!parentManager()) return;
+  if (state.parentSaving)
+    return toast("Please wait for the current save to finish");
+  const grades = [
+      ...new Set(STUDENTS.map((s) => s.grade.split(" · ")[0])),
+    ].sort(),
+    classes = [...new Set(STUDENTS.map((s) => s.grade))].sort();
+  parentForm(
+    "Message parents",
+    "Preview the exact recipients before saving messages to their in-app conversations.",
+    [
+      {
+        label: "Audience",
+        key: "audience",
+        opts: [
+          "All parents",
+          "By grade",
+          "Single class",
+          "Individual guardian",
+        ],
+      },
+      { label: "Grade (for By grade)", key: "grade", opts: ["", ...grades] },
+      { label: "Class (for Single class)", key: "cls", opts: ["", ...classes] },
+      {
+        label: "Guardian reference (for Individual guardian)",
+        key: "guardianId",
+        opts: ["", ...buildGuardians().map((g) => g.id)],
+      },
+      { label: "Subject", key: "subject", req: true, maxlen: 160 },
+      { label: "Message", key: "message", area: true, req: true, maxlen: 600 },
+    ],
+    "Preview recipients",
+    "sendToParents",
+  );
+}
+window.sendToParents = function (v) {
+  if (!parentManager()) return false;
+  const targets = buildGuardians().filter(
+    (g) =>
+      v.audience === "All parents" ||
+      (v.audience === "Individual guardian"
+        ? g.id === v.guardianId
+        : g.children.some((id) => {
+            const s = STUDENTS.find((s) => s.id === id);
+            return (
+              s &&
+              (v.audience === "By grade"
+                ? s.grade.split(" · ")[0] === v.grade
+                : s.grade === v.cls)
+            );
+          })),
+  );
+  if (!targets.length) {
+    toast("No guardians match this audience");
+    return false;
+  }
+  state.parentBroadcast = {
+    audience: v.audience,
+    grade: v.audience === "By grade" ? v.grade : undefined,
+    className: v.audience === "Single class" ? v.cls : undefined,
+    guardianId:
+      v.audience === "Individual guardian" ? targets[0].mongoId : undefined,
+    channel: "In-app only",
+    subject: v.subject,
+    message: v.message,
+  };
+  openDrawer(
+    `<div class="dh"><h3>Review in-app broadcast</h3><button class="iconbtn" aria-label="Close broadcast preview" onclick="closeDrawer()">${ic("close", 20)}</button></div><div class="db"><strong>${parentEscape(v.subject)}</strong><p style="white-space:pre-wrap;overflow-wrap:anywhere">${parentEscape(v.message)}</p><p>${targets.length} guardian conversations. No email or SMS is sent.</p>${targets
+      .slice(0, 20)
+      .map((g) => `<div>${studentNameHtml(g)} · ${studentIdentityHtml(g.id)}</div>`)
+      .join(
+        "",
+      )}${targets.length > 20 ? "<p>And " + (targets.length - 20) + " more</p>" : ""}<div class="df"><button class="btn" onclick="sendToParentsForm()">Change message</button><button class="btn primary" onclick="confirmParentBroadcast()">Confirm in-app broadcast</button></div></div>`,
+  );
+  return false;
+};
+window.confirmParentBroadcast = async function () {
+  if (!parentManager() || !state.parentBroadcast) return;
+  return parentSave(
+    () =>
+      SCHOOLOS_ADAPTER.api("/guardians/broadcasts", {
+        method: "POST",
+        body: JSON.stringify(state.parentBroadcast),
+      }),
+    () => {
+      state.parentBroadcast = null;
+      closeDrawer();
+    },
+    (res) => "Saved to " + res.data.recipientCount + " guardian conversations",
+  );
+};
+function parentMeetings() {
+  const date = state.parentMeetingDate || new Date().toISOString().slice(0, 10),
+    rows = MEETINGS.filter((m) => m.date === date);
+  return `<div class="card pad"><div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center"><h3>Parent–teacher meetings</h3><input aria-label="Meeting date" type="date" value="${parentEscape(date)}" onchange="state.parentMeetingDate=this.value;render()">${parentManager() ? '<button class="btn" onclick="newMeetingSlotForm()">New slot</button>' : ""}</div><p class="muted">Select a date to browse available slots${parentManager() ? " and confirmed bookings" : " and your own bookings"}. Video links and external reminders require a configured provider.</p><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Time</th><th>Teacher</th><th>Room</th><th>Parent / student</th><th>Status</th></tr></thead><tbody>${rows.map((m) => `<tr><td><button class="parent-name" onclick="${parentCall("parentOpenMeeting", m.id)}">${parentEscape(m.time)}</button></td><td>${m.teacher&&m.teacher!=="Unassigned"?studentNameHtml({name:m.teacher}):"Unassigned"}</td><td>${parentEscape(m.room)}</td><td>${m.parent&&m.parent!=="—"?studentNameHtml({name:m.parent}):parentEscape(m.parent)}<div>${m.student&&m.student!=="—"?studentNameHtml({name:m.student}):parentEscape(m.student)}</div></td><td>${parentEscape(m.status)}</td></tr>`).join("") || '<tr><td colspan="5">No meetings on this date. Choose another date or contact school administration.</td></tr>'}</tbody></table></div></div>`;
+}
+function meetingsToday() {
+  return MEETINGS.filter(
+    (m) => m.date === new Date().toISOString().slice(0, 10),
+  );
+}
+function parentOpenMeeting(id) {
+  openDrawer(meetingSlotDetail(id));
+}
+function meetingSlotDetail(id) {
+  const m = MEETINGS.find((m) => m.id === id);
+  if (!m) return "";
+  return `<div class="dh"><h3><span>${parentEscape(m.status)}</span> <span>meeting</span></h3><button class="iconbtn" aria-label="Close meeting" onclick="closeDrawer()">${ic("close", 20)}</button></div><div class="db">${studentInfoRows(
+    [
+      ["Teacher", m.teacher],
+      ["Date", m.date],
+      ["Time", m.time],
+      ["Room", m.room],
+      ["Parent", m.parent],
+      ["Student", m.student],
+      ["Video link", m.link || "Not configured"],
+    ],
+  )}<div class="df" style="gap:8px;flex-wrap:wrap">${m.status === "Available" ? `<button class="btn primary" onclick="${parentCall("bookMeetingForm", id)}">Book this slot</button>` : parentManager() ? `<button class="btn" onclick="${parentCall("cancelMeeting", id)}">Cancel booking</button><button class="btn" onclick="${parentCall("rescheduleMeetingForm", id)}">Reschedule</button>${m.status === "Pending" ? `<button class="btn primary" onclick="${parentCall("confirmMeeting", id)}">Confirm booking</button>` : ""}` : '<span class="muted">Contact school administration to cancel or reschedule.</span>'}</div></div>`;
+}
+function bookMeetingForm(id) {
+  if (!parentAllowed()) return;
+  if (state.parentSaving)
+    return toast("Please wait for the current save to finish");
+  state._meetingSlot = id;
+  const g = buildGuardians();
+  parentForm(
+    "Book meeting",
+    "Select a child linked to the attending guardian. The server rejects mismatched links and double bookings.",
+    [
+      ...(parentManager()
+        ? [
+            {
+              label: "Guardian reference",
+              key: "guardianId",
+              opts: g.map((g) => g.id),
+              req: true,
+            },
+          ]
+        : []),
+      {
+        label: "Child admission number",
+        key: "studentRef",
+        opts: STUDENTS.map((s) => s.id),
+        req: true,
+      },
+      ...(parentManager()
+        ? [{ label: "Note to teacher", key: "note", area: true, maxlen: 600 }]
+        : []),
+    ],
+    "Book slot",
+    "confirmBooking",
+  );
+}
+window.confirmBooking = async function (v) {
+  if (!parentAllowed()) return false;
+  const student = STUDENTS.find((s) => s.id === v.studentRef),
+    g = buildGuardians().find((g) => g.id === v.guardianId);
+  if (
+    !student ||
+    (parentManager() && (!g || !g.children.includes(student.id)))
+  ) {
+    toast("Choose a child linked to the selected guardian");
+    return false;
+  }
+  return parentSave(
+    () =>
+      SCHOOLOS_ADAPTER.api(
+        "/meetings/" +
+          state._meetingSlot +
+          (parentManager() ? "/book-on-behalf" : "/book"),
+        {
+          method: "POST",
+          body: JSON.stringify(
+            parentManager()
+              ? {
+                  guardianId: g.mongoId,
+                  studentId: student.mongoId,
+                  note: v.note,
+                }
+              : { studentId: student.mongoId },
+          ),
+        },
+      ),
+    () => closeDrawer(),
+    "Meeting booked",
+  );
+};
+function newMeetingSlotForm() {
+  if (!parentManager()) return;
+  if (state.parentSaving)
+    return toast("Please wait for the current save to finish");
+  parentForm(
+    "Publish meeting slot",
+    "Only existing teaching staff can host a meeting.",
+    [
+      {
+        label: "Teacher reference",
+        key: "teacherId",
+        opts: STAFF.filter((s) => s.type === "Teaching").map((s) => s.id),
+        req: true,
+      },
+      { label: "Date", key: "date", type: "date", req: true },
+      { label: "Start time", key: "time", type: "time", req: true },
+      { label: "Room", key: "room", req: true, maxlen: 80 },
+    ],
+    "Publish slot",
+    "saveMeetingSlot",
+  );
+}
+window.saveMeetingSlot = async function (v) {
+  if (!parentManager()) return false;
+  const teacher = STAFF.find((s) => s.id === v.teacherId);
+  if (!teacher?.mongoId) return toast("Select an existing teacher");
+  return parentSave(
+    () =>
+      SCHOOLOS_ADAPTER.api("/meetings", {
+        method: "POST",
+        body: JSON.stringify({
+          teacherStaffId: teacher.mongoId,
+          date: v.date,
+          startTime: v.time,
+          room: v.room,
+        }),
+      }),
+    () => closeDrawer(),
+  );
+};
+window.cancelMeeting = async function (id) {
+  if (
+    !parentManager() ||
+    !window.confirm("Cancel this booking and make the slot available?")
+  )
+    return;
+  return parentSave(
+    () =>
+      SCHOOLOS_ADAPTER.api("/meetings/" + id + "/cancel", { method: "POST" }),
+    () => closeDrawer(),
+  );
+};
+window.confirmMeeting = async function (id) {
+  if (!parentManager()) return;
+  return parentSave(
+    () =>
+      SCHOOLOS_ADAPTER.api("/meetings/" + id + "/confirm", { method: "POST" }),
+    () => closeDrawer(),
+  );
+};
+function rescheduleMeetingForm(id) {
+  if (!parentManager()) return;
+  if (state.parentSaving)
+    return toast("Please wait for the current save to finish");
+  const current = MEETINGS.find((m) => m.id === id);
+  if (!current) return;
+  state._reschedFrom = id;
+  const available = MEETINGS.filter(
+    (m) =>
+      m.status === "Available" && m.teacherMongoId === current.teacherMongoId,
+  );
+  if (!available.length)
+    return toast("No other available slots with this teacher");
+  parentForm(
+    "Reschedule meeting",
+    "The move is saved atomically. Existing booking details are retained.",
+    [
+      {
+        label: "Target slot",
+        key: "targetId",
+        opts: available.map((m) => m.date + " " + m.time + " (" + m.id + ")"),
+        req: true,
+      },
+    ],
+    "Reschedule",
+    "doReschedule",
+  );
+}
+window.doReschedule = async function (v) {
+  if (!parentManager()) return false;
+  const targetId = String(v.targetId || "").match(/\(([^)]+)\)$/)?.[1];
+  if (!targetId) return toast("Select a slot");
+  return parentSave(
+    () =>
+      SCHOOLOS_ADAPTER.api("/meetings/" + state._reschedFrom + "/reschedule", {
+        method: "POST",
+        body: JSON.stringify({ targetSlotId: targetId }),
+      }),
+    () => closeDrawer(),
+  );
+};

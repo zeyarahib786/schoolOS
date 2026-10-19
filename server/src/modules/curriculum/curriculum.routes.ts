@@ -2,7 +2,13 @@ import { Router } from 'express';
 import * as controller from './curriculum.controller';
 import { validate } from '../../middleware/validate';
 import { requireAuth, requireRole } from '../../middleware/auth';
-import { listUnitsSchema, createUnitSchema, updateUnitSchema, unitIdParamSchema } from './curriculum.validation';
+import {
+  listUnitsSchema,
+  createUnitSchema,
+  updateUnitSchema,
+  unitIdParamSchema,
+  archiveUnitSchema,
+} from './curriculum.validation';
 
 const router = Router();
 
@@ -24,4 +30,5 @@ router.delete(
   controller.remove,
 );
 
+router.post('/:id/archive', requireRole('Administrator', 'Principal'), validate(archiveUnitSchema), controller.archive);
 export default router;

@@ -105,7 +105,7 @@ function setRole(r) {
     Parent: ["Khalid Al Hashimi", "KA"],
     Student: ["Fatima Al Hashimi", "FA"],
   };
-  nm.textContent = profiles[r][0];
+  nm.textContent = t(profiles[r][0]);
   av.textContent = profiles[r][1];
   if (state.module !== "dashboard") {
     const allowed = flatItems().find((x) => x.id === state.module);
@@ -136,11 +136,15 @@ function kpi(icon, color, label, val, trend, onclick, active) {
         ? "▼"
         : "•"
     : "";
+  const labTr = typeof schoolTranslateText === "function" ? schoolTranslateText(label) : (typeof t === "function" ? t(label) : label);
+  const valTr = typeof schoolArabicDigits === "function" ? schoolArabicDigits(val) : val;
+  const vTr = trend ? (typeof schoolTranslateText === "function" ? schoolTranslateText(trend.v) : (typeof schoolArabicDigits === "function" ? schoolArabicDigits(trend.v) : trend.v)) : "";
+  const noteTr = trend ? (typeof schoolTranslateText === "function" ? schoolTranslateText(trend.note) : (typeof t === "function" ? t(trend.note) : trend.note)) : "";
   return `<div class="card pad kpi${onclick ? " kpi-click" : ""}${active ? " kpi-active" : ""}"${onclick ? ` onclick="${onclick}" role="button" tabindex="0"` : ""}>
     ${onclick ? `<span class="kpi-go">${ic(active ? "att" : "arrow", 14)}</span>` : ""}
-    <div class="kp-top"><div class="kp-ic" style="background:${color}14;color:${color}">${ic(icon, 20)}</div><div class="kp-lab">${label}</div></div>
-    <div class="kp-val num">${val}</div>
-    ${trend ? `<div class="kp-sub"><span class="trend ${tcls}">${tarrow} ${trend.v}</span><span>${trend.note}</span></div>` : ""}
+    <div class="kp-top"><div class="kp-ic" style="background:${color}14;color:${color}">${ic(icon, 20)}</div><div class="kp-lab">${labTr}</div></div>
+    <div class="kp-val num">${valTr}</div>
+    ${trend ? `<div class="kp-sub"><span class="trend ${tcls}">${tarrow} ${vTr}</span><span>${noteTr}</span></div>` : ""}
   </div>`;
 }
 function vbars(data) {

@@ -8,8 +8,13 @@ export function create(studentId: string, roomId: string, type: string, fromDate
 export async function list(filter: FilterQuery<IHostelLeave>, page: number, limit: number) {
   const skip = (page - 1) * limit;
   const [items, total] = await Promise.all([
-    HostelLeave.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit)
-      .populate('student', 'name refId grade').populate('room', 'roomNumber block').populate('approvedBy', 'name'),
+    HostelLeave.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .populate('student', 'name refId grade')
+      .populate('room', 'roomNumber block')
+      .populate('approvedBy', 'name'),
     HostelLeave.countDocuments(filter),
   ]);
   return { items, total };
@@ -25,5 +30,7 @@ export function transition(id: string, from: HostelLeaveStatus[], status: Hostel
   const update: { status: HostelLeaveStatus; approvedBy?: string } = { status };
   if (approvedBy) update.approvedBy = approvedBy;
   return HostelLeave.findOneAndUpdate({ _id: id, status: { $in: from } }, { $set: update }, { new: true })
-    .populate('student', 'name refId grade').populate('room', 'roomNumber block').populate('approvedBy', 'name');
+    .populate('student', 'name refId grade')
+    .populate('room', 'roomNumber block')
+    .populate('approvedBy', 'name');
 }

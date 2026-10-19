@@ -20,7 +20,7 @@ export function scopeClaimFilter(
   if (UNRESTRICTED_READ_ROLES.includes(requester.role)) {
     return base;
   }
-  if (!ownStaffId) {
+  if (!ownStaffId || requester.role !== 'Teacher') {
     return { ...base, _id: { $in: [] } };
   }
   return { ...base, staff: ownStaffId };

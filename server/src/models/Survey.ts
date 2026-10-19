@@ -12,6 +12,8 @@ export interface ISurvey extends Document {
   questions: ISurveyQuestion[];
   status: 'Draft' | 'Scheduled' | 'Active' | 'Closed';
   scheduledAt?: Date;
+  audience: 'All' | 'Staff' | 'Parents' | 'Students';
+  responseRevision: number;
   createdBy: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -31,6 +33,8 @@ const surveyQuestionSchema = new Schema<ISurveyQuestion>(
 
 const surveySchema = new Schema<ISurvey>(
   {
+    audience: { type: String, enum: ['All', 'Staff', 'Parents', 'Students'], default: 'All' },
+    responseRevision: { type: Number, default: 0, select: false },
     title: { type: String, required: true, trim: true, maxlength: 160 },
     description: { type: String, required: true, trim: true, maxlength: 1000 },
     questions: {

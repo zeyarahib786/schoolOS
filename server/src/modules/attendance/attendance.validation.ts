@@ -1,7 +1,15 @@
 import { z } from 'zod';
 
 const objectId = z.string().regex(/^[a-f0-9]{24}$/i, 'Invalid id');
-const isoDate = z.string().refine((v) => !Number.isNaN(Date.parse(v)), 'Invalid date');
+const isoDate = z
+  .string()
+  .refine(
+    (v) =>
+      /^\d{4}-\d{2}-\d{2}/.test(v) &&
+      !Number.isNaN(Date.parse(v)) &&
+      new Date(v).toISOString().slice(0, 10) === v.slice(0, 10),
+    'Invalid calendar date',
+  );
 
 export const listAttendanceSchema = z.object({
   body: z.object({}).optional(),
@@ -101,3 +109,26 @@ export type MarkStaffAttendanceInput = z.infer<typeof markStaffAttendanceSchema>
 export type ListAbsenceRequestsQuery = z.infer<typeof listAbsenceRequestsSchema>['query'];
 export type CreateAbsenceRequestInput = z.infer<typeof createAbsenceRequestSchema>['body'];
 export type DecideAbsenceRequestInput = z.infer<typeof decideAbsenceRequestSchema>['body'];
+
+export const saveRegisterSchema = z.object({
+  params: z.object({}).optional(),
+  query: z.object({}).optional(),
+  body: z.object({
+    date: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .refine(
+        (v) => !Number.isNaN(Date.parse(v)) && new Date(v).toISOString().slice(0, 10) === v,
+        'Invalid calendar date',
+      ),
+    session: z.enum(['AM', 'PM']),
+    entries: z
+      .array(attendanceEntrySchema.extend({ expectedUpdatedAt: z.string().datetime().nullable() }))
+      .min(1)
+      .max(200),
+    notifyGuardians: z.boolean().default(false),
+    notificationChannel: z.enum(['InApp', 'Email', 'SMS']).default('InApp'),
+    correctionReason: z.string().trim().max(300).optional(),
+  }),
+});
+export type SaveRegisterInput = z.infer<typeof saveRegisterSchema>['body'];

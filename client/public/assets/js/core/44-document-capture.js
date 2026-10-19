@@ -65,11 +65,67 @@ function docRecordSlot(d,hb,recId){
   else{body=`<label class="doc-drop" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="${hb}Drop(event,'${recId}','${d.key}')"><span>${UP_ICON}</span><span>Upload ${escHtml(d.label.toLowerCase())}<br><span style="font-size:11px;color:var(--slate-500)">PDF, image or document · max 4&nbsp;MB</span></span><input type="file" accept="image/*,.pdf,.doc,.docx" style="display:none" onchange="${hb}Pick(this,'${recId}','${d.key}')" aria-label="Upload ${escHtml(d.label)}"></label>${d.done?'':`<div style="margin-top:7px;text-align:right"><button class="btn xs" onclick="${hb}Mark('${recId}','${d.key}')">Mark received (paper)</button></div>`}`;}
   return `<div class="doc-slot">${head}${body}</div>`;
 }
-function docPreview(file){if(!file)return;const isImg=file.type&&file.type.indexOf('image')===0,isPdf=file.type&&file.type.indexOf('pdf')>=0;
-  const ov=document.createElement('div');ov.className='doc-lightbox';ov.setAttribute('role','dialog');ov.setAttribute('aria-label','Document preview');ov.onclick=()=>ov.remove();
-  const inner=isImg?`<img src="${file.url}" alt="${escHtml(file.name)}">`:isPdf?`<iframe src="${file.url}" title="${escHtml(file.name)}"></iframe>`:`<div class="doc-lb-fallback">${DOC_ICON.replace('17','44').replace('17','44')}<div style="font-weight:600;color:var(--slate-800)">${escHtml(file.name)}</div><div class="muted" style="font-size:12px">${fmtSize(file.size)} · preview not available for this type</div><button class="btn primary" onclick="dlUrl('${file.url}','${escHtml(file.name)}')">${ic('download',15)} Download</button></div>`;
-  ov.innerHTML=`<div class="doc-lb-box" onclick="event.stopPropagation()"><div class="doc-lb-head"><span>${escHtml(file.name)}</span><button class="iconbtn" aria-label="Close preview" onclick="this.closest('.doc-lightbox').remove()">${X_ICON}</button></div><div class="doc-lb-body">${inner}</div></div>`;
-  document.body.appendChild(ov);
+function docPreview(file) {
+  if (!file) return;
+  const previousFocus = document.activeElement;
+  const ov = document.createElement('div');
+  ov.className = 'doc-lightbox';
+  ov.setAttribute('role', 'dialog');
+  ov.setAttribute('aria-modal', 'true');
+  ov.setAttribute('aria-label', 'Document preview');
+  const close = () => {
+    document.removeEventListener('keydown', onKey);
+    ov.remove();
+    if (typeof file.onClose === 'function') file.onClose();
+    if (previousFocus && previousFocus.isConnected) previousFocus.focus();
+  };
+  const onKey = e => { if (e.key === 'Escape') { e.preventDefault(); close(); } };
+  ov.onclick = close;
+  const box = document.createElement('div');
+  box.className = 'doc-lb-box';
+  box.onclick = e => e.stopPropagation();
+  const head = document.createElement('div');
+  head.className = 'doc-lb-head';
+  const name = document.createElement('span');
+  name.textContent = file.name || 'Document';
+  const button = document.createElement('button');
+  button.className = 'iconbtn';
+  button.setAttribute('aria-label', 'Close preview');
+  button.innerHTML = X_ICON;
+  button.onclick = close;
+  head.append(name, button);
+  const body = document.createElement('div');
+  body.className = 'doc-lb-body';
+  if (/^image\//.test(file.type || '')) {
+    const img = document.createElement('img');
+    img.src = file.url;
+    img.alt = file.name || 'Document';
+    body.append(img);
+  } else if (file.type === 'application/pdf') {
+    const frame = document.createElement('iframe');
+    frame.src = file.url;
+    frame.title = file.name || 'Document';
+    body.append(frame);
+  } else {
+    const fallback = document.createElement('div');
+    fallback.className = 'doc-lb-fallback';
+    const label = document.createElement('strong');
+    label.textContent = file.name || 'Document';
+    const explanation = document.createElement('p');
+    explanation.className = 'muted';
+    explanation.textContent = fmtSize(file.size) + ' · Preview is unavailable for this file type. Download to open it.';
+    const download = document.createElement('button');
+    download.className = 'btn primary';
+    download.textContent = 'Download';
+    download.onclick = () => dlUrl(file.url, file.name);
+    fallback.append(label, explanation, download);
+    body.append(fallback);
+  }
+  box.append(head, body);
+  ov.append(box);
+  document.body.append(ov);
+  document.addEventListener('keydown', onKey);
+  button.focus();
 }
 const TODAY='Today';
 function stuInitDocs(st){if(!st.docs||!st.docs[0]||!('key' in st.docs[0]))st.docs=STUDENT_DOCS.map(d=>({key:d.key,label:d.label,req:d.req,done:false,file:null}));return st}

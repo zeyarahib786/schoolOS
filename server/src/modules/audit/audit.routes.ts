@@ -10,6 +10,11 @@ const router = Router();
 
 router.use(requireAuth);
 router.get('/', requireRole('Administrator', 'Principal'), validate(listAuditLogSchema), controller.list);
-router.post('/exports', requireRole('Administrator', 'Principal'), validate(recordAuditExportSchema), controller.recordExport);
+router.post(
+  '/exports',
+  requireRole('Administrator', 'Principal'),
+  validate(recordAuditExportSchema),
+  controller.recordExport,
+);
 
 export default router;

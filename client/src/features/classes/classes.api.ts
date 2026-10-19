@@ -8,6 +8,8 @@ export interface ClassSection {
   stream: 'Foundation' | 'Primary' | 'General' | 'Commerce' | 'Science' | 'Arts';
   teacherStaffId?: { _id: string; name: string; type: string; status: string };
   representativeStudentId?: { _id: string; name: string; grade: string; status: string };
+  room?: string;
+  status?: 'Active' | 'Archived';
   capacity: number;
   filled: number;
   createdAt: string;
@@ -20,6 +22,7 @@ export interface CreateClassSectionInput {
   stream: ClassSection['stream'];
   teacherStaffId?: string;
   capacity: number;
+  room?: string;
 }
 
 interface ApiSuccess<T> { data: T }

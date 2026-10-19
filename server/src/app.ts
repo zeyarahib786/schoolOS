@@ -1,3 +1,5 @@
+import { databaseReady } from './utils/readiness';
+import { measureRequests } from './middleware/operationalMetrics';
 import express, { Express, Request, Response } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
@@ -10,6 +12,10 @@ import { logger } from './utils/logger';
 import { requestContext } from './middleware/requestContext';
 import { errorHandler } from './middleware/errorHandler';
 import { notFoundHandler } from './middleware/notFound';
+import notificationsRoutes from './modules/notifications/notifications.routes';
+import inboxRoutes from './modules/notifications/notifications.inbox.routes';
+import { receiveWebhook } from './modules/notifications/notifications.service';
+import { asyncHandler } from './middleware/errorHandler';
 import authRoutes from './modules/auth/auth.routes';
 import studentRoutes from './modules/students/student.routes';
 import staffRoutes from './modules/staff/staff.routes';
@@ -58,6 +64,7 @@ export function createApp(): Express {
   app.set('trust proxy', 1);
 
   app.use(requestContext);
+  app.use(measureRequests);
   app.use(
     pinoHttp({
       logger,
@@ -79,6 +86,23 @@ export function createApp(): Express {
     }),
   );
   app.use(compression());
+  app.use(env.API_PREFIX, (_req: Request, res: Response, next) => {
+    // School records and authenticated responses must never enter a shared/browser cache.
+    res.setHeader('Cache-Control', 'private, no-store');
+    next();
+  });
+  app.post(
+    `${env.API_PREFIX}/notifications/resend-webhook`,
+    express.raw({ type: 'application/json', limit: '100kb' }),
+    asyncHandler(async (req, res) => {
+      await receiveWebhook(req.body as Buffer, {
+        'svix-id': String(req.headers['svix-id'] || ''),
+        'svix-timestamp': String(req.headers['svix-timestamp'] || ''),
+        'svix-signature': String(req.headers['svix-signature'] || ''),
+      });
+      res.status(200).json({ success: true });
+    }),
+  );
   app.use(express.json({ limit: '1mb' }));
   app.use(express.urlencoded({ extended: true, limit: '1mb' }));
   app.use(mongoSanitize()); // strips $/dot operators from req.body/query/params - blocks NoSQL injection
@@ -98,9 +122,8 @@ export function createApp(): Express {
   app.get('/health', (_req: Request, res: Response) => {
     res.status(200).json({ status: 'ok', uptime: process.uptime() });
   });
-  app.get('/ready', (_req: Request, res: Response) => {
-    const mongoose = require('mongoose'); // eslint-disable-line @typescript-eslint/no-var-requires
-    const dbReady = mongoose.connection.readyState === 1;
+  app.get('/ready', async (_req: Request, res: Response) => {
+    const dbReady = await databaseReady();
     res.status(dbReady ? 200 : 503).json({ status: dbReady ? 'ready' : 'not-ready', db: dbReady });
   });
 
@@ -140,6 +163,8 @@ export function createApp(): Express {
   app.use(`${env.API_PREFIX}/id-cards`, idcardsRoutes);
   app.use(`${env.API_PREFIX}/reports`, reportsRoutes);
   app.use(`${env.API_PREFIX}/settings`, settingsRoutes);
+  app.use(`${env.API_PREFIX}/inbox`, inboxRoutes);
+  app.use(`${env.API_PREFIX}/notifications`, notificationsRoutes);
   app.use(`${env.API_PREFIX}/messages`, messagesRoutes);
   app.use(`${env.API_PREFIX}/classes`, classesRoutes);
   app.use(`${env.API_PREFIX}/crm`, crmRoutes);

@@ -14,7 +14,7 @@ export function bookOnBehalf(slotId: string, guardianId: string, studentId: stri
         bookedForStudent: studentId,
         status: 'Confirmed',
         note,
-        link: `https://meet.alnoor.ae/${slotId}`,
+        link: null,
       },
     },
     { new: true },
@@ -22,13 +22,20 @@ export function bookOnBehalf(slotId: string, guardianId: string, studentId: stri
 }
 
 export function confirm(slotId: string) {
-  return MeetingSlot.findOneAndUpdate({ _id: slotId, status: 'Pending' }, { $set: { status: 'Confirmed' } }, { new: true });
+  return MeetingSlot.findOneAndUpdate(
+    { _id: slotId, status: 'Pending' },
+    { $set: { status: 'Confirmed' } },
+    { new: true },
+  );
 }
 
 export function cancel(slotId: string) {
   return MeetingSlot.findOneAndUpdate(
     { _id: slotId, status: { $ne: 'Available' } },
-    { $set: { status: 'Available', bookedBy: null, bookedGuardian: null, bookedForStudent: null, link: null }, $unset: { note: 1 } },
+    {
+      $set: { status: 'Available', bookedBy: null, bookedGuardian: null, bookedForStudent: null, link: null },
+      $unset: { note: 1 },
+    },
     { new: true },
   );
 }
@@ -42,20 +49,25 @@ export async function reschedule(sourceId: string, targetId: string) {
       if (!source) return;
       const target = await MeetingSlot.findOneAndUpdate(
         { _id: targetId, status: 'Available', teacher: source.teacher },
-        { $set: {
-          bookedBy: source.bookedBy || null,
-          bookedGuardian: source.bookedGuardian || null,
-          bookedForStudent: source.bookedForStudent || null,
-          status: 'Confirmed',
-          note: source.note,
-          link: `https://meet.alnoor.ae/${targetId}`,
-        } },
+        {
+          $set: {
+            bookedBy: source.bookedBy || null,
+            bookedGuardian: source.bookedGuardian || null,
+            bookedForStudent: source.bookedForStudent || null,
+            status: 'Confirmed',
+            note: source.note,
+            link: null,
+          },
+        },
         { new: true, session },
       );
       if (!target) return;
       await MeetingSlot.updateOne(
         { _id: sourceId },
-        { $set: { status: 'Available', bookedBy: null, bookedGuardian: null, bookedForStudent: null, link: null }, $unset: { note: 1 } },
+        {
+          $set: { status: 'Available', bookedBy: null, bookedGuardian: null, bookedForStudent: null, link: null },
+          $unset: { note: 1 },
+        },
         { session },
       );
       moved = target;
@@ -65,4 +77,3 @@ export async function reschedule(sourceId: string, targetId: string) {
     await session.endSession();
   }
 }
-

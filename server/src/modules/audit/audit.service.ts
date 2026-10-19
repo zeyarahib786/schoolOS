@@ -1,3 +1,5 @@
+import { schoolDeadline } from '../../utils/schoolDeadline';
+import { ApiError } from '../../utils/ApiError';
 import { FilterQuery } from 'mongoose';
 import { AuditLog, IAuditLog } from '../../models/AuditLog';
 import { ListAuditLogQuery } from './audit.validation';
@@ -19,6 +21,25 @@ export async function logAudit(
 
 export async function listAuditLog(query: ListAuditLogQuery): Promise<{ items: IAuditLog[]; total: number }> {
   const filter: FilterQuery<IAuditLog> = {};
+  if (query.dateFrom && query.dateTo && query.dateFrom > query.dateTo)
+    throw ApiError.badRequest('Date range starts after its end');
+  if (query.q)
+    filter.action = new RegExp(
+      query.q
+        .split('')
+        .map((c) => ('.*+?^${}()|[]\\'.includes(c) ? '\\' + c : c))
+        .join(''),
+      'i',
+    );
+  if (query.dateFrom || query.dateTo) {
+    const previous = query.dateFrom
+      ? new Date(Date.parse(query.dateFrom) - 86400000).toISOString().slice(0, 10)
+      : undefined;
+    filter.createdAt = {
+      ...(previous ? { $gte: new Date((await schoolDeadline(previous)).getTime() + 1) } : {}),
+      ...(query.dateTo ? { $lte: await schoolDeadline(query.dateTo) } : {}),
+    };
+  }
   if (query.module) filter.module = query.module;
   if (query.severity) filter.severity = query.severity;
 

@@ -12,7 +12,3 @@ export function findById(id: string): Promise<IBiometricDevice | null> {
 export function create(input: CreateDeviceInput): Promise<IBiometricDevice> {
   return BiometricDevice.create(input);
 }
-
-export function markSynced(id: string): Promise<IBiometricDevice | null> {
-  return BiometricDevice.findByIdAndUpdate(id, { status: 'Online', lastSyncAt: new Date() }, { new: true });
-}

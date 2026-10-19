@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { asyncHandler } from '../../middleware/errorHandler';
 import { sendSuccess } from '../../utils/apiResponse';
 import { ApiError } from '../../utils/ApiError';
+import { listWalletsSchema, listTransactionsSchema, listAllergyPlansSchema } from './cafeteria.validation';
 import * as service from './cafeteria.service';
 
 function requireUser(req: Request) {
@@ -11,10 +12,7 @@ function requireUser(req: Request) {
 
 export const listWallets = asyncHandler(async (req: Request, res: Response) => {
   const requester = requireUser(req);
-  const result = await service.listWallets(
-    req.query as unknown as Parameters<typeof service.listWallets>[0],
-    requester,
-  );
+  const result = await service.listWallets(listWalletsSchema.shape.query.parse(req.query), requester);
   sendSuccess(res, 200, result.items, { pagination: result.pagination });
 });
 
@@ -31,12 +29,12 @@ export const purchase = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const listTransactions = asyncHandler(async (req: Request, res: Response) => {
-  const result = await service.listTransactions(req.query as never, requireUser(req));
+  const result = await service.listTransactions(listTransactionsSchema.shape.query.parse(req.query), requireUser(req));
   sendSuccess(res, 200, result.items, { pagination: result.pagination });
 });
 
 export const listAllergyPlans = asyncHandler(async (req: Request, res: Response) => {
-  const result = await service.listAllergyPlans(req.query as never, requireUser(req));
+  const result = await service.listAllergyPlans(listAllergyPlansSchema.shape.query.parse(req.query), requireUser(req));
   sendSuccess(res, 200, result.items, { pagination: result.pagination });
 });
 

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 const objectId = z.string().regex(/^[a-f0-9]{24}$/i, 'Invalid id');
-const dateFormat = z.string().refine((v) => !Number.isNaN(Date.parse(v)), 'Invalid date');
+import { calendarDateSchema as dateFormat } from '../../utils/calendarDate';
 
 export const listLeaveSchema = z.object({
   body: z.object({}).optional(),
@@ -9,7 +9,7 @@ export const listLeaveSchema = z.object({
   query: z.object({
     page: z.coerce.number().int().min(1).default(1),
     limit: z.coerce.number().int().min(1).max(100).default(20),
-    status: z.enum(['Pending', 'Approved', 'Denied']).optional(),
+    status: z.enum(['Pending', 'Approved', 'Denied', 'Cancelled']).optional(),
   }),
 });
 
@@ -19,6 +19,7 @@ export const requestLeaveSchema = z.object({
   body: z
     .object({
       staffId: objectId.optional(),
+      type: z.enum(['Annual leave', 'Sick leave', 'Casual leave', 'Unpaid leave']).default('Annual leave'),
       fromDate: dateFormat,
       toDate: dateFormat,
       reason: z.string().trim().min(3).max(500),
@@ -34,9 +35,16 @@ export const decideLeaveSchema = z.object({
   params: z.object({ id: objectId }),
   body: z.object({
     decision: z.enum(['Approved', 'Denied']),
+    note: z.string().trim().max(500).optional(),
   }),
 });
 
 export type ListLeaveQuery = z.infer<typeof listLeaveSchema>['query'];
 export type RequestLeaveInput = z.infer<typeof requestLeaveSchema>['body'];
 export type DecideLeaveInput = z.infer<typeof decideLeaveSchema>['body'];
+
+export const cancelLeaveSchema = z.object({
+  query: z.object({}).optional(),
+  params: z.object({ id: objectId }),
+  body: z.object({ reason: z.string().trim().min(3).max(500) }),
+});

@@ -1,3 +1,6 @@
+import { Ticket } from '../../models/Ticket';
+import { z } from 'zod';
+import { replyTicketSchema } from './helpdesk.validation';
 import { ApiError } from '../../utils/ApiError';
 import { ITicket } from '../../models/Ticket';
 import * as repo from './helpdesk.repository';
@@ -55,8 +58,28 @@ export async function transitionTicket(
     if (staff.status !== 'Active') throw ApiError.conflict('A ticket can only be assigned to active staff');
   }
 
-  const updated = await repo.applyTransition(id, from, input);
-  if (!updated) throw ApiError.conflict('This ticket changed before the update could be applied; refresh and try again');
+  if (to === 'Resolved' && !(input.resolutionNotes || '').trim())
+    throw ApiError.badRequest('Meaningful resolution notes are required');
+  const updated = await repo.applyTransition(id, from, input, requester.id);
+  if (!updated)
+    throw ApiError.conflict('This ticket changed before the update could be applied; refresh and try again');
   await logAudit(`Moved helpdesk ticket ${ticket.subject} from ${from} to ${to}`, 'Helpdesk', requester.id);
   return updated;
+}
+
+export async function replyTicket(
+  id: string,
+  input: z.infer<typeof replyTicketSchema>['body'],
+  requester: AuthenticatedUser,
+) {
+  const ticket = await Ticket.findOne(scopeTicketFilter({ _id: id }, requester));
+  if (!ticket) throw ApiError.notFound('Ticket not found');
+  const saved = await Ticket.findOneAndUpdate(
+    { _id: id, updatedAt: new Date(input.expectedUpdatedAt), status: { $ne: 'Closed' } },
+    { $push: { replies: { at: new Date(), by: requester.id, name: requester.role, message: input.message } } },
+    { new: true, runValidators: true },
+  );
+  if (!saved) throw ApiError.conflict('Ticket changed or closed; reload before replying');
+  await logAudit('Added reply to helpdesk ticket ' + id, 'Helpdesk', requester.id);
+  return saved;
 }

@@ -2,7 +2,13 @@ import { Router } from 'express';
 import * as controller from './expenses.controller';
 import { validate } from '../../middleware/validate';
 import { requireAuth, requireRole } from '../../middleware/auth';
-import { listClaimsSchema, submitClaimSchema, reviewClaimSchema } from './expenses.validation';
+import {
+  listClaimsSchema,
+  submitClaimSchema,
+  reviewClaimSchema,
+  payClaimSchema,
+  cancelClaimSchema,
+} from './expenses.validation';
 
 const router = Router();
 
@@ -20,6 +26,19 @@ router.post(
   requireRole('Administrator', 'Principal', 'Accountant'),
   validate(reviewClaimSchema),
   controller.review,
+);
+
+router.post(
+  '/:id/pay',
+  requireRole('Administrator', 'Principal', 'Accountant'),
+  validate(payClaimSchema),
+  controller.pay,
+);
+router.post(
+  '/:id/cancel',
+  requireRole('Administrator', 'Principal', 'Teacher', 'Accountant'),
+  validate(cancelClaimSchema),
+  controller.cancel,
 );
 
 export default router;

@@ -20,11 +20,12 @@ export const DEFAULT_GRADE_SCALE: GradeScaleEntry[] = [
  * from `scores` at read time, never stored, so correcting a single mark can never leave a stale
  * average or grade behind. Rank and grade are computed rather than stored.
  */
+export function computeRawAveragePercent(scores: IExamScore[], maxMarks: number): number {
+  if (!scores.length || maxMarks <= 0) return 0;
+  return (scores.reduce((sum, score) => sum + score.marks, 0) / (scores.length * maxMarks)) * 100;
+}
 export function computeAveragePercent(scores: IExamScore[], maxMarks: number): number {
-  if (scores.length === 0 || maxMarks <= 0) return 0;
-  const totalMarks = scores.reduce((sum, s) => sum + s.marks, 0);
-  const totalMax = scores.length * maxMarks;
-  return Math.round((totalMarks / totalMax) * 1000) / 10; // one decimal place
+  return Math.round(computeRawAveragePercent(scores, maxMarks) * 10) / 10;
 }
 
 export function computeGrade(averagePercent: number, scale: GradeScaleEntry[] = DEFAULT_GRADE_SCALE): string {

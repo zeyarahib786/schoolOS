@@ -14,6 +14,9 @@ export interface IBooking extends Document {
   endTime: string;
   bookedBy: Types.ObjectId;
   purpose: string;
+  status: 'Active' | 'Cancelled';
+  cancelledAt?: Date;
+  history: { at: Date; by: Types.ObjectId; reason: string; action: string }[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -25,6 +28,9 @@ const bookingSchema = new Schema<IBooking>(
     startTime: { type: String, required: true, match: /^([01]\d|2[0-3]):[0-5]\d$/ },
     endTime: { type: String, required: true, match: /^([01]\d|2[0-3]):[0-5]\d$/ },
     bookedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    status: { type: String, enum: ['Active', 'Cancelled'], default: 'Active' },
+    cancelledAt: Date,
+    history: [{ at: Date, by: { type: Schema.Types.ObjectId, ref: 'User' }, reason: String, action: String }],
     purpose: { type: String, required: true, trim: true, maxlength: 300 },
   },
   { timestamps: true },

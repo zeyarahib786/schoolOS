@@ -1,16 +1,23 @@
-import { FilterQuery, Types } from 'mongoose';
+import mongoose, { FilterQuery, Types } from 'mongoose';
+import { ApiError } from '../../utils/ApiError';
 import { Survey, ISurvey } from '../../models/Survey';
 import { SurveyResponse, ISurveyResponse } from '../../models/SurveyResponse';
 import { ListSurveysQuery, CreateSurveyInput, SubmitResponseInput } from './surveys.validation';
 
-export async function findMany(query: ListSurveysQuery): Promise<{ items: ISurvey[]; total: number }> {
+export async function findMany(
+  query: ListSurveysQuery,
+  scope: FilterQuery<ISurvey> = {},
+): Promise<{ items: ISurvey[]; total: number }> {
   const filter: FilterQuery<ISurvey> = {};
   if (query.status) filter.status = query.status;
 
   const skip = (query.page - 1) * query.limit;
   const [items, total] = await Promise.all([
-    Survey.find(filter).sort({ createdAt: -1 }).skip(skip).limit(query.limit),
-    Survey.countDocuments(filter),
+    Survey.find({ $and: [filter, scope] })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(query.limit),
+    Survey.countDocuments({ $and: [filter, scope] }),
   ]);
   return { items, total };
 }
@@ -24,23 +31,51 @@ export function create(input: CreateSurveyInput, createdBy: string): Promise<ISu
 }
 
 export function activate(id: string): Promise<ISurvey | null> {
-  return Survey.findByIdAndUpdate(id, { status: 'Active' }, { new: true });
+  return Survey.findOneAndUpdate(
+    { _id: id, status: { $in: ['Draft', 'Scheduled'] } },
+    { $set: { status: 'Active' }, $inc: { responseRevision: 1 } },
+    { new: true },
+  );
 }
 
 export function close(id: string): Promise<ISurvey | null> {
-  return Survey.findByIdAndUpdate(id, { status: 'Closed' }, { new: true });
+  return Survey.findOneAndUpdate(
+    { _id: id, status: 'Active' },
+    { $set: { status: 'Closed' }, $inc: { responseRevision: 1 } },
+    { new: true },
+  );
 }
 
 export function hasResponded(surveyId: string, respondentId: string): Promise<ISurveyResponse | null> {
   return SurveyResponse.findOne({ survey: surveyId, respondent: respondentId });
 }
 
-export function submitResponse(
+export async function submitResponse(
   surveyId: string,
   respondentId: string,
   input: SubmitResponseInput,
 ): Promise<ISurveyResponse> {
-  return SurveyResponse.create({ survey: surveyId, respondent: respondentId, answers: input.answers });
+  const session = await mongoose.startSession();
+  let saved: ISurveyResponse | null = null;
+  try {
+    await session.withTransaction(async () => {
+      const active = await Survey.findOneAndUpdate(
+        { _id: surveyId, status: 'Active' },
+        { $inc: { responseRevision: 1 } },
+        { session, new: true },
+      );
+      if (!active) throw ApiError.conflict('Survey closed before the response was saved');
+      saved = (
+        await SurveyResponse.create([{ survey: surveyId, respondent: respondentId, answers: input.answers }], {
+          session,
+        })
+      )[0];
+    });
+    if (!saved) throw new Error('Response transaction produced no record');
+    return saved;
+  } finally {
+    await session.endSession();
+  }
 }
 
 /**

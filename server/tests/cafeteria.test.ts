@@ -11,6 +11,9 @@ async function registerAndLogin(role: 'Administrator' | 'Teacher' | 'Parent', em
 }
 
 async function createStudent(token: string, refId: string, guardianUserId?: string) {
+  if (guardianUserId)
+    token = (await registerAndLogin('Administrator', 'cafeteria-link-' + refId.toLowerCase() + '@example.invalid'))
+      .token;
   const res = await request(app).post('/api/v1/students').set('Authorization', `Bearer ${token}`).send({
     refId,
     name: 'Fatima Al Hashimi',
@@ -69,7 +72,11 @@ describe('Cafeteria API', () => {
       .get('/api/v1/cafeteria/transactions')
       .set('Authorization', `Bearer ${admin.token}`);
     expect(transactions.status).toBe(200);
-    expect(transactions.body.data.some((item: { type: string; description: string }) => item.type === 'Purchase' && item.description === 'Lunch')).toBe(true);
+    expect(
+      transactions.body.data.some(
+        (item: { type: string; description: string }) => item.type === 'Purchase' && item.description === 'Lunch',
+      ),
+    ).toBe(true);
   });
 
   it('rejects a purchase exceeding the current balance', async () => {
@@ -132,7 +139,9 @@ describe('Cafeteria API', () => {
     const res = await request(app).get('/api/v1/cafeteria/wallets').set('Authorization', `Bearer ${parent.token}`);
     expect(res.status).toBe(200);
     expect(res.body.data.length).toBe(1);
-    const transactions = await request(app).get('/api/v1/cafeteria/transactions').set('Authorization', `Bearer ${parent.token}`);
+    const transactions = await request(app)
+      .get('/api/v1/cafeteria/transactions')
+      .set('Authorization', `Bearer ${parent.token}`);
     expect(transactions.status).toBe(200);
     expect(transactions.body.data.length).toBe(1);
     expect(transactions.body.data[0].wallet.student._id).toBe(myChildId);
@@ -143,19 +152,38 @@ describe('Cafeteria API', () => {
     const parent = await registerAndLogin('Parent', 'parent-allergy@alnoor.ae');
     const childId = await createStudent(admin.token, 'ANS-8510', parent.userId);
     const otherId = await createStudent(admin.token, 'ANS-8511');
-    const first = await request(app).post('/api/v1/cafeteria/allergy-plans').set('Authorization', `Bearer ${admin.token}`).send({
-      studentId: childId, allergens: 'Peanuts', severity: 'Severe', carePlan: 'Nut-free tray',
-    });
+    const first = await request(app)
+      .post('/api/v1/cafeteria/allergy-plans')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({
+        studentId: childId,
+        allergens: 'Peanuts',
+        severity: 'Severe',
+        carePlan: 'Nut-free tray',
+      });
     expect(first.status).toBe(200);
-    const updated = await request(app).post('/api/v1/cafeteria/allergy-plans').set('Authorization', `Bearer ${admin.token}`).send({
-      studentId: childId, allergens: 'Peanuts, tree nuts', severity: 'Severe', carePlan: 'Nut-free tray and EpiPen',
-    });
+    const updated = await request(app)
+      .post('/api/v1/cafeteria/allergy-plans')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({
+        expectedUpdatedAt: first.body.data.updatedAt,
+        reason: 'Reviewed dietary instructions',
+        studentId: childId,
+        allergens: 'Peanuts, tree nuts',
+        severity: 'Severe',
+        carePlan: 'Nut-free tray and EpiPen',
+      });
     expect(updated.body.data._id).toBe(first.body.data._id);
     await request(app).post('/api/v1/cafeteria/allergy-plans').set('Authorization', `Bearer ${admin.token}`).send({
-      studentId: otherId, allergens: 'Milk', severity: 'Moderate', carePlan: 'Dairy-free meal',
+      studentId: otherId,
+      allergens: 'Milk',
+      severity: 'Moderate',
+      carePlan: 'Dairy-free meal',
     });
 
-    const visible = await request(app).get('/api/v1/cafeteria/allergy-plans').set('Authorization', `Bearer ${parent.token}`);
+    const visible = await request(app)
+      .get('/api/v1/cafeteria/allergy-plans')
+      .set('Authorization', `Bearer ${parent.token}`);
     expect(visible.status).toBe(200);
     expect(visible.body.data).toHaveLength(1);
     expect(visible.body.data[0].student._id).toBe(childId);
@@ -166,21 +194,43 @@ describe('Cafeteria API', () => {
     const admin = await registerAndLogin('Administrator', 'admin-allergy-owner@alnoor.ae');
     const studentId = await createStudent(admin.token, 'ANS-8512');
     const teacher = await registerAndLogin('Teacher', 'teacher-allergy@alnoor.ae');
-    const res = await request(app).post('/api/v1/cafeteria/allergy-plans').set('Authorization', `Bearer ${teacher.token}`).send({
-      studentId, allergens: 'Egg', severity: 'Mild', carePlan: 'Egg-free substitute',
-    });
+    const res = await request(app)
+      .post('/api/v1/cafeteria/allergy-plans')
+      .set('Authorization', `Bearer ${teacher.token}`)
+      .send({
+        studentId,
+        allergens: 'Egg',
+        severity: 'Mild',
+        carePlan: 'Egg-free substitute',
+      });
     expect(res.status).toBe(403);
   });
 
   it('upserts weekly menu meal slots without overwriting other meals', async () => {
     const admin = await registerAndLogin('Administrator', 'admin-menu@alnoor.ae');
-    const breakfast = await request(app).put('/api/v1/cafeteria/menu/item').set('Authorization', `Bearer ${admin.token}`).send({
-      day: 'Sunday', meal: 'Breakfast', item: 'Shakshuka', calories: 390, vegetarian: true, allergens: ['Egg'],
-    });
+    const breakfast = await request(app)
+      .put('/api/v1/cafeteria/menu/item')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({
+        day: 'Sunday',
+        meal: 'Breakfast',
+        item: 'Shakshuka',
+        calories: 390,
+        vegetarian: true,
+        allergens: ['Egg'],
+      });
     expect(breakfast.status).toBe(200);
-    const lunch = await request(app).put('/api/v1/cafeteria/menu/item').set('Authorization', `Bearer ${admin.token}`).send({
-      day: 'Sunday', meal: 'Lunch', item: 'Chicken biryani', calories: 680, vegetarian: false, allergens: [],
-    });
+    const lunch = await request(app)
+      .put('/api/v1/cafeteria/menu/item')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({
+        day: 'Sunday',
+        meal: 'Lunch',
+        item: 'Chicken biryani',
+        calories: 680,
+        vegetarian: false,
+        allergens: [],
+      });
     expect(lunch.status).toBe(200);
     expect(lunch.body.data.breakfast.item).toBe('Shakshuka');
     expect(lunch.body.data.lunch.item).toBe('Chicken biryani');
@@ -192,9 +242,17 @@ describe('Cafeteria API', () => {
 
   it('rejects weekly menu changes by a Teacher', async () => {
     const teacher = await registerAndLogin('Teacher', 'teacher-menu@alnoor.ae');
-    const res = await request(app).put('/api/v1/cafeteria/menu/item').set('Authorization', `Bearer ${teacher.token}`).send({
-      day: 'Monday', meal: 'Snack', item: 'Fruit cup', calories: 120, vegetarian: true, allergens: [],
-    });
+    const res = await request(app)
+      .put('/api/v1/cafeteria/menu/item')
+      .set('Authorization', `Bearer ${teacher.token}`)
+      .send({
+        day: 'Monday',
+        meal: 'Snack',
+        item: 'Fruit cup',
+        calories: 120,
+        vegetarian: true,
+        allergens: [],
+      });
     expect(res.status).toBe(403);
   });
 });

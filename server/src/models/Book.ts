@@ -7,6 +7,8 @@ import { Schema, model, Document, Types } from 'mongoose';
  * remains). */
 export interface IBook extends Document {
   _id: Types.ObjectId;
+  shelf: string;
+  history: Array<{ at: Date; actor: Types.ObjectId; reason: string }>;
   isbn: string;
   title: string;
   author: string;
@@ -19,6 +21,8 @@ export interface IBook extends Document {
 
 const bookSchema = new Schema<IBook>(
   {
+    shelf: { type: String, trim: true, maxlength: 80, default: '' },
+    history: [{ _id: false, at: Date, actor: { type: Schema.Types.ObjectId, ref: 'User' }, reason: String }],
     isbn: { type: String, required: true, unique: true, trim: true },
     title: { type: String, required: true, trim: true, maxlength: 200 },
     author: { type: String, required: true, trim: true, maxlength: 120 },

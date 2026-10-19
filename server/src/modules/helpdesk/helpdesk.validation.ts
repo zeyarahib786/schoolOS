@@ -30,6 +30,7 @@ export const transitionTicketSchema = z.object({
   body: z.object({
     status: z.enum(['Open', 'Assigned', 'Resolved', 'Closed']),
     assignedTo: objectId.optional(),
+    expectedUpdatedAt: z.string().datetime().optional(),
     resolutionNotes: z.string().trim().max(2000).optional(),
   }),
 });
@@ -43,3 +44,9 @@ export const ticketIdParamSchema = z.object({
 export type ListTicketsQuery = z.infer<typeof listTicketsSchema>['query'];
 export type RaiseTicketInput = z.infer<typeof raiseTicketSchema>['body'];
 export type TransitionTicketInput = z.infer<typeof transitionTicketSchema>['body'];
+
+export const replyTicketSchema = z.object({
+  params: z.object({ id: objectId }),
+  query: z.object({}).optional(),
+  body: z.object({ expectedUpdatedAt: z.string().datetime(), message: z.string().trim().min(1).max(2000) }),
+});

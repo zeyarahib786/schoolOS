@@ -3,6 +3,9 @@ import * as controller from './student.controller';
 import { validate } from '../../middleware/validate';
 import { requireAuth, requireRole } from '../../middleware/auth';
 import {
+  importStudentsSchema,
+  enrollmentSchema,
+  accountsSchema,
   listStudentsSchema,
   studentIdParamSchema,
   createStudentSchema,
@@ -18,13 +21,43 @@ const router = Router();
 router.use(requireAuth);
 
 router.get('/', validate(listStudentsSchema), controller.list);
-router.put('/:id/documents/:key', requireRole('Administrator', 'Principal', 'Teacher'),
-  express.raw({ type: ['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'], limit: '4mb' }),
-  validate(studentDocumentParamSchema), controller.uploadDocument);
+router.put(
+  '/:id/documents/:key',
+  requireRole('Administrator', 'Principal', 'Teacher'),
+  express.raw({
+    type: [
+      'application/pdf',
+      'image/jpeg',
+      'image/png',
+      'image/webp',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    ],
+    limit: '4mb',
+  }),
+  validate(studentDocumentParamSchema),
+  controller.uploadDocument,
+);
 router.get('/:id/documents/:key', validate(studentDocumentParamSchema), controller.downloadDocument);
-router.delete('/:id/documents/:key', requireRole('Administrator', 'Principal', 'Teacher'),
-  validate(studentDocumentParamSchema), controller.deleteDocument);
+router.delete(
+  '/:id/documents/:key',
+  requireRole('Administrator', 'Principal', 'Teacher'),
+  validate(studentDocumentParamSchema),
+  controller.deleteDocument,
+);
+router.post(
+  '/import',
+  requireRole('Administrator', 'Principal'),
+  validate(importStudentsSchema),
+  controller.importRecords,
+);
+router.patch(
+  '/:id/enrollment',
+  requireRole('Administrator', 'Principal'),
+  validate(enrollmentSchema),
+  controller.enrollment,
+);
+router.patch('/:id/accounts', requireRole('Administrator', 'Principal'), validate(accountsSchema), controller.accounts);
 router.get('/:id', validate(studentIdParamSchema), controller.getOne);
 router.post(
   '/',

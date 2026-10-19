@@ -13,12 +13,30 @@ export interface IEvent extends Document {
   audience: 'All' | 'Students' | 'Staff' | 'Parents';
   booking?: Types.ObjectId;
   createdBy: Types.ObjectId;
+  status: 'Scheduled' | 'Cancelled';
+  history: {
+    at: Date;
+    by: Types.ObjectId;
+    reason: string;
+    action: string;
+    previous?: { title: string; description: string; date: Date; audience: string };
+  }[];
   createdAt: Date;
   updatedAt: Date;
 }
 
 const eventSchema = new Schema<IEvent>(
   {
+    status: { type: String, enum: ['Scheduled', 'Cancelled'], default: 'Scheduled' },
+    history: [
+      {
+        at: Date,
+        by: { type: Schema.Types.ObjectId, ref: 'User' },
+        reason: String,
+        action: String,
+        previous: { title: String, description: String, date: Date, audience: String },
+      },
+    ],
     title: { type: String, required: true, trim: true, maxlength: 160 },
     description: { type: String, required: true, trim: true, maxlength: 2000 },
     date: { type: Date, required: true, index: true },

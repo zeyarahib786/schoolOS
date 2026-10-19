@@ -1,0 +1,3416 @@
+openapi: 3.0.3
+info:
+  title: Solvagence SchoolOS API
+  version: 0.1.0
+  description: >
+    Production-oriented MERN API covering the active SchoolOS modules. Every response follows the same
+    envelope: { success, data, meta } on 2xx, { success:false, error:{code,message,requestId} }
+    on failure. Role-based and ownership-based authorization is enforced server-side.
+servers:
+  - url: http://localhost:4000/api/v1
+    description: Local development
+
+components:
+  # ---- Staff module added this round - same pattern as Students, see /staff paths below ----
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    FeeHeadInput:
+      type: object
+      required: [name, appliesTo, amount, frequency]
+      properties:
+        name: { type: string, minLength: 2, maxLength: 100 }
+        appliesTo: { type: string, minLength: 1, maxLength: 100 }
+        amount: { type: number, exclusiveMinimum: true, minimum: 0, maximum: 1000000000, multipleOf: 0.01 }
+        frequency: { type: string, enum: [Annual, Term, One-time] }
+        status: { type: string, enum: [Active, Archived], default: Active }
+    Student:
+      type: object
+      properties:
+        _id: { type: string }
+        refId: { type: string, example: ANS-1042 }
+        name: { type: string }
+        grade: { type: string }
+        gender: { type: string, enum: [Male, Female] }
+        roll: { type: string }
+        guardianName: { type: string }
+        dateOfBirth: { type: string, format: date }
+        nationality: { type: string }
+        guardianRelationship: { type: string, enum: [Father, Mother, Guardian, Other] }
+        guardianEmail: { type: string, format: email }
+        phone: { type: string }
+        emergencyContact: { type: string }
+        preferredLanguage: { type: string }
+        address: { type: string }
+        previousSchool: { type: string }
+        previousGrade: { type: string }
+        languages: { type: string }
+        bloodGroup: { type: string, enum: [A+, A-, B+, B-, AB+, AB-, O+, O-] }
+        allergies: { type: string }
+        medicalNotes: { type: string }
+        transportRequirement: { type: string, enum: [No, One-way, Two-way] }
+        documents:
+          type: array
+          description: Metadata for authenticated files stored in the studentDocuments GridFS bucket.
+          items:
+            type: object
+            properties:
+              key: { type: string, enum: [id, birth, photo] }
+              label: { type: string }
+              filename: { type: string }
+              contentType: { type: string }
+              size: { type: integer }
+              uploadedAt: { type: string, format: date-time }
+        feeStatus: { type: string, enum: [Paid, Pending, Overdue] }
+        attendancePct: { type: number }
+        gpa: { type: number }
+        attendanceRecords: { type: integer, minimum: 0, readOnly: true, description: Number of linked attendance records used for the live summary. }
+        assessmentResults: { type: integer, minimum: 0, readOnly: true, description: Number of linked assessment results used for the live summary. }
+        invoiceRecords: { type: integer, minimum: 0, readOnly: true, description: Number of linked invoices used for the live summary. }
+        status: { type: string, enum: [Active, Inactive, Alumni] }
+    StaffMember:
+      type: object
+      properties:
+        _id: { type: string }
+        refId: { type: string, example: EMP-209 }
+        name: { type: string }
+        designation: { type: string }
+        department: { type: string }
+        type: { type: string, enum: [Teaching, Non-Teaching] }
+        status: { type: string, enum: [Active, Onboarding, On Leave, Inactive] }
+        email: { type: string }
+        phone: { type: string }
+        joinedDate: { type: string, format: date }
+    AttendanceRecord:
+      type: object
+      properties:
+        _id: { type: string }
+        student: { type: string, description: 'ObjectId ref to Student, or a populated object with name/refId/grade' }
+        date: { type: string, format: date }
+        session: { type: string, enum: [AM, PM] }
+        status: { type: string, enum: [Present, Absent, Late, Excused] }
+        notes: { type: string }
+    InvoiceInput:
+      type: object
+      required: [refId, studentId, term, amount, dueDate]
+      properties:
+        refId: { type: string, minLength: 1, maxLength: 30 }
+        studentId: { type: string, description: Existing active student ObjectId }
+        term: { type: string, minLength: 1, maxLength: 60 }
+        amount: { type: number, minimum: 0, exclusiveMinimum: true, maximum: 1000000000, multipleOf: 0.01 }
+        currency: { type: string, minLength: 3, maxLength: 3, description: Must match school currency when supplied }
+        dueDate: { type: string, format: date, description: Valid calendar date }
+    Invoice:
+      type: object
+      properties:
+        _id: { type: string }
+        refId: { type: string, example: INV-1001 }
+        student: { type: string, description: 'ObjectId ref to Student, or a populated object' }
+        term: { type: string }
+        amount: { type: number }
+        currency: { type: string, example: AED }
+        dueDate: { type: string, format: date }
+        status: { type: string, enum: [Pending, Paid, Overdue] }
+        paymentMethod: { type: string, enum: [Card, Bank transfer, Cash, Cheque, Online portal] }
+    CurriculumUnit:
+      type: object
+      properties:
+        _id: { type: string }
+        subject: { type: string }
+        term: { type: string }
+        title: { type: string }
+        outcomes: { type: string }
+        sequenceOrder: { type: integer }
+        plannedDate: { type: string, format: date }
+        completedDate: { type: string, format: date, nullable: true }
+        framework: { type: string }
+        owner: { type: string }
+    ClassSection:
+      type: object
+      properties:
+        _id: { type: string }
+        grade: { type: string, example: Grade 6 }
+        section: { type: string, example: A }
+        className: { type: string, example: Grade 6 · A }
+        stream: { type: string, enum: [Foundation, Primary, General, Commerce, Science, Arts] }
+        teacherStaffId: { type: object, nullable: true, description: Populated active teaching Staff record }
+        representativeStudentId: { type: object, nullable: true, description: Populated Student record }
+        capacity: { type: integer, minimum: 1, maximum: 100 }
+        filled: { type: integer, description: Live count of active Student records assigned to className }
+    CrmLead:
+      type: object
+      properties:
+        _id: { type: string }
+        name: { type: string }
+        grade: { type: string }
+        stage: { type: string, enum: [New, Contacted, Toured, Application, Won] }
+        source: { type: string, enum: [Website, Walk-in, Referral, Agent, Event, Instagram, Facebook, Google] }
+        phone: { type: string }
+        guardian: { type: string }
+        guardianEmail: { type: string, format: email }
+        owner: { type: string }
+        temperature: { type: string, enum: [Hot, Warm, Cold] }
+        followUpDate: { type: string, format: date-time, nullable: true }
+        followUpType: { type: string, nullable: true }
+        archived: { type: boolean }
+        archiveReason: { type: string, nullable: true }
+        lastActivityAt: { type: string, format: date-time }
+        activityLog: { type: array, items: { type: object } }
+    Book:
+      type: object
+      properties:
+        _id: { type: string }
+        isbn: { type: string }
+        title: { type: string }
+        author: { type: string }
+        category: { type: string }
+        totalCopies: { type: integer }
+        availableCopies: { type: integer }
+    Loan:
+      type: object
+      properties:
+        _id: { type: string }
+        book: { type: string, description: 'ObjectId ref to Book, or a populated object' }
+        student: { type: string, description: 'ObjectId ref to Student, or a populated object' }
+        issuedDate: { type: string, format: date }
+        dueDate: { type: string, format: date }
+        returnedDate: { type: string, format: date }
+        status: { type: string, enum: [Active, Returned, Overdue] }
+    ErrorResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: false }
+        error:
+          type: object
+          properties:
+            code: { type: string }
+            message: { type: string }
+            requestId: { type: string }
+    Guardian:
+      type: object
+      properties:
+        _id: { type: string }
+        refId: { type: string, example: GRD-101 }
+        name: { type: string }
+        relation: { type: string, enum: [Parent, Father, Mother, Guardian, Other] }
+        phone: { type: string }
+        email: { type: string, format: email }
+        studentIds: { type: array, items: { type: object } }
+        portalStatus: { type: string, enum: [Active, Invited, Suspended] }
+        pickupAuthorized: { type: boolean }
+        financialResponsible: { type: boolean }
+        custody: { type: string }
+        userId: { type: string, nullable: true }
+        lastLoginAt: { type: string, format: date-time, nullable: true }
+        updatedAt: { type: string, format: date-time }
+        note: { type: string }
+        consents:
+          type: object
+          properties:
+            media: { type: boolean, nullable: true }
+            trips: { type: boolean, nullable: true }
+            medical: { type: boolean, nullable: true }
+    GuardianFields:
+      type: object
+      required: [name, relation, phone, studentIds, pickupAuthorized, financialResponsible, custody, consents]
+      properties:
+        name: { type: string, minLength: 2, maxLength: 120 }
+        relation: { type: string, enum: [Parent, Father, Mother, Guardian, Other] }
+        phone: { type: string, pattern: '^\+?[0-9 ]{7,20}$' }
+        email: { type: string, description: Optional contact email; empty string clears it; shared email is allowed }
+        studentIds: { type: array, maxItems: 50, uniqueItems: true, items: { type: string } }
+        pickupAuthorized: { type: boolean }
+        financialResponsible: { type: boolean }
+        custody: { type: string, minLength: 1, maxLength: 300 }
+        note: { type: string, maxLength: 600 }
+        consents:
+          type: object
+          required: [media, trips, medical]
+          properties:
+            media: { type: boolean, nullable: true }
+            trips: { type: boolean, nullable: true }
+            medical: { type: boolean, nullable: true }
+    GuardianCreate:
+      allOf:
+        - { $ref: '#/components/schemas/GuardianFields' }
+        - type: object
+          required: [refId]
+          properties:
+            refId: { type: string, minLength: 1, maxLength: 30 }
+    GuardianUpdate:
+      allOf:
+        - { $ref: '#/components/schemas/GuardianFields' }
+        - type: object
+          required: [expectedUpdatedAt]
+          properties:
+            expectedUpdatedAt: { type: string, format: date-time }
+    AccessRole:
+      type: object
+      required: [_id, name, isSystem, permissions]
+      properties:
+        _id: { type: string }
+        name: { type: string, example: Teacher }
+        description: { type: string }
+        basedOn: { type: string, nullable: true }
+        isSystem: { type: boolean }
+        permissions:
+          type: object
+          additionalProperties: { type: boolean }
+          example: { Students: true, Payroll: false, Settings: false }
+paths:
+  /staff:
+    get:
+      summary: >-
+        List staff (paginated, searchable, filterable by department/type/status). Ownership-scoped:
+        Administrator/Principal/Accountant see the full directory; any other role sees only their
+        own linked staff record (matched via userId), if one exists.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Paginated staff list }
+    post:
+      summary: Create a staff record (Administrator, Principal only)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/StaffMember' } }
+      responses:
+        '201': { description: Staff record created }
+        '403': { description: Insufficient role }
+        '409': { description: refId or email already exists }
+  /staff/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    get:
+      summary: Get a single staff record by id (ownership-scoped - see GET /staff)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Staff record found }
+        '404': { description: Not found, or not yours to see }
+    patch:
+      summary: Versioned employee profile update (Administrator, Principal only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedUpdatedAt, changeReason]
+              properties:
+                expectedUpdatedAt: { type: string, format: date-time }
+                changeReason: { type: string, minLength: 3, maxLength: 500 }
+                name: { type: string }
+                department: { type: string }
+                designation: { type: string }
+                status: { type: string, enum: [Active, Onboarding, On Leave, Inactive] }
+                joinedDate: { type: string, format: date }
+                annualLeaveRemaining: { type: integer, minimum: 0, maximum: 366 }
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Updated }
+        '403': { description: Insufficient role }
+    delete:
+      summary: Delete a staff record (Administrator only; blocked when operational history exists)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Deleted }
+        '403': { description: Insufficient role }
+        '409': { description: Staff has leave, payroll, claim, meeting, or ticket history; set Inactive instead }
+  /staff/{id}/documents/{key}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+      - { name: key, in: path, required: true, schema: { type: string, enum: [id, degree, photo, experience, visa, attestation] } }
+    put:
+      summary: Securely upload an existing Staff onboarding document (Administrator or Principal)
+      security: [{ bearerAuth: [] }]
+      responses: { '201': { description: Document stored in GridFS } }
+    get:
+      summary: Download a staff document within the staff-directory ownership scope
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Document stream } }
+    delete:
+      summary: Remove a staff document (Administrator or Principal)
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Document removed } }
+  /staff/{id}/onboarding/{key}/toggle:
+    post:
+      summary: Persist an existing onboarding checklist toggle (Administrator or Principal)
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Updated staff record } }
+  /attendance:
+    get:
+      summary: >-
+        List attendance records (paginated, filterable by student/date/session/status). Ownership-
+        scoped: Administrator/Principal/Teacher see all records; a Parent sees only records for
+        their linked children and Student sees the linked student record. Requested student filters intersect ownership.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Paginated attendance list, student field populated with name/refId/grade }
+  /attendance/staff:
+    get:
+      summary: >-
+        List staff self-attendance for a date. Administrator, Principal, and Accountant see all
+        staff rows; Teacher sees only their own row.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Staff attendance list for the selected day }
+        '403': { description: Non-staff role }
+  /attendance/staff/me:
+    put:
+      summary: Mark or correct the signed-in staff user's attendance for the day.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                date: { type: string, format: date }
+                status: { type: string, enum: [Present, Remote, Late] }
+      responses:
+        '200': { description: Staff attendance row saved }
+        '403': { description: Non-staff role }
+  /attendance/absence-requests:
+    get:
+      summary: >-
+        List student absence requests. Administrator/Principal/Teacher see all; Parent sees only
+        requests for linked children.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Paginated absence request list }
+    post:
+      summary: Create an absence request for a linked student.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [studentId, fromDate, toDate, note]
+              properties:
+                studentId: { type: string }
+                fromDate: { type: string, format: date }
+                toDate: { type: string, format: date }
+                type: { type: string, enum: [Medical, Family event, Travel, Religious observance, Other] }
+                note: { type: string }
+      responses:
+        '201': { description: Absence request created in Pending status }
+        '404': { description: Student not found or not linked to requester }
+  /attendance/absence-requests/{id}/cancel:
+    post:
+      summary: Cancel a pending absence request.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Request cancelled }
+        '409': { description: Request is no longer pending }
+  /attendance/absence-requests/{id}/decision:
+    post:
+      summary: Transactionally decide a pending absence request; approval fills unmarked/Absent sessions as Excused and preserves Present/Late.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision: { type: string, enum: [Approved, Rejected] }
+                note: { type: string }
+      responses:
+        '200': { description: Decision saved }
+        '403': { description: Insufficient role }
+        '409': { description: Request is no longer pending }
+  /attendance/register:
+    put:
+      summary: Save a protected class register (Administrator, Principal or Teacher)
+      description: Transactional batch of unique active students. Dates use school calendar days. Stale timestamps reject the whole batch; changing a saved status/note requires a correction reason. Optional notifyGuardians requests confirmed Absent/Late alerts for today only; Teacher requests require current-year class mapping and external delivery approval.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [date, session, entries]
+              properties:
+                date: { type: string, format: date }
+                session: { type: string, enum: [AM, PM] }
+                notifyGuardians: { type: boolean, default: false }
+                notificationChannel: { type: string, enum: [InApp, Email, SMS], default: InApp }
+                correctionReason: { type: string, maxLength: 300 }
+                entries:
+                  type: array
+                  minItems: 1
+                  maxItems: 200
+                  items:
+                    type: object
+                    required: [studentId, status, expectedUpdatedAt]
+                    properties:
+                      studentId: { type: string }
+                      status: { type: string, enum: [Present, Absent, Late, Excused] }
+                      notes: { type: string, maxLength: 300 }
+                      expectedUpdatedAt: { type: string, format: date-time, nullable: true }
+      responses:
+        '200': { description: Complete register saved and audited }
+        '400': { description: Invalid/future day, duplicate/inactive students or missing correction reason }
+        '403': { description: Insufficient role }
+        '409': { description: Another editor changed a register entry }
+  /attendance/mark:
+    post:
+      summary: >-
+        Bulk-mark attendance for a whole class in one request (Administrator, Principal, or
+        Teacher only). Rejects the entire batch with 409 if any (student, date, session)
+        combination is already marked - enforced by a database-level unique index, not just
+        application logic.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [date, session, entries]
+              properties:
+                date: { type: string, format: date }
+                session: { type: string, enum: [AM, PM] }
+                entries:
+                  type: array
+                  maxItems: 200
+                  items:
+                    type: object
+                    required: [studentId, status]
+                    properties:
+                      studentId: { type: string }
+                      status: { type: string, enum: [Present, Absent, Late, Excused] }
+                      notes: { type: string }
+      responses:
+        '201': { description: 'Attendance marked - returns { markedCount }' }
+        '403': { description: Insufficient role }
+        '409': { description: One or more students already marked for this date/session }
+    put:
+      summary: >-
+        Save or correct a live class register idempotently (Administrator, Principal, or Teacher
+        only). Existing (student, date, session) rows are updated, missing rows are created.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [date, session, entries]
+              properties:
+                date: { type: string, format: date }
+                session: { type: string, enum: [AM, PM] }
+                entries:
+                  type: array
+                  maxItems: 200
+                  items:
+                    type: object
+                    required: [studentId, status]
+                    properties:
+                      studentId: { type: string }
+                      status: { type: string, enum: [Present, Absent, Late, Excused] }
+                      notes: { type: string }
+      responses:
+        '200': { description: 'Register saved - returns { markedCount, updatedCount, createdCount }' }
+        '403': { description: Insufficient role }
+  /fees/heads:
+    get:
+      summary: List saved fee heads (Administrator/Principal/Accountant)
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Reference price list }, '403': { description: Finance role required } }
+    post:
+      summary: Create a school-currency reference fee head
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/FeeHeadInput' } }
+      responses: { '201': { description: Saved fee head } }
+  /fees/heads/{id}:
+    patch:
+      summary: Versioned full-field fee head edit/archive
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - { $ref: '#/components/schemas/FeeHeadInput' }
+                - type: object
+                  required: [expectedUpdatedAt]
+                  properties:
+                    expectedUpdatedAt: { type: string, format: date-time }
+      responses: { '200': { description: Saved head }, '409': { description: Stale version } }
+  /exams/{id}:
+    patch:
+      summary: Save draft datesheet (teaching staff only)
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedUpdatedAt, schedule]
+              properties:
+                expectedUpdatedAt: { type: string, format: date-time }
+                schedule:
+                  type: array
+                  maxItems: 30
+                  items:
+                    type: object
+                    required: [subject, date, startTime, durationMinutes, venue]
+                    properties:
+                      subject: { type: string }
+                      date: { type: string, format: date }
+                      startTime: { type: string, pattern: '^([01]\d|2[0-3]):[0-5]\d$' }
+                      durationMinutes: { type: integer, minimum: 1, maximum: 480 }
+                      venue: { type: string, minLength: 1, maxLength: 100 }
+      responses: { '200': { description: Saved datesheet }, '409': { description: Stale or published scheme } }
+  /exams/{id}/register:
+    put:
+      summary: Transactional versioned complete marks batch (teaching staff only)
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [entries]
+              properties:
+                correctionReason: { type: string, maxLength: 300, description: Required when saved scores change }
+                entries:
+                  type: array
+                  minItems: 1
+                  maxItems: 100
+                  items:
+                    type: object
+                    required: [studentId, scores, expectedUpdatedAt]
+                    properties:
+                      studentId: { type: string }
+                      expectedUpdatedAt: { type: string, format: date-time, nullable: true }
+                      scores:
+                        type: array
+                        minItems: 1
+                        items:
+                          type: object
+                          required: [subject, marks]
+                          properties:
+                            subject: { type: string }
+                            marks: { type: number, minimum: 0 }
+      responses: { '200': { description: Saved count }, '400': { description: Incomplete/invalid marks or missing correction reason }, '403': { description: Role denied or published }, '409': { description: Stale editor; entire batch rolled back } }
+  /announcements/audience-preview:
+    get:
+      summary: Active portal visibility counts including staff oversight (authors only)
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: audience, in: query, required: true, schema: { type: string, enum: [All, Staff, Parents, Students] } }]
+      responses: { '200': { description: 'audience, visibleAccounts, byRole, channel and deliveryTracked=false' } }
+  /announcements/{id}:
+    patch:
+      summary: Edit Draft content (author Teacher or Administrator/Principal reviewer)
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, body, expectedUpdatedAt]
+              properties:
+                title: { type: string, minLength: 2, maxLength: 160 }
+                body: { type: string, minLength: 1, maxLength: 3000 }
+                audience: { type: string, enum: [All, Staff, Parents, Students], default: All }
+                pinned: { type: boolean, default: false }
+                expectedUpdatedAt: { type: string, format: date-time }
+      responses: { '200': { description: Saved draft }, '409': { description: Stale/not-editable draft } }
+  /messages/{id}/archive:
+    post:
+      summary: Personal archive or restore (participant only)
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [archived]
+              properties:
+                archived: { type: boolean }
+      responses: { '200': { description: Personal archive state updated }, '404': { description: Missing message or non-party } }
+  /fees:
+    get:
+      summary: >-
+        List invoices (paginated, filterable by student/status). Ownership-scoped: Administrator/
+        Principal/Accountant see all invoices; a Parent sees only their linked children's
+        invoices; Teacher sees none (fees is deliberately the narrowest-access module - Teacher
+        has no legitimate business need for financial data).
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Paginated invoice list }
+    post:
+      summary: Raise an invoice (Administrator, Principal, or Accountant only - NOT Teacher, unlike every other write-gated module)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/InvoiceInput' } }
+      responses:
+        '201': { description: Invoice created }
+        '403': { description: Insufficient role }
+        '409': { description: refId already exists }
+  /fees/payments:
+    get:
+      summary: List recorded fee payments (parent-scoped like invoices).
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Paginated payment ledger }
+    post:
+      summary: Record a student-level payment against the oldest unpaid invoice.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [studentId, amount, paymentMethod]
+              properties:
+                studentId: { type: string }
+                amount: { type: number, minimum: 0, exclusiveMinimum: true, maximum: 1000000000, multipleOf: 0.01 }
+                paymentMethod: { type: string, enum: [Card, Bank transfer, Cash, Cheque, Online portal] }
+                reference: { type: string }
+                idempotencyKey: { type: string, minLength: 8, maxLength: 100, description: Same recorder/key/details replay without another payment }
+      responses:
+        '200': { description: Payment recorded and invoice balance updated }
+        '400': { description: Payment exceeds balance }
+        '404': { description: No unpaid invoice found }
+  /fees/reminders:
+    post:
+      summary: Save in-app fee reminders for selected outstanding invoices to active unsuspended linked Parents; an empty ID list sends none.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                invoiceIds: { type: array, items: { type: string } }
+      responses:
+        '200': { description: Reminder processing counts }
+  /fees/{id}/pay:
+    post:
+      summary: Record a full or partial payment against an invoice (Administrator, Principal, or Accountant only)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [paymentMethod]
+              properties:
+                amount: { type: number, minimum: 0, exclusiveMinimum: true, maximum: 1000000000, multipleOf: 0.01 }
+                paymentMethod: { type: string, enum: [Card, Bank transfer, Cash, Cheque, Online portal] }
+                reference: { type: string }
+                idempotencyKey: { type: string, minLength: 8, maxLength: 100, description: Same recorder/key/details replay without another payment }
+      responses:
+        '200': { description: Payment recorded; invoice status/balance updated }
+        '400': { description: Payment amount exceeds balance }
+        '403': { description: Insufficient role }
+        '404': { description: Not found }
+  /curriculum:
+    get:
+      summary: >-
+        List curriculum units (paginated, grade/year/term/subject/archive filters, searchable). No ownership
+        restriction - every authenticated role, including Parent and Student, can read the
+        curriculum.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Paginated curriculum unit list }
+    post:
+      summary: Add a persisted curriculum unit (Administrator, Principal, or Teacher only)
+      description: Units are unique by subject, term, title, grade and academic year (case-insensitive); creation is audited.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Unit created }
+        '403': { description: Insufficient role }
+        '409': { description: A matching unit already exists for the subject and term }
+  /curriculum/subjects:
+    get:
+      summary: Distinct list of all subjects that have at least one curriculum unit
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Array of subject names }
+  /curriculum/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    patch:
+      summary: Update, complete, or reopen a curriculum unit (Administrator, Principal, or Teacher only)
+      description: Requires expectedUpdatedAt and reason; records review history, rejects future completion and editing archived units.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Updated }
+        '409': { description: Update would duplicate another unit }
+    delete:
+      summary: Remove an unused curriculum unit (Administrator, Principal, or Teacher only)
+      description: Completed or reviewed units cannot be deleted; use leadership archive.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Removed }
+  /classes:
+    get:
+      summary: List persisted class sections with live active-student roster counts
+      description: Readable by every authenticated role; supports pagination, stream filtering, and grade/section search.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Paginated class-section list }
+    post:
+      summary: Create a class section (Administrator, Principal, or Teacher only)
+      description: Grade/section is case-insensitively unique. An assigned teacher must be active teaching staff, and capacity cannot be below the current active roster.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [grade, section]
+              properties:
+                grade: { type: string, example: Grade 6 }
+                section: { type: string, pattern: '^[A-F]$' }
+                stream: { type: string, enum: [Foundation, Primary, General, Commerce, Science, Arts] }
+                teacherStaffId: { type: string }
+                capacity: { type: integer, minimum: 1, maximum: 100, default: 30 }
+                room: { type: string, maxLength: 60 }
+      responses:
+        '201': { description: Class section created and audited }
+        '403': { description: Insufficient role }
+        '404': { description: Assigned teacher not found }
+        '409': { description: Duplicate section, invalid teacher state, or capacity below roster }
+  /classes/{id}:
+    patch:
+      summary: Edit or archive/restore a section (Administrator or Principal)
+      description: Section identity remains stable. Active teaching staff only; capacity must cover active roster; occupied sections cannot be archived. Stale edits return 409.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [capacity, stream, status, expectedUpdatedAt]
+              properties:
+                capacity: { type: integer, minimum: 1, maximum: 100 }
+                stream: { type: string, enum: [Foundation, Primary, General, Commerce, Science, Arts] }
+                room: { type: string, maxLength: 60 }
+                teacherStaffId: { type: string, nullable: true }
+                status: { type: string, enum: [Active, Archived] }
+                expectedUpdatedAt: { type: string, format: date-time }
+      responses:
+        '200': { description: Section updated and audited }
+        '403': { description: Insufficient role }
+        '404': { description: Section missing }
+        '409': { description: Stale edit, occupied archive, invalid teacher or insufficient capacity }
+  /crm:
+    get:
+      summary: List persisted CRM leads (Administrator or Principal only)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Paginated lead funnel }
+        '403': { description: Insufficient role }
+    post:
+      summary: Capture a new lead with duplicate protection and audit logging
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Lead created }
+        '409': { description: Lead already exists }
+  /crm/{id}/advance:
+    post:
+      summary: Advance a lead by exactly one funnel stage
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Lead advanced }
+        '409': { description: Archived or already at final stage }
+  /crm/{id}/follow-up:
+    put:
+      summary: Schedule the existing quick or custom follow-up
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Follow-up persisted }
+  /crm/{id}/activity:
+    post:
+      summary: Log outreach or follow-up activity and optional temperature change
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Activity persisted }
+  /crm/{id}/archive:
+    post:
+      summary: Archive a manual, stale, or lost lead with a reason
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Lead archived }
+  /crm/{id}/restore:
+    post:
+      summary: Restore an archived lead to the funnel
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Lead restored }
+  /crm/{id}/convert:
+    post:
+      summary: Convert an Application-stage lead into Admissions and mark it Won
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Admissions application created }
+        '409': { description: Wrong stage or duplicate application }
+  /crm/{id}:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string, pattern: '^[a-fA-F0-9]{24}$' } }
+    patch:
+      summary: Edit an active unconverted enquiry with optimistic concurrency (leadership only)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [name, grade, source, guardian, phone, guardianEmail, temperature, updatedAt]
+              properties:
+                name: { type: string, minLength: 2, maxLength: 120 }
+                grade: { type: string, pattern: '^(KG [12]|Grade ([1-9]|1[0-2]))$' }
+                source: { type: string, enum: [Website, Walk-in, Referral, Agent, Event, Instagram, Facebook, Google] }
+                guardian: { type: string, maxLength: 120 }
+                phone: { type: string, maxLength: 30 }
+                guardianEmail: { type: string, maxLength: 254, description: Valid email or empty string to clear }
+                temperature: { type: string, enum: [Hot, Warm, Cold] }
+                updatedAt: { type: string, format: date-time }
+      responses:
+        '200': { description: Saved enquiry with new updatedAt }
+        '409': { description: Stale version, inactive enquiry or duplicate identity }
+    delete:
+      summary: Permanently delete an already archived lead
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Lead deleted }
+        '409': { description: Lead must be archived first }
+  /library/books:
+    get:
+      summary: List the book catalogue (paginated, searchable by title/author, filterable by category)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Paginated book list with real-time availableCopies }
+    post:
+      summary: >-
+        Add a new arrival, or restock an existing ISBN (Administrator, Principal, or Teacher only).
+        Adding a book whose ISBN already exists in the catalogue increments its copy counts atomically
+        rather than creating a duplicate record.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Book created or restocked }
+        '403': { description: Insufficient role }
+  /library/loans:
+    get:
+      summary: >-
+        List loans (paginated, filterable by student/status). Ownership-scoped: Administrator/
+        Principal/Teacher see all; a Parent sees only their linked children's loans.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Paginated loan list, book and student populated }
+    post:
+      summary: >-
+        Issue a loan (Administrator, Principal, or Teacher only). The availability check and the
+        copy decrement happen in a single atomic database operation, not a separate read-then-write -
+        verified under real concurrent requests in the integration test suite (two simultaneous
+        requests for the last copy: exactly one succeeds, never both).
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Loan issued }
+        '403': { description: Insufficient role }
+        '409': { description: No copies currently available }
+  /library/loans/{id}/return:
+    post:
+      summary: Process a return (Administrator, Principal, or Teacher only) - increments availableCopies back
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Loan marked Returned }
+        '409': { description: This loan has already been returned }
+  /library/requests:
+    get:
+      summary: List book requests; staff see all and students/parents see only linked student requests
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Paginated book request list }
+    post:
+      summary: Create a book request for the authenticated Student or Parent's linked active student
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Request created }
+        '409': { description: Duplicate pending request or inactive student }
+  /library/requests/{id}/fulfill:
+    post:
+      summary: Mark a pending book request fulfilled (Administrator, Principal, or Teacher only)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Request fulfilled }
+        '409': { description: Request is already fulfilled }
+  /library/reminders:
+    post:
+      summary: Send persisted in-app reminders for selected overdue loans (Administrator, Principal, or Teacher only)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Reminder delivery totals; unlinked students are reported as skipped }
+  /auth/register:
+    post:
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password, role]
+              properties:
+                name: { type: string }
+                email: { type: string, format: email }
+                password: { type: string, minLength: 10 }
+                role: { type: string, enum: [Administrator, Principal, Teacher, Accountant, Parent, Student] }
+      responses:
+        '201': { description: User created, tokens issued }
+        '400': { description: Validation error, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+        '409': { description: Email already registered }
+  /auth/login:
+    post:
+      summary: Log in with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string }
+                password: { type: string }
+      responses:
+        '200': { description: Login successful, tokens issued }
+        '401': { description: Invalid credentials (generic message - no user enumeration) }
+  /auth/refresh:
+    post:
+      summary: Exchange a valid refresh token for a new token pair
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties: { refreshToken: { type: string } }
+      responses:
+        '200': { description: New token pair issued }
+        '401': { description: Invalid, expired, or revoked refresh token }
+  /auth/logout:
+    post:
+      summary: Log out - revokes all outstanding refresh tokens for this user
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Logged out }
+        '401': { description: Missing or invalid access token }
+  /auth/me:
+    get:
+      summary: Return the full authenticated user record, revalidated against the database (not just the JWT payload) - a deactivated account is rejected here even with an otherwise-valid token
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: 'Current user, full record (id, name, email, role)' }
+        '401': { description: Missing/invalid access token, or the account has been deactivated since the token was issued }
+  /roles/me:
+    get:
+      summary: Get the authenticated user’s persisted module-navigation grants
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Current access role }
+        '401': { description: Missing or invalid access token }
+  /roles:
+    get:
+      summary: List the full permission matrix and active portal-account counts (Administrator only)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Roles, governed modules, per-role counts, and total active users }
+        '403': { description: Administrator required }
+    post:
+      summary: Create a permission template by cloning an existing role (Administrator only; templates are not account roles)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, basedOn]
+              properties:
+                name: { type: string }
+                basedOn: { type: string }
+                description: { type: string }
+      responses:
+        '201': { description: Role created }
+        '409': { description: Role name already exists }
+  /roles/{id}/permissions/{module}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+      - { name: module, in: path, required: true, schema: { type: string } }
+    patch:
+      summary: Persist a module grant or revocation and append an audit entry (Administrator only)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [enabled]
+              properties:
+                enabled: { type: boolean }
+      responses:
+        '200': { description: Updated role }
+        '400': { description: Invalid role id, module, or boolean value }
+        '403': { description: Administrator required }
+        '404': { description: Role not found }
+
+  /students:
+    get:
+      summary: >-
+        List students (paginated, searchable, filterable). Results are ownership-scoped: a Parent
+        only sees students linked to them via guardianUserId; Administrator/Principal/Teacher/
+        Accountant see all students.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: limit, in: query, schema: { type: integer, default: 20, maximum: 100 } }
+        - { name: search, in: query, schema: { type: string } }
+        - { name: grade, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { type: string, enum: [Active, Inactive, Alumni] } }
+      responses:
+        '200':
+          description: Paginated student list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { type: array, items: { $ref: '#/components/schemas/Student' } }
+                  meta:
+                    type: object
+                    properties:
+                      pagination:
+                        type: object
+                        properties:
+                          page: { type: integer }
+                          limit: { type: integer }
+                          total: { type: integer }
+                          totalPages: { type: integer }
+    post:
+      summary: Create a student (Administrator, Principal, Teacher only)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Student' }
+      responses:
+        '201': { description: Student created }
+        '400': { description: Validation error }
+        '403': { description: Insufficient role }
+        '409': { description: refId already exists }
+  /students/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    get:
+      summary: Get a single student by id
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Student found }
+        '400': { description: Malformed id }
+        '404': { description: Not found }
+    patch:
+      summary: Update a student (Administrator, Principal, Teacher only)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Updated }
+        '403': { description: Insufficient role }
+        '404': { description: Not found }
+    delete:
+      summary: Delete a student (Administrator, Principal only)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Deleted }
+        '403': { description: Insufficient role }
+        '404': { description: Not found }
+
+  /students/{id}/documents/{key}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+      - { name: key, in: path, required: true, schema: { type: string, enum: [id, birth, photo] } }
+    put:
+      summary: Upload or replace a student document (Administrator, Principal, Teacher only; maximum 4 MB)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: X-File-Name, in: header, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/pdf: { schema: { type: string, format: binary } }
+          image/jpeg: { schema: { type: string, format: binary } }
+          image/png: { schema: { type: string, format: binary } }
+      responses:
+        '201': { description: Document securely stored in GridFS }
+        '400': { description: Invalid key, type, size, or student id }
+        '403': { description: Insufficient role }
+    get:
+      summary: Download a student document (authenticated and student-ownership scoped)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Document bytes }
+        '404': { description: Student or document not found, or outside the requester's scope }
+    delete:
+      summary: Delete a student document (Administrator, Principal, Teacher only)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Document deleted }
+        '403': { description: Insufficient role }
+        '404': { description: Student or document not found }
+
+  # ---- Exams & Gradebook - added this round ----
+  /exams:
+    get:
+      summary: List exam schemes (paginated)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Paginated exam scheme list }
+    post:
+      summary: Create an exam scheme (Administrator, Principal, or Teacher only)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Exam scheme created }
+        '403': { description: Insufficient role }
+  /exams/{id}/summary:
+    get:
+      description: Administrator, Principal or Teacher only; no family aggregate disclosure. Pass threshold is normalized by maxMarks.
+      summary: >-
+        Real-time class statistics for an exam - class average and pass rate, computed via a
+        MongoDB aggregation pipeline directly in the database, not pulled into the application
+        and reduced in memory.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: 'Aggregate summary: studentCount, classAverage, passCount, passRate' }
+  /exams/{id}/publish:
+    post:
+      summary: Lock and publish an exam. Existing results become visible to linked guardians and receive a portal notification.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Published exam and notification count }
+        '403': { description: Insufficient role }
+  /exams/{id}/reopen:
+    post:
+      summary: Reopen a locked exam for authorised moderation.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Reopened exam }
+  /exams/{id}/report-cards:
+    post:
+      description: Optional grade class filter; issued score snapshots are immutable and repeats preserve the original. Not a signed PDF.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                grade: { type: string }
+      summary: Generate persistent report cards once per student for a published exam; safe to repeat.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Generated and already-existing card counts }
+  /exams/{id}/subjects:
+    post:
+      summary: Add a subject before any results exist (teaching staff only; published exams are locked)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Subject added }
+  /exams/{id}/subjects/{subject}:
+    delete:
+      summary: >-
+        Remove a subject from an exam scheme. Rejects removing the last remaining subject (400)
+        so every exam scheme retains at least one subject. Published exams or schemes with any results reject changes.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: subject, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Subject removed }
+        '400': { description: Cannot remove the last remaining subject }
+  /exams/results:
+    get:
+      summary: >-
+        List exam results with average/grade/pass-status computed live from scores at read time -
+        never stored, so a corrected mark can never leave a stale grade behind. Ownership-scoped
+        like Students/Attendance/Fees.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Paginated results, each with computed averagePercent/grade/passing }
+    post:
+      summary: >-
+        Create a student's complete result for an unlocked exam. Existing records return 409;
+        use the versioned register with a correction reason to change saved marks.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Result recorded, with computed fields }
+        '400': { description: Unknown subject for this exam, or invalid input }
+        '403': { description: Insufficient role, or the exam is locked }
+  /exams/{id}/results/{studentId}/notify:
+    post:
+      summary: Send the existing share-result notification to a linked guardian after publication.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: studentId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Guardian notification sent }
+
+  # ---- Payroll - added this round ----
+  /payroll:
+    get:
+      summary: >-
+        List payslips (paginated, filterable by staff/month/status). Ownership-scoped:
+        Administrator/Principal/Accountant see all; any other role (most relevantly Teacher) sees
+        only payslips for their own linked staff record. Parent and Student are denied HR/payroll reads.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Paginated payslip list, staff populated }
+    post:
+      summary: >-
+        Generate (or re-generate/correct) a payslip for an active/on-leave staff member and month
+        while it is not paid. Corrections require expectedUpdatedAt and correctionReason; amounts use two decimal places and integer-cent arithmetic. Net pay cannot be negative; paid periods are immutable at both the
+        service and database query level.
+        Administrator, Principal, or Accountant only.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Payslip created or updated, netPay computed and stored }
+        '400': { description: Staff is inactive/onboarding, or deductions exceed earnings }
+        '404': { description: Staff record not found }
+        '409': { description: The payslip period is already paid }
+        '403': { description: Insufficient role }
+  /payroll/{id}/pay:
+    post:
+      summary: Record actual external payment of a Processed payslip; no bank transfer initiated
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedUpdatedAt, paidDate, paymentMethod, paymentReference]
+              properties:
+                expectedUpdatedAt: { type: string, format: date-time }
+                paidDate: { type: string, format: date }
+                paymentMethod: { type: string, enum: [Bank transfer, Cash, Cheque, Other] }
+                paymentReference: { type: string, minLength: 3, maxLength: 120 }
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Payslip marked Paid, paidDate stamped }
+        '409': { description: This payslip has already been paid }
+
+  # ---- Expenses - added this round ----
+  /expenses:
+    get:
+      summary: >-
+        List expense claims (paginated, filterable by status/category). Ownership-scoped:
+        Administrator/Principal/Accountant see all; any other role sees only claims THEY
+        submitted, via their own linked staff record.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Paginated claim list, staff populated }
+    post:
+      summary: >-
+        Submit an expense claim for yourself (Administrator, Principal, Teacher, or Accountant -
+        any role with a plausible staff link; Parent/Student cannot). Requires the caller's
+        account to actually be linked to a staff record via Staff.userId.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Claim submitted with status Pending }
+        '400': { description: No staff record is linked to your account }
+        '403': { description: This role cannot submit an expense claim }
+  /expenses/{id}/review:
+    post:
+      summary: >-
+        Approve or reject a claim (Administrator, Principal, or Accountant only). Explicitly
+        blocks a reviewer from approving their OWN submitted claim, even if they hold a
+        review-capable role - a real segregation-of-duties control, not just role gating.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status, expectedUpdatedAt, reviewNotes]
+              properties:
+                status: { type: string, enum: [Approved, Rejected] }
+                expectedUpdatedAt: { type: string, format: date-time }
+                reviewNotes: { type: string, minLength: 3, maxLength: 500 }
+      responses:
+        '200': { description: Claim reviewed }
+        '403': { description: Insufficient role, OR attempting to review your own claim }
+        '409': { description: This claim has already been reviewed }
+
+  # ---- Helpdesk - added this round ----
+  /helpdesk:
+    get:
+      summary: >-
+        List tickets (paginated, filterable by status/category). Ownership-scoped: Administrator/
+        Principal/Teacher (support roles) see every ticket; any other role sees only tickets they
+        personally raised.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Paginated ticket list, raisedBy and assignedTo populated }
+    post:
+      summary: >-
+        Raise a support ticket - open to EVERY authenticated role, including Parent and Student,
+        unlike every other module's create endpoint.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Ticket created with status Open }
+  /helpdesk/{id}/transition:
+    post:
+      summary: >-
+        Move a ticket to a new status (Administrator, Principal, or Teacher only). Enforces a real
+        state machine (see the module's ticket.state-machine.ts): Open->Assigned->Resolved->Closed,
+        with Resolved->Assigned as a reopen path. Closed is a genuine terminal state - no
+        transition out of it is ever allowed, verified end-to-end through the real API.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [Open, Assigned, Resolved, Closed] }
+                assignedTo: { type: string }
+                resolutionNotes: { type: string }
+      responses:
+        '200': { description: Ticket updated }
+        '400': { description: 'The requested transition is not valid from the ticket''s current status' }
+        '403': { description: Insufficient role }
+
+  # ---- Certificates - added this round ----
+  /certificates:
+    get:
+      summary: >-
+        List certificates (paginated, filterable by student/type). Ownership-scoped:
+        Administrator/Principal/Teacher see all; Parent and Student accounts see only
+        certificates issued to their linked student records.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Paginated certificate list, student populated }
+    post:
+      summary: >-
+        Create a certificate record (Administrator, Principal, or Teacher only). Supported types
+        are Bonafide, Transfer, Character, Study, ReportCard, and Provisional. The optional
+        status is Pending or Issued (default). Pending requests get a REQ reference; an
+        Administrator or Principal must approve them to allocate a unique certificate number.
+        This API does not create a digital signature or public verification.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: 'Certificate issued, e.g. certNumber: "BF-2026-0001"' }
+        '403': { description: Insufficient role }
+  /certificates/{id}/decision:
+    post:
+      summary: Approve or reject a pending certificate request (Administrator or Principal)
+      description: 'Body decision: Issued or Rejected. Only Pending records can transition.'
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Certificate decision recorded }
+        '403': { description: Insufficient role }
+        '409': { description: Request is no longer pending }
+
+  # ---- Facilities & Bookings - added this round ----
+  /facilities/facilities:
+    get:
+      summary: List facilities (Administrator, Principal or Teacher; family and Accountant reads are denied)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Facility list }
+    post:
+      summary: Add a facility (Administrator, Principal, or Teacher only)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Facility created }
+        '403': { description: Insufficient role }
+  /facilities/bookings:
+    get:
+      summary: List bookings (Administrator, Principal or Teacher; filterable by facility/date)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Paginated booking list, facility and bookedBy populated }
+    post:
+      summary: >-
+        Book a facility for a time range (Administrator, Principal, or Teacher only). Rejects a
+        genuinely overlapping booking for the same facility and date with 409 - enforced via a
+        MongoDB multi-document transaction (the overlap check and the insert happen atomically
+        together), not a unique index, since range overlap can't be expressed as a unique
+        constraint. Proven safe under real concurrent requests for the identical slot: exactly
+        one succeeds, verified in the integration test suite. REQUIRES a replica-set-enabled
+        MongoDB (Atlas provides this by default) - a standalone mongod does not support
+        transactions at all. See docs/setup/local.md and docs/setup/deployment.md.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Booking created }
+        '403': { description: Insufficient role }
+        '409': { description: Facility already booked for an overlapping time }
+
+  # ---- Events Calendar - added this round ----
+  /events:
+    get:
+      summary: List saved events with audience/date/status filters intersected with family visibility; internal history is staff-only.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Paginated event list }
+    post:
+      summary: >-
+        Create an event (Administrator, Principal, or Teacher only). If a `venue` is specified,
+        genuinely reuses Facilities' transaction-safe booking creation (facilities.repository's
+        createBookingIfNoOverlap) rather than a separate, potentially-diverging implementation -
+        an event whose venue is unavailable fails to create at all, with no partial/dangling
+        event left behind. Proven cross-module: a direct Facilities booking and a venue-linked
+        Event genuinely conflict with each other for the same slot, verified in the integration
+        test suite.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Event created, booking populated if a venue was reserved }
+        '403': { description: Insufficient role }
+        '409': { description: The selected venue is already booked for an overlapping time }
+
+  # ---- Audit Log - added this round ----
+  /audit-log:
+    get:
+      summary: >-
+        List audit log entries (paginated, filterable by module/severity). Administrator or
+        Principal only - an audit trail across every module is itself sensitive.
+        No arbitrary create, update, or delete route exists. Entries are server-authored; the
+        separate export acknowledgement records a fixed action for its authenticated caller.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+        - { name: module, in: query, schema: { type: string, maxLength: 80 } }
+        - { name: severity, in: query, schema: { type: string, enum: [Info, Warning, Critical] } }
+      responses:
+        '200': { description: Paginated newest-first audit log entries, performedBy populated; meta.pagination contains page, limit, total, and totalPages }
+        '403': { description: Insufficient role }
+  /audit-log/exports:
+    post:
+      summary: Record a fixed server-authored audit-log export event before the client downloads CSV; Administrator or Principal only. No arbitrary action or actor payload is accepted.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Export acknowledgement recorded }
+        '400': { description: Non-empty payload rejected }
+        '403': { description: Insufficient role }
+
+  # ---- Surveys & Feedback - added this round ----
+  /surveys:
+    get:
+      summary: List surveys intersected with the current role audience; non-managers see Active/Closed surveys and their own response state.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Paginated survey list }
+    post:
+      summary: Create a survey with embedded questions (Administrator, Principal, or Teacher only) - starts as Draft, or Scheduled when scheduledAt is supplied
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Survey created }
+        '403': { description: Insufficient role }
+  /surveys/{id}/activate:
+    post:
+      summary: Move a Draft or Scheduled survey to Active, opening it for responses (Administrator, Principal, or Teacher only)
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Survey activated }
+  /surveys/{id}/close:
+    post:
+      summary: Close a survey, stopping further responses (Administrator, Principal, or Teacher only)
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Survey closed }
+  /surveys/{id}/respond:
+    post:
+      summary: >-
+        Submit a response - open to EVERY authenticated role, like Helpdesk ticket creation.
+        Rejects if the survey isn't Active, if the requester has already responded (one response
+        per person, DB-enforced via a unique index), or if any answer references a question/option
+        that doesn't actually exist on the survey.
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '201': { description: Response recorded }
+        '400': { description: Invalid answer - question or option does not exist }
+        '403': { description: Survey is not currently Active }
+        '409': { description: You have already responded to this survey }
+  /surveys/{id}/results:
+    get:
+      summary: >-
+        Vote tally per question per option, computed via a real MongoDB aggregation pipeline
+        ($unwind + $group across every respondent's answers) - not pulled into the application
+        and counted in memory. An option with zero votes still appears with count 0, not omitted.
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: 'title, totalRespondents, and per-question option counts' }
+
+  # ---- Transport - added this round ----
+  /transport/vehicles:
+    get:
+      summary: List vehicles
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Vehicle list } }
+    post:
+      summary: Add a vehicle (Administrator, Principal, or Teacher only)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Vehicle created }
+        '403': { description: Insufficient role }
+  /transport/routes:
+    get:
+      summary: >-
+        List routes (paginated). Ownership-scoped: Administrator/Principal/Teacher see all; a
+        Parent sees only routes their linked child is assigned to.
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Paginated route list, vehicle and assignedStudents populated } }
+    post:
+      summary: Add a route with at least one stop (Administrator, Principal, or Teacher only)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Route created }
+        '403': { description: Insufficient role }
+  /transport/routes/{id}/assign:
+    post:
+      summary: >-
+        Assign a student to a route (Administrator, Principal, or Teacher only). The capacity
+        check and the assignment happen in a single atomic update comparing the current
+        assigned-student count against the vehicle's capacity via $expr - proven safe under real
+        concurrent requests for the last available seat (exactly one succeeds, verified in the
+        integration test suite). Assigning the same student twice is a no-op, not a duplicate or
+        an error.
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Student assigned }
+        '403': { description: Insufficient role }
+        '409': { description: Route is at full capacity }
+  /transport/routes/{id}/operational-status:
+    patch:
+      summary: Persist the existing route on-road, delayed, or depot state (Administrator, Principal, or Teacher only)
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { '200': { description: Operational route status updated }, '409': { description: Vehicle is in maintenance } }
+  /transport/routes/{id}/incidents:
+    post:
+      summary: Record an existing transport UI incident with audit severity
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { '201': { description: Incident recorded } }
+  /transport/incidents:
+    get:
+      summary: List transport incidents; non-transport roles receive no incident data
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Paginated incident list } }
+  /transport/vehicles/{id}/maintenance:
+    patch:
+      summary: Schedule vehicle maintenance and take any assigned route to depot
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { '200': { description: Vehicle placed in maintenance } }
+
+  # ---- Inventory - added this round ----
+  /inventory/items:
+    get:
+      summary: List inventory items (paginated, filterable by category)
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Paginated item list } }
+    post:
+      summary: Add an inventory item (Administrator, Principal, Teacher, or Accountant)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Item created }
+  /inventory/items/{id}/adjust:
+    post:
+      summary: Atomically adjust stock and append a movement record (Administrator, Principal, Teacher, or Accountant only)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Updated inventory item }
+        '409': { description: Adjustment would make stock negative }
+        '403': { description: Insufficient role }
+  /inventory/purchase-orders:
+    get:
+      summary: List purchase orders
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: PO list, line items populated } }
+    post:
+      summary: Raise a purchase order with one or more line items (Administrator, Principal, Teacher, or Accountant)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: PO created as Draft }
+        '400': { description: A referenced inventory item does not exist }
+        '403': { description: Insufficient role }
+  /inventory/purchase-orders/{id}/send:
+    post:
+      summary: Move a PO from Draft to Sent (Administrator, Principal, Teacher, or Accountant)
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: PO sent }
+        '400': { description: Invalid transition from the PO's current status }
+  /inventory/purchase-orders/{id}/receive:
+    post:
+      summary: >-
+        Move a PO from Sent to Received, incrementing stock for EVERY line item in a single
+        MongoDB transaction - a different transaction use case than Facilities' (all-or-nothing
+        atomicity across MULTIPLE separate document updates, not a check-then-write). Proven
+        correct for a real 3-item PO in the integration test suite: all three items' stock
+        updates land together, exactly as expected. Received is a genuine terminal state - no
+        transition back to Sent or Draft is ever allowed.
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: PO received, all line items' stock updated atomically }
+        '400': { description: Invalid transition from the PO's current status }
+  /inventory/purchase-orders/{id}/cancel:
+    post:
+      summary: Cancel a Draft or Sent PO; Received and Cancelled POs are terminal
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: PO cancelled }
+        '400': { description: Invalid transition from the PO's current status }
+
+  # ---- Hostel - added this round ----
+  /hostel/rooms:
+    get:
+      summary: >-
+        List hostel rooms (paginated, filterable by block). Ownership-scoped: Administrator/
+        Principal/Teacher see all; a Parent sees only rooms their linked child occupies.
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Paginated room list, occupants populated } }
+    post:
+      summary: Add a hostel room (Administrator, Principal, or Teacher only)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Room created }
+        '403': { description: Insufficient role }
+  /hostel/rooms/{id}/allocate:
+    post:
+      summary: >-
+        Allocate a student to a room (Administrator, Principal, or Teacher only). Reuses the same
+        atomic capacity-guarded technique as Transport's seat assignment ($expr comparing occupant
+        count against capacity, $addToSet for idempotent re-allocation) - the correct, already-
+        proven solution to the same underlying problem (a fixed-capacity resource with many
+        competing candidates), applied deliberately rather than re-derived. Proven under real
+        concurrent requests for the last bed in the integration test suite.
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Student allocated }
+        '403': { description: Insufficient role }
+        '409': { description: Room is at full capacity }
+  /hostel/leave:
+    get:
+      summary: List hostel leave and gate-pass requests (Administrator, Principal, or Teacher only)
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Paginated leave list with student, room, and approver populated } }
+    post:
+      summary: Create a leave request for a student currently allocated to the selected room
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Leave request created in Requested state }
+        '400': { description: Student is not allocated to the selected room or dates are invalid }
+  /hostel/leave/{id}/transition:
+    post:
+      summary: Transition hostel leave using approve, reject, mark-out, or return
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Leave state transitioned }
+        '409': { description: Action is invalid for the current leave state }
+  /hostel/roll-call:
+    get:
+      summary: List persisted boarder roll-call statuses for a date
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Roll-call entries with student details populated } }
+    put:
+      summary: Create or update one allocated boarder's roll-call status for a date
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Roll-call status persisted }
+        '400': { description: Student is not an allocated boarder }
+  /hostel/roll-call/all:
+    put:
+      summary: Mark every allocated boarder present while preserving On leave statuses
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Updated roll-call entries } }
+  /hostel/maintenance:
+    get:
+      summary: List hostel maintenance requests, optionally filtered by status
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Paginated maintenance requests with room and user details } }
+    post:
+      summary: Log a maintenance request against an existing hostel room
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Maintenance request created }
+        '400': { description: Selected hostel room does not exist }
+  /hostel/maintenance/{id}/resolve:
+    post:
+      summary: Resolve an open or in-progress hostel maintenance request
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Maintenance request resolved }
+        '409': { description: Request is already resolved or does not exist }
+
+  # ---- Behaviour - added this round ----
+  /behaviour:
+    get:
+      summary: >-
+        List behaviour incidents (paginated, filterable by student/severity). Ownership-scoped:
+        Administrator/Principal/Teacher see all; a Parent sees only their linked children's
+        incidents.
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Paginated incident list, student and reportedBy populated } }
+    post:
+      summary: Log a behaviour incident (Administrator, Principal, or Teacher only)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Incident logged }
+        '403': { description: Insufficient role }
+  /behaviour/{id}/status:
+    patch:
+      summary: Versioned case review; Teacher owns Logged entries, leadership reviews escalation/closure
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status, expectedUpdatedAt, reason]
+              properties:
+                status: { type: string, enum: [Logged, Escalated, Closed] }
+                expectedUpdatedAt: { type: string, format: date-time }
+                reason: { type: string, minLength: 3, maxLength: 500 }
+                actionTaken: { type: string, maxLength: 1000, description: Required resolution for closure }
+                followUpDate: { type: string, format: date, nullable: true }
+                assignedToEmail: { type: string, format: email, nullable: true, description: Leadership only }
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Behaviour status updated }
+        '404': { description: Behaviour entry not found }
+
+  # ---- Health & Clinic - added this round ----
+  /health-records:
+    get:
+      summary: >-
+        List clinic visits (paginated, filterable by student). Ownership-scoped, deliberately
+        NARROWER than Behaviour's: only Administrator and Principal are unrestricted - Teacher is
+        excluded even though Teacher CAN record a visit. Medical data is a more sensitive category
+        than behaviour incidents; a Teacher recording a visit sees an empty list when browsing
+        afterward (proven in the integration test suite), a real, intentional asymmetry between
+        write access and read access, not an oversight.
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Paginated visit list, student populated } }
+    post:
+      summary: Record a clinic visit (Administrator, Principal, or Teacher - broader than the read-access list)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Visit recorded }
+        '403': { description: Insufficient role }
+  /health-records/{id}:
+    patch:
+      summary: Versioned clinic outcome/contact/follow-up update (Administrator or Principal only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedUpdatedAt, reason]
+              properties:
+                expectedUpdatedAt: { type: string, format: date-time }
+                reason: { type: string, minLength: 3, maxLength: 500 }
+                outcome: { type: string, enum: [Returned to class, Sent home, Referred to hospital, Under observation] }
+                parentContacted: { type: boolean }
+                followUpDate: { type: string, format: date, nullable: true }
+                followUpNote: { type: string, maxLength: 500 }
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Clinic follow-up updated }
+        '403': { description: Medical follow-up update requires Administrator or Principal }
+        '404': { description: Clinic visit not found }
+
+  # ---- Cafeteria - added this round ----
+  /cafeteria/wallets:
+    get:
+      summary: >-
+        List wallets (paginated). Ownership-scoped like Fees/Payroll: Administrator/Principal/
+        Accountant unrestricted; Teacher excluded (financial data); a Parent sees only their
+        linked children's wallets.
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Paginated wallet list, student populated } }
+  /cafeteria/transactions:
+    get:
+      summary: List wallet transactions using the same financial ownership scope as wallets
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Paginated transactions with wallet and student populated } }
+  /cafeteria/allergy-plans:
+    get:
+      summary: List allergy care plans; parents see only plans for their linked children
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Paginated allergy plans with student details } }
+    post:
+      summary: Create or update a student's allergy care plan (Administrator or Principal only)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Allergy plan saved }
+        '403': { description: Insufficient role }
+  /cafeteria/menu:
+    get:
+      summary: List the weekly cafeteria menu in weekday order
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Weekly menu } }
+  /cafeteria/menu/item:
+    put:
+      summary: Create or replace one meal slot without overwriting the day's other meals
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Menu item saved }
+        '403': { description: Administrator or Principal required }
+  /cafeteria/wallets/top-up:
+    post:
+      summary: Top up a student's wallet (Administrator, Principal, or Accountant only) - creates the wallet automatically on first use
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Wallet topped up }
+        '403': { description: Insufficient role }
+  /cafeteria/wallets/purchase:
+    post:
+      summary: Record a purchase with atomic wallet and ledger commit (finance roles)
+      description: Positive two-decimal amount, description and studentId; optional wallet-scoped requestId makes identical retries idempotent. Recorded method/reference do not initiate payments. Integer-cent arithmetic and serialized student writes prevent overdrawing or duplicate first-use wallets.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Purchase recorded, balance decremented }
+        '403': { description: Insufficient role }
+        '409': { description: Insufficient wallet balance }
+
+  # ---- Visitors - added this round ----
+  /visitors:
+    get:
+      summary: >-
+        List visitor log entries (paginated, filterable by status). Unlike every prior module,
+        the ENTIRE module - both read and write - is gated to Administrator/Principal/Teacher at
+        the router level, not just individual write routes. There is no ownership-scoping concept
+        here at all (no Parent visibility), since a visitor log entry isn't "about" any
+        particular student's guardian.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Paginated visitor log, checkedInBy populated }
+        '403': { description: Insufficient role - applies even to GET }
+    post:
+      summary: Check in a visitor (Administrator, Principal, or Teacher only)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Visitor checked in with status CheckedIn }
+  /visitors/{id}/checkout:
+    post:
+      summary: Check out a visitor (Administrator, Principal, or Teacher only) - rejects an already-checked-out visitor
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Visitor checked out, checkedOutAt stamped }
+        '409': { description: This visitor has already checked out }
+
+  # ---- Biometric - added this round ----
+  /biometric:
+    get:
+      summary: List biometric attendance devices - whole-module role gate like Visitors, no ownership concept
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Device list } }
+    post:
+      summary: Register a device (Administrator, Principal, or Teacher only) - starts Offline
+      security: [{ bearerAuth: [] }]
+      responses: { '201': { description: Device registered } }
+  /biometric/{id}/sync:
+    post:
+      summary: Reject unconfigured hardware sync without changing device or attendance records
+      description: No hardware connector is configured. Returns 409; neither Online nor lastSyncAt is fabricated.
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '409': { description: Hardware connector is not configured }
+        '404': { description: Device not found }
+
+  # ---- Alumni - added this round ----
+  /alumni:
+    get:
+      summary: List alumni profiles (paginated, filterable by graduation year)
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Paginated alumni list, student populated } }
+  /alumni/graduate:
+    post:
+      summary: >-
+        Graduate an active student (Administrator, Principal, or Teacher only). A THIRD
+        transaction use case in this codebase (after Facilities' check-then-write and Inventory's
+        multi-item all-or-nothing): cross-COLLECTION consistency - the Student's own `status`
+        field flips to 'Alumni' and the new AlumniProfile is created together, or neither happens.
+        Proven end-to-end: fetching the student afterward confirms status genuinely changed, not
+        just that the alumni profile was created as a disconnected copy.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Student graduated, alumni profile created }
+        '403': { description: Insufficient role }
+        '404': { description: Student not found }
+        '409': { description: This student has already graduated }
+
+  # ---- LMS (Learning Management) - added this round ----
+  /lms/assignments:
+    get:
+      summary: List assignments (paginated, filterable by subject/grade) - open to all authenticated roles
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Paginated assignment list } }
+    post:
+      summary: Create an assignment (Administrator, Principal, or Teacher only)
+      description: Optional remindersEnabled defaults false. Published coursework can generate pending-only reminders once in the 24 hours before and first 48 hours after its deadline. notifyEmail uses existing approval and provider gates.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Assignment created }
+        '403': { description: Insufficient role }
+  /lms/assignments/{id}/submit:
+    post:
+      summary: >-
+        Submit an assignment - ONLY the Student role may submit, not even Administrator on a
+        student's behalf; requires the requester's login account to be linked to a Student record
+        via the studentUserId field (added to the Student model specifically for this module,
+        closing a real pre-existing gap where nothing linked a Student-role login to their own
+        record). Late detection is computed at submission time against the assignment's dueDate -
+        a submission at the exact due instant is on time; even 1ms later is flagged isLate
+        (boundary proven in unit tests). One submission per student per assignment, DB-enforced
+        via a unique compound index - a duplicate attempt gets a real 409.
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '201': { description: Submission recorded, isLate flag set }
+        '400': { description: No student record linked to this account }
+        '403': { description: Only a Student may submit }
+        '404': { description: Assignment not found }
+        '409': { description: Already submitted }
+  /lms/submissions:
+    get:
+      summary: >-
+        List submissions (optionally filtered by assignmentId). The first DUAL-RELATIONSHIP
+        ownership scoping in this codebase: a Student sees only their OWN submissions (resolved
+        via studentUserId), a Parent sees only their linked children's (resolved via
+        guardianUserId) - the same scoping function applied to a per-role-resolved id list.
+        Proven end-to-end for both relationships simultaneously in the integration suite.
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: 'Submission list, student and assignment populated' } }
+  /lms/submissions/{id}/grade:
+    post:
+      summary: >-
+        Grade a submission (Administrator, Principal, or Teacher only). The score is validated
+        against the assignment's own maxScore - a score exceeding it gets a real 400, not a
+        silent clamp or acceptance.
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Submission graded, status moves to Graded }
+        '400': { description: Score exceeds the assignment maxScore }
+        '404': { description: Submission not found }
+
+  # ---- Timetable - added this round ----
+  /timetable:
+    get:
+      summary: >-
+        List timetable slots (filterable by grade/dayOfWeek). Staff can read drafts; Parent and
+        Student accounts receive published slots only.
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Slot list, sorted grade/day/period } }
+    post:
+      summary: >-
+        Schedule a period (Administrator, Principal, or Teacher only). Database unique indexes
+        prevent class, teacher, and room double-booking for the same day and period.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Period scheduled }
+        '403': { description: Insufficient role }
+        '409': { description: Class, teacher, or room conflict }
+  /timetable/{id}:
+    patch:
+      summary: Edit subject, teacher, room, or substitute status; the grade returns to Draft
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Period updated }
+        '403': { description: Insufficient role }
+        '404': { description: Period not found }
+        '409': { description: Teacher or room conflict }
+    delete:
+      summary: Mark a period free by deleting its scheduled slot
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '204': { description: Period removed }
+        '403': { description: Insufficient role }
+        '404': { description: Period not found }
+  /timetable/publish:
+    post:
+      summary: Publish every scheduled period for one grade to Parent and Student accounts
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Grade timetable published }
+        '403': { description: Insufficient role }
+        '404': { description: Grade has no scheduled periods }
+  /timetable/swap:
+    post:
+      summary: Atomically swap two periods or move a scheduled period into a free position
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Periods swapped and grade returned to Draft }
+        '403': { description: Insufficient role }
+        '404': { description: Source period not found }
+        '409': { description: Destination creates a teacher or room conflict }
+
+  # ---- Announcements - added this round ----
+  /announcements:
+    get:
+      summary: >-
+        List announcements visible to the requester. A genuinely different access pattern from
+        every prior module: visibility is declared BY THE CONTENT (each announcement names its
+        audience: All/Staff/Parents/Students), and the read filter maps the requester's role to
+        the audience set they may see. Parent sees All+Parents; Student sees All+Students.
+        Only Published notices reach non-reviewers, except teachers also see their own drafts
+        and pending notices. Administrator and Principal can review every status.
+        Pinned announcements sort first.
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Paginated announcements, publishedBy populated } }
+    post:
+      summary: Create an announcement (Administrator, Principal, or Teacher)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Announcement created with Draft, Pending approval, or Published status }
+        '403': { description: Insufficient role or Teacher attempted direct publish }
+  /announcements/{id}/status:
+    patch:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [Pending approval, Published, Draft] }
+                expectedUpdatedAt: { type: string, format: date-time }
+                reviewNote: { type: string, maxLength: 300 }
+      summary: Submit a draft for approval, approve it, or return a pending notice to draft
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Announcement status updated }
+        '403': { description: Requester cannot perform this transition }
+        '404': { description: Announcement not found }
+        '409': { description: Current status does not allow this transition }
+
+  # ---- Admissions - added this round ----
+  /admissions:
+    get:
+      summary: List admission applications (paginated, filterable by status) - whole-module staff gate like Visitors
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Paginated application list }
+        '403': { description: Insufficient role - applies even to GET }
+    post:
+      summary: Record a new application (starts as Applied)
+      security: [{ bearerAuth: [] }]
+      responses: { '201': { description: Application recorded } }
+  /admissions/{id}/transition:
+    post:
+      summary: >-
+        Progress an application through the pipeline. The first BRANCHING state machine in this
+        codebase: forward path Applied -> Shortlisted -> Interviewed -> Accepted, with Rejected
+        reachable at every active pipeline stage. Waitlist and restore preserve the existing
+        UI workflow; required ID, birth certificate and photo are enforced before Accepted. Enrolled is
+        deliberately NOT a valid transition target here - enrollment goes through the dedicated
+        endpoint below, since it needs refId/roll and creates a real Student.
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Application progressed }
+        '400': { description: Invalid transition from the application's current status }
+  /admissions/{id}/documents/{key}:
+    put:
+      summary: Upload or replace an existing admission document slot (Administrator, Principal, or Teacher)
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }, { name: key, in: path, required: true, schema: { type: string, enum: [id, birth, photo, report, immun, tc] } }]
+      responses: { '201': { description: Document securely stored in GridFS } }
+    get:
+      summary: Download an admission document
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }, { name: key, in: path, required: true, schema: { type: string } }]
+      responses: { '200': { description: Document content } }
+    delete:
+      summary: Remove an admission document
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }, { name: key, in: path, required: true, schema: { type: string } }]
+      responses: { '200': { description: Document removed } }
+  /admissions/{id}/documents/{key}/mark-received:
+    post:
+      summary: Record verified receipt of a paper admission document
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }, { name: key, in: path, required: true, schema: { type: string } }]
+      responses: { '200': { description: Paper document receipt recorded } }
+  /admissions/{id}/enroll:
+    post:
+      summary: >-
+        Enroll an Accepted applicant - the symmetric MIRROR of Alumni's graduation transaction:
+        creates a brand-new Student (carrying the application's own name/grade/gender/guardian/
+        phone) and flips the application to Enrolled together, or neither happens. Proven both
+        sides: the created Student is fetched back and its fields verified against the
+        application's data; and a failed enrollment (duplicate refId, 409) provably leaves the
+        application still Accepted - rolled back, not half-applied.
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Applicant enrolled, Student created, application links to it }
+        '400': { description: Only an Accepted application can be enrolled }
+        '409': { description: A student with this refId already exists (transaction rolled back) }
+
+  # ---- Leave (staff leave) - added this round ----
+  /leave:
+    get:
+      summary: >-
+        List leave requests. Approvers (Administrator/Principal) see all; everyone else sees only
+        their own via their linked Staff record (Staff.userId, the Payroll/Expenses self-service
+        shape) - and a requester with NO linked record matches nothing (fail closed), not
+        everything.
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Paginated leave list, staff populated with balance } }
+    post:
+      summary: >-
+        Request leave for yourself - any authenticated user with a linked Staff record; Administrator
+        or Principal may submit the existing HR form for a selected active staff member. The day
+        count is computed as an INCLUSIVE calendar count (same from/to date = 1 day; time-of-day
+        stripped so 23:59 -> 00:01 is still 2 days) and STORED at request time like Payroll's
+        netPay: an approved leave's size is a historical record that must not silently change if
+        the counting rule ever does. Inverted ranges are rejected by a cross-field Zod refinement.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Leave requested, day count stored, status Pending }
+        '400': { description: No linked staff record, or invalid range }
+  /leave/{id}/decide:
+    post:
+      summary: >-
+        Approve or deny a leave request. The approver gate (Administrator/Principal ONLY) is the
+        first write-side rule that is a strict SUBSET of WRITE_ROLES - a Teacher can request but
+        never decide. Self-approval prevention like Expenses, but stricter in one respect: an
+        approver cannot decide their OWN request even to DENY it. Approval deducts the stored day
+        count from the staff member's annualLeaveRemaining via Cafeteria's guarded-decrement
+        technique ($gte guard + $inc in one findOneAndUpdate) applied at APPROVAL time - proven
+        under real concurrency (two simultaneous approvals, exactly one lands, balance never
+        negative) and proven to deduct exactly once across a double-decide attempt (409 on the
+        second, balance unchanged). An insufficient balance fails the approval with 400 and the
+        request stays Pending.
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Decision recorded; balance deducted if approved }
+        '400': { description: Insufficient leave balance }
+        '403': { description: Not an approver, or deciding your own request }
+        '409': { description: Already decided }
+
+  # ---- Meetings (parent-teacher) - added this round ----
+  /meetings:
+    get:
+      summary: >-
+        List meeting slots (onlyOpen true/false filter). Leadership sees all, Parent sees open and
+        own bookings, Teacher sees open and own linked staff bookings, other roles see open only.
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Paginated slot list, teacher and booked student populated } }
+    post:
+      summary: >-
+        Publish a bookable slot (Administrator, Principal, or Teacher only). The same teacher
+        must exist as teaching staff; Teacher may publish only their own linked staff slots. Cannot
+        publish two slots at the same date+time - compound uniqueness preventing
+        double-publication, 409 on conflict.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Slot published, open for booking }
+        '409': { description: This teacher already has a slot at that date and time }
+  /meetings/{id}/book:
+    post:
+      summary: >-
+        Book an open slot - ONLY a Parent may book (mirroring LMS's only-Student-submits
+        asymmetry), and only for a student genuinely linked to them via guardianUserId - resolved
+        server-side, never trusted from the request body. The claim is Library's atomic-guard
+        technique applied to booking: availability check and claim are ONE findOneAndUpdate
+        guarded on bookedBy null, proven under a real two-parent race (exactly one 200, one 409).
+        The failure path distinguishes a nonexistent slot (404) from an already-booked one (409)
+        with a follow-up query made only on failure, keeping the happy path single-operation.
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Slot booked for the parent's child }
+        '403': { description: Not a Parent, or not your child }
+        '404': { description: Meeting slot not found }
+        '409': { description: Slot already booked }
+
+  # ---- Documents (versioned registry) - added this round ----
+  /documents:
+    get:
+      summary: >-
+        List documents. By default shows ONLY the current version of each code; includeSuperseded
+        reveals full version history. Filterable by category and code (case-normalized). Open
+        read - policies, forms, and circulars exist to be consulted by everyone.
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Paginated document list, publishedBy populated } }
+    post:
+      summary: >-
+        Publish a document (Administrator, Principal, or Teacher only). Publishing an existing
+        code atomically supersedes its current version and creates version N+1 within a MongoDB
+        replica-set transaction. A per-code counter serializes version assignment, and a partial
+        unique index protects the single-current-version invariant. Failed publication rolls back
+        both version changes. Optional expectedVersion rejects stale reviewed publications.
+        Codes must look like POL-001 and are normalized to uppercase.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Version published as current; previous version superseded }
+        '409': { description: Concurrent publish for this code - retry }
+  /documents/file:
+    post:
+      summary: Publish a document version with an attached PDF (Administrator, Principal, Teacher)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: X-File-Name, in: header, required: true, schema: { type: string }, description: URI-encoded PDF filename }
+        - { name: X-Document-Code, in: header, required: true, schema: { type: string } }
+        - { name: X-Document-Title, in: header, required: true, schema: { type: string } }
+        - { name: X-Document-Category, in: header, required: true, schema: { type: string, enum: [Policy, Form, Circular, Guideline] } }
+        - { name: X-Document-Description, in: header, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/pdf:
+            schema: { type: string, format: binary }
+      responses:
+        '201': { description: Version and PDF stored }
+        '400': { description: Invalid PDF or metadata }
+        '403': { description: Not a publishing role }
+  /documents/{id}/file:
+    get:
+      summary: Download an exact document version's PDF (all authenticated roles)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: PDF attachment
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        '404': { description: Record not found or no PDF attached }
+
+  # ---- ID Cards - added this round ----
+  /id-cards:
+    get:
+      summary: >-
+        List ID cards (filterable by status/subjectType) - whole-module staff gate: cards carry
+        personal data and issuance is front-office work. One collection spans BOTH holder kinds:
+        the first POLYMORPHIC reference in this codebase (subjectType holds the literal model
+        name, subject resolves through Mongoose refPath), so a single list interleaves cards
+        whose holders populate from the Students and Staff collections respectively - proven
+        end-to-end with both kinds in one response.
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Paginated card list, holder populated per record via refPath } }
+    post:
+      summary: >-
+        Issue a card. Holder existence is checked in the RIGHT collection (a real Staff id passed
+        as a Student subject is a 404, proven); expiry must be in the future; serials are
+        sequential via the Counter technique (CARD-YYYY-000001). One ACTIVE card per holder,
+        enforced with the partial-unique technique (recognized from Documents, reused): the
+        holder's full Lost/Revoked history coexists while a second Active issuance gets 409. A
+        fresh issuance genuinely links `replaces` to the holder's most recent Lost/Revoked card,
+        making a card's lineage traceable - proven end-to-end (report lost -> reissue -> the new
+        card's replaces equals the lost card's id).
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Card issued Active, serial assigned, lineage linked }
+        '400': { description: Expiry in the past }
+        '404': { description: Holder not found in the specified collection }
+        '409': { description: Holder already has an active card }
+  /id-cards/{id}/report-lost:
+    post:
+      summary: Report an Active card lost - only Active cards can be reported (409 otherwise, proven for the double-report case)
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Card marked Lost; the holder can now be issued a replacement }
+        '409': { description: Card is not Active }
+  /id-cards/{id}/revoke:
+    post:
+      summary: Revoke an Active card (same Active-only rule as report-lost)
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Card revoked }
+        '409': { description: Card is not Active }
+
+  # ---- Reports - added this round ----
+  /reports/overview:
+    get:
+      summary: >-
+        School-wide overview - the first true CROSS-COLLECTION read aggregation in this codebase:
+        five independent $group pipelines (Students by status with $avg gpa/attendance over
+        Active students, Staff by type, Invoices by status with amounts summed, Tickets by
+        status, Attendance by month) run in parallel and composed. Monthly attendance rates
+        cover the latest six months; Excused marks are excluded from the denominator and
+        months without eligible marks have a null rate. Averages are computed by the DATABASE, not by
+        loading documents into application memory. Also the first management-only READ: the
+        Administrator/Principal subset Leave uses for its write side, applied to reading - even a
+        Teacher gets 403 (proven). Aggregation correctness proven over real created data: two
+        students -> Active count 2 with numeric averages; one 2500 invoice -> Pending count 1,
+        totalAmount 2500.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Composed overview across students, staff, fees, helpdesk }
+        '403': { description: Only Administrator or Principal }
+
+  # ---- Settings - added this round ----
+  /settings:
+    get:
+      summary: >-
+        School-wide settings - the first SINGLETON document in this codebase (fixed string _id,
+        the Counter model's string-_id technique applied to "exactly one of this thing"). GET
+        before any save returns honest defaults rather than a 404 every client would special-case.
+        Open read: school name and academic year are basic context for everyone.
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Current settings or defaults } }
+    put:
+      summary: >-
+        Update settings - the first ADMINISTRATOR-ONLY gate in this codebase: even Principal gets
+        403 (proven), because school-wide configuration has system-wide blast radius. The write is
+        an upsert against the fixed _id, so two saves provably leave exactly ONE document with the
+        latest values. Every change is written to the audit log as a Warning naming the Settings
+        module and the actor server-side - proven end-to-end by reading the entry back through
+        the Audit module's own API.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Settings saved (created on first save); audit entry written }
+        '400': { description: Invalid payload (e.g. malformed academic year) }
+        '403': { description: Only an Administrator }
+
+  # ---- Messages - added this round (FINAL module, 36 of 36) ----
+  /messages:
+    get:
+      parameters:
+        - { name: box, in: query, schema: { type: string, enum: [inbox, sent, all], default: all } }
+        - { name: archived, in: query, schema: { type: boolean, default: false } }
+      summary: >-
+        List your correspondence. BIDIRECTIONAL $or ownership - you see a message iff you are its
+        sender OR its recipient - with, uniquely in this codebase, NO administrative override:
+        the scoping function takes no role parameter at all, so an Administrator's view is
+        exactly as narrow as anyone else's (proven: an Administrator cannot see a message between
+        two other users). Box filter: inbox (recipient=you), sent (sender=you), all ($or).
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: 'Paginated messages, both parties populated' } }
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [recipientEmail, subject, body]
+              properties:
+                recipientEmail: { type: string, format: email }
+                subject: { type: string, minLength: 1, maxLength: 160 }
+                body: { type: string, minLength: 1, maxLength: 5000 }
+                replyTo: { type: string, description: Originating message ID; both users must be its participants }
+      summary: >-
+        Send a message by recipient email. A nonexistent recipient is 404; messaging yourself is
+        400. Inactive or suspended recipient accounts are rejected. No role gate - every authenticated user can correspond.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Message sent, unread }
+        '400': { description: Cannot message yourself }
+        '404': { description: No user with that email }
+  /messages/{id}/read:
+    post:
+      summary: >-
+        Mark a message read - ONLY the recipient. The sender gets 403; a NON-PARTY (even an
+        Administrator) gets 404 rather than 403, because for a non-party the message is
+        indistinguishable from nonexistent - a 403 would leak that it exists. Both distinctions
+        proven. Idempotent: marking an already-read message returns it unchanged.
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: readAt set (or already set) }
+        '403': { description: Sender cannot mark their own message read }
+        '404': { description: Not found, or not a party to it }
+  /guardians:
+    get:
+      summary: List guardian profiles (leadership sees roster; Parent sees own explicit userId and currently owned children)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Paginated guardian directory }
+        '403': { description: Unauthorized role or suspended Parent portal }
+    post:
+      summary: Create a guardian contact with existing child links and recorded consents (leadership only)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/GuardianCreate' }
+      responses:
+        '201': { description: Guardian saved and audited }
+        '400': { description: Invalid input or missing child reference }
+        '409': { description: Duplicate guardian reference }
+  /guardians/{id}:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+    get:
+      summary: Read one guardian (leadership or owning Parent)
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Guardian with visible children }, '403': { description: Another family or unauthorized role }, '404': { description: Guardian missing } }
+    patch:
+      summary: Edit contact, child links and consents with optimistic version check (leadership only)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/GuardianUpdate' }
+      responses: { '200': { description: Guardian and linked child ownership saved atomically }, '400': { description: Invalid child or input }, '409': { description: Stale version or competing Parent ownership } }
+  /guardians/{id}/account:
+    patch:
+      summary: Link or unlink an existing active Parent login and atomically synchronize primary child ownership (leadership only)
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [parentEmail, expectedUpdatedAt]
+              properties:
+                parentEmail: { type: string, format: email, nullable: true }
+                expectedUpdatedAt: { type: string, format: date-time }
+      responses: { '200': { description: Account link updated }, '400': { description: No active Parent matches }, '409': { description: Stale version, duplicate account record or competing child ownership } }
+  /guardians/broadcasts:
+    get:
+      summary: List persisted parent broadcasts
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Paginated broadcasts } }
+    post:
+      summary: Send an in-app audience-targeted broadcast and atomically append it to every matching guardian thread
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Broadcast and recipient thread messages persisted }
+        '400': { description: No matching guardians, incomplete audience filter, or unconfigured Email/SMS channel }
+  /guardians/{id}/portal:
+    patch:
+      summary: Activate or suspend a linked Parent portal; suspension blocks existing requests, login and refresh
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Guardian portal status updated and audited }
+        '404': { description: Guardian not found }
+  /guardians/{id}/messages:
+    get:
+      summary: Read one guardian conversation (leadership or owning Parent)
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { '200': { description: Chronological guardian thread } }
+    post:
+      summary: Persist school out or owning-Parent in reply; foreign-family access denied
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '201': { description: Reply persisted and audited }
+        '404': { description: Guardian not found }
+  /meetings/{id}/book-on-behalf:
+    post:
+      summary: Leadership books an Available PTM slot for a guardian and one of their linked students
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Slot booked Confirmed }
+        '400': { description: Guardian/student link mismatch }
+        '409': { description: Slot is no longer available }
+  /meetings/{id}/confirm:
+    post:
+      summary: Confirm a Pending PTM slot
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { '200': { description: Meeting confirmed }, '409': { description: Slot is not Pending } }
+  /meetings/{id}/cancel:
+    post:
+      summary: Cancel a booked PTM and return the slot to Available
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { '200': { description: Booking cleared }, '409': { description: Slot is already Available } }
+  /meetings/{id}/reschedule:
+    post:
+      summary: Atomically move a booking to an Available slot belonging to the same teacher
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { '200': { description: Booking moved }, '409': { description: Target unavailable or different teacher } }
+  /meetings/{id}/notify:
+    post:
+      summary: Reports unconfigured participant delivery; use an in-app guardian conversation
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { '400': { description: External reminders are not configured }, '409': { description: Available slot has no participants } }
+  /notifications/status:
+    get:
+      summary: Staff notification provider configuration status without secrets
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Email/SMS configured flags }
+        '403': { description: Requires Administrator, Principal or Teacher }
+  /notifications:
+    get:
+      summary: Paginated external jobs scoped to leadership or Teacher authorship
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+      responses: { '200': { description: Jobs and pagination } }
+    post:
+      summary: Queue an external message; Teacher submissions require office approval
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [recipientEmail, channel, subject, body, idempotencyKey]
+              properties:
+                recipientEmail: { type: string, format: email }
+                channel: { type: string, enum: [Email, SMS] }
+                subject: { type: string, minLength: 1, maxLength: 160 }
+                body: { type: string, minLength: 1, maxLength: 5000 }
+                idempotencyKey: { type: string, minLength: 8, maxLength: 100 }
+      responses:
+        '201': { description: Persisted or idempotently replayed job }
+        '409': { description: Request key reused with different details }
+        '503': { description: Channel setup pending }
+  /notifications/{id}/approve:
+    post:
+      summary: Leadership approves a Teacher external message
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { '200': { description: Pending job }, '403': { description: Leadership required }, '409': { description: Job is not Awaiting approval } }
+  /notifications/{id}/cancel:
+    post:
+      summary: Cancel an owned or leadership-visible pending external message
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { '200': { description: Cancelled }, '409': { description: Job cannot be cancelled } }
+  /notifications/{id}/retry:
+    post:
+      summary: Retry a failed job within safe provider idempotency boundaries
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses: { '200': { description: Pending }, '409': { description: Unsafe or expired retry } }
+  /notifications/resend-webhook:
+    post:
+      summary: Verify raw Resend webhook using Svix and reconcile persisted delivery state
+      security: []
+      parameters:
+        - { name: svix-id, in: header, required: true, schema: { type: string } }
+        - { name: svix-timestamp, in: header, required: true, schema: { type: string } }
+        - { name: svix-signature, in: header, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object } } }
+      responses: { '200': { description: Event acknowledged }, '401': { description: Invalid signature }, '503': { description: Verification secret pending } }
+  /certificates/pdf-status:
+    get:
+      summary: Signing configuration presence without secrets
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: PKCS12 configured flag and unsigned availability } }
+  /certificates/{id}/pdf:
+    get:
+      summary: Owned issued certificate PDF; creating signed artifacts requires leadership
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: signed, in: query, schema: { type: string, enum: ['true', 'false'], default: 'false' } }
+      responses:
+        '200':
+          description: Immutable binary PDF, private no-store cache
+          content: { application/pdf: { schema: { type: string, format: binary } } }
+        '403': { description: School office must generate the signed copy first }
+        '404': { description: Issued record not owned or not found }
+        '503': { description: Signing identity or font unavailable }
+  /staff/{id}/account:
+    patch:
+      summary: Leadership links or unlinks an existing active staff-role account transactionally
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, expectedUpdatedAt, reason]
+              properties:
+                email: { type: string, format: email, nullable: true }
+                expectedUpdatedAt: { type: string, format: date-time }
+                reason: { type: string, minLength: 3, maxLength: 500 }
+      responses: { '200': { description: Link saved }, '400': { description: Account is not an active staff role }, '409': { description: Stale profile or account already linked } }
+  /leave/{id}/cancel:
+    post:
+      summary: Owner cancels pending leave; office cancels approved leave and refunds annual days once
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [reason], properties: { reason: { type: string, minLength: 3, maxLength: 500 } } } } }
+      responses: { '200': { description: Cancelled with history }, '403': { description: Office review required }, '409': { description: No longer cancellable } }
+  /payroll/{id}/pdf:
+    get:
+      summary: Download an actual owned payslip PDF copy (explicitly unsigned)
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Private PDF, content: { application/pdf: { schema: { type: string, format: binary } } } }
+        '404': { description: Payslip not owned or found }
+
+  /curriculum/{id}/archive:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      summary: Archive or restore curriculum (Administrator or Principal)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [archived, expectedUpdatedAt, reason]
+              properties:
+                archived: { type: boolean }
+                expectedUpdatedAt: { type: string, format: date-time }
+                reason: { type: string, minLength: 3, maxLength: 500 }
+      responses:
+        '200': { description: Saved unit and review history }
+        '409': { description: Stale unit version }
+
+  /lms/assignments/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    patch:
+      summary: Review assignment plan and publication (Administrator, Principal, Teacher)
+      description: Requires expectedUpdatedAt and reason; retains history. Submitted work locks scope and maximum score. Draft and Scheduled records are hidden from family; Closed rejects intake. Teacher access requires active class/subject/year mapping. Scheduled publication requires publishAt with an explicit offset before dueDate. notifyEmail defaults false; teacher email requests require office approval.
+      responses:
+        '200': { description: Saved assignment }
+        '409': { description: Stale version or submitted-work scope lock }
+  /lms/courses/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    patch:
+      summary: Review course metadata or archive state (Administrator, Principal, Teacher)
+      description: Requires expectedUpdatedAt and reason. Linked assignments lock subject, grade and academic year.
+      responses:
+        '200': { description: Saved course }
+        '409': { description: Stale version or linked scope lock }
+
+  /library/books/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    patch:
+      summary: Review catalogue metadata (Administrator, Principal, Teacher)
+      description: Requires expectedUpdatedAt and reason; edits title, author, category or shelf without changing stock.
+      responses:
+        '200': { description: Saved title }
+        '409': { description: Stale version }
+  /library/loans/{id}/renew:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      summary: Renew an outstanding loan (Administrator, Principal, Teacher)
+      description: Requires dueDate, expectedUpdatedAt and reason; extends the due date into the future, maximum three renewals.
+      responses:
+        '200': { description: Renewed loan and history }
+        '409': { description: Stale, returned or renewal limit }
+  /library/requests/{id}/decision:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      summary: Cancel an authorized family request or reject as library staff
+      description: Requires status (Cancelled or Rejected) and reason; only pending requests can be decided.
+      responses:
+        '200': { description: Saved decision }
+        '403': { description: Unauthorized child or rejection }
+        '409': { description: Request already decided }
+
+  /transport/vehicles/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    patch:
+      summary: Review vehicle metadata or maintenance state (Administrator, Principal, Teacher)
+      description: Requires expectedUpdatedAt and reason. Capacity cannot be below assigned riders. Maintenance moves associated routes to Depot transactionally.
+      responses:
+        '200': { description: Reviewed vehicle }
+        '409': { description: Stale version or capacity conflict }
+  /transport/routes/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    patch:
+      summary: Review route plan or archive state (Administrator, Principal, Teacher)
+      description: Requires expectedUpdatedAt and reason; route must be at Depot. Assigned pickup stops and reused vehicles are protected.
+      responses:
+        '200': { description: Reviewed route }
+        '409': { description: Stale version, riders or vehicle conflict }
+  /transport/routes/{id}/remove:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      summary: Remove assigned rider (Administrator, Principal, Teacher)
+      description: Requires studentId, expectedUpdatedAt and reason; clears the saved pickup relation and preserves history.
+      responses:
+        '200': { description: Updated roster }
+        '409': { description: Stale version or rider not assigned }
+  /transport/incidents/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    patch:
+      summary: Review or resolve transport incident (Administrator, Principal, Teacher)
+      description: Requires status, resolution, expectedUpdatedAt and reason. Retains dated review history.
+      responses:
+        '200': { description: Saved review }
+        '409': { description: Stale version }
+
+  /hostel/rooms/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    patch:
+      summary: Review room capacity, policy, warden or archive (Administrator, Principal, Teacher)
+      description: Requires expectedUpdatedAt and reason; allocated boarders protect capacity, policy and archive changes.
+      responses:
+        '200': { description: Reviewed room }
+        '409': { description: Stale version or allocation conflict }
+  /hostel/rooms/{id}/discharge:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      summary: Discharge an allocated boarder (Administrator, Principal, Teacher)
+      description: Requires studentId, expectedUpdatedAt and reason. Active gate passes block discharge.
+      responses:
+        '200': { description: Updated accommodation and history }
+        '409': { description: Stale version or active gate pass }
+
+  /expenses/{id}/pay:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      summary: Record confirmed reimbursement for an Approved claim
+      description: Finance only; requires expectedUpdatedAt, paidDate, paymentMethod, paymentReference and reason. Paid is immutable; no money is transferred.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Saved record }
+        '403': { description: Role or ownership denied }
+        '409': { description: Stale version or lifecycle conflict }
+
+  /expenses/{id}/cancel:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      summary: Cancel an own Pending claim
+      description: Submitter only; requires expectedUpdatedAt and reason. Preserves dated history.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Saved record }
+        '403': { description: Role or ownership denied }
+        '409': { description: Stale version or lifecycle conflict }
+
+  /inventory/items/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    patch:
+      summary: Review inventory metadata without changing quantity
+      description: Staff inventory roles; requires expectedUpdatedAt, reason and full metadata fields. Preserves previous metadata; use stock movements for quantity changes.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Saved record }
+        '403': { description: Role or ownership denied }
+        '409': { description: Stale version or lifecycle conflict }
+
+  /events/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    patch:
+      summary: Review a Scheduled calendar event
+      description: Teaching staff; requires title, description, date, audience, expectedUpdatedAt and reason. Reserved venue day cannot change; cancel and recreate.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Saved record }
+        '403': { description: Role or ownership denied }
+        '409': { description: Stale version or lifecycle conflict }
+
+  /events/{id}/cancel:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      summary: Cancel an event and release its linked venue atomically
+      description: Teaching staff; requires expectedUpdatedAt and reason. Preserves cancelled event/reservation, and stale changes roll back together.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Saved record }
+        '403': { description: Role or ownership denied }
+        '409': { description: Stale version or lifecycle conflict }
+
+  /biometric/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    patch:
+      summary: Review registry metadata and a manual device inspection
+      description: Staff infrastructure roles; requires expectedUpdatedAt, reason, metadata, enabled/status and actual observedAt for Online/Offline. Does not sync hardware or import attendance.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Saved registry review }
+        '400': { description: Missing or future inspection time }
+        '409': { description: Stale version or duplicate name }
+
+  /visitors/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    patch:
+      summary: Correct saved visitor metadata with dated history
+      description: Staff front-desk roles only. Requires full metadata, expectedUpdatedAt and reason; changed host requires confirmed approval. Physical timestamps remain unchanged.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Saved visitor correction }
+        '400': { description: New host approval not confirmed }
+        '409': { description: Stale version }
+
+  /certificates/requests:
+    get:
+      summary: List staff request records or own submitted family requests for linked students
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Saved request records }
+    post:
+      summary: Submit an owned family certificate request
+      description: Parent/Student only; studentId/type/purpose. Creates Pending and serializes duplicate types; no certificate is issued automatically.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Pending request }
+        '403': { description: Unrelated student or role }
+        '409': { description: A pending request already exists }
+  /certificates/{id}/cancel:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      summary: Cancel an own current Pending family request
+      description: Requires expectedUpdatedAt and reason. Cannot cancel an issued record or change immutable signed bytes.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Cancelled request }
+        '409': { description: Stale, unrelated or already decided request }
+
+  /id-cards/{id}/pdf:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    get:
+      summary: Download an owned authenticated ID card record PDF
+      description: Office-wide, owned linked-student for families or own staff for Accountant. Unsigned record copy includes current validity; no gate credential is encoded.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Private application/pdf }
+        '404': { description: Missing or unrelated record }
+  /alumni/eligibility/{id}:
+    get:
+      summary: Review active-student library, transport and hostel graduation clearance
+      security: [{bearerAuth: []}]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+      responses:
+        '200': {description: Saved record or clearance preview}
+        '403': {description: Role or ownership denied}
+        '404': {description: Record not found}
+        '409': {description: State or version conflict}
+
+  /alumni/{id}:
+    patch:
+      summary: Review an office or owned Student alumni profile with version and reason
+      security: [{bearerAuth: []}]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+      responses:
+        '200': {description: Saved record or clearance preview}
+        '403': {description: Role or ownership denied}
+        '404': {description: Record not found}
+        '409': {description: State or version conflict}
+
+  /facilities/facilities/{id}:
+    patch:
+      summary: Review facility metadata and maintenance availability with version and reason
+      security: [{bearerAuth: []}]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+      responses:
+        '200': {description: Saved record or clearance preview}
+        '403': {description: Role or ownership denied}
+        '404': {description: Record not found}
+        '409': {description: State or version conflict}
+
+  /facilities/bookings/{id}/cancel:
+    post:
+      summary: Cancel a standalone reservation with version and reason; linked events must cancel through Calendar
+      security: [{bearerAuth: []}]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+      responses:
+        '200': {description: Saved record or clearance preview}
+        '403': {description: Role or ownership denied}
+        '404': {description: Record not found}
+        '409': {description: State or version conflict}
+
+
+  /helpdesk/assignees:
+    get:
+      summary: Minimal active support assignee directory for Administrator, Principal and Teacher
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {description: Active staff names, references and designation only}
+        '403': {description: Support role required}
+  /helpdesk/{id}/replies:
+    post:
+      summary: Save a versioned reply to an owned or support-visible non-closed ticket
+      security: [{bearerAuth: []}]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+      responses:
+        '200': {description: Saved reply in ticket conversation}
+        '404': {description: Ticket not found or unrelated}
+        '409': {description: Ticket changed or closed}
+
+  /reports/insights:
+    get:
+      summary: Leadership recorded-rule priorities and source evidence for Active students
+      security: [{bearerAuth: []}]
+      responses:
+        '200': {description: Complete recorded evidence, stock thresholds and school-day financial summary}
+        '403': {description: Administrator or Principal required}
+
+  /students/import:
+    post:
+      summary: Validate and atomically import a previewed student batch (Administrator or Principal)
+      security: [{ bearerAuth: [] }]
+      responses: { '201': { description: Imported student records }, '400': { description: Invalid batch }, '409': { description: Duplicate references or conflicting records } }
+  /students/{id}/enrollment:
+    patch:
+      summary: Record a reviewed enrollment status change with reason and history (Administrator or Principal)
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Updated student }, '409': { description: Stale version or blocked status change } }
+  /students/{id}/accounts:
+    patch:
+      summary: Explicitly link existing active family accounts (Administrator or Principal)
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Updated student account links }, '400': { description: Invalid role or account } }
+  /lms/courses:
+    get:
+      summary: List actual saved LMS courses
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Course list } }
+    post:
+      summary: Create a saved LMS course (authorized staff)
+      security: [{ bearerAuth: [] }]
+      responses: { '201': { description: Course created }, '403': { description: Insufficient role } }
+  /inbox:
+    get:
+      summary: List the authenticated user's personal notification history
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
+        - { in: query, name: unread, schema: { type: string, enum: ['true', 'false'] } }
+      responses: { '200': { description: Personal events with pagination and unread count } }
+  /inbox/read-all:
+    post:
+      summary: Mark only the authenticated user's notifications read
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Read state persisted } }
+  /inbox/{id}/read:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string } }
+    post:
+      summary: Mark an owned notification read
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Saved notification }, '404': { description: Missing or another recipient's event } }
+  /crm/assignees:
+    get:
+      summary: List active leadership accounts eligible for CRM assignment
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: CRM assignees }, '403': { description: Leadership only } }
+  /crm/{id}/assign:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string } }
+    post:
+      summary: Assign a pipeline lead to an active CRM account
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [ownerId], properties: { ownerId: { type: string } } }
+      responses: { '200': { description: Saved ownership }, '400': { description: Invalid assignee }, '409': { description: Archived or converted lead } }
+  /crm/{id}/complete-follow-up:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string } }
+    post:
+      summary: Complete an active follow-up with an outcome note
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [note], properties: { note: { type: string, minLength: 3, maxLength: 400 } } }
+      responses: { '200': { description: Saved activity and cleared follow-up }, '409': { description: No active follow-up } }
+  /crm/{id}/email:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string } }
+    post:
+      summary: Queue a Resend email to the saved prospect guardian address
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subject, body, idempotencyKey]
+              properties:
+                subject: { type: string, minLength: 1, maxLength: 160 }
+                body: { type: string, minLength: 1, maxLength: 5000 }
+                idempotencyKey: { type: string, minLength: 8, maxLength: 100 }
+      responses: { '201': { description: Persisted queue record, not a delivery receipt }, '409': { description: Idempotency conflict }, '503': { description: Configure Resend first } }
+
+  /crm/bulk-email:
+    post:
+      summary: Queue reviewed guardian emails (Administrator or Principal only)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [recipients, subject, body, idempotencyKey]
+              properties:
+                recipients:
+                  type: array
+                  minItems: 1
+                  maxItems: 100
+                  items:
+                    type: object
+                    additionalProperties: false
+                    required: [id, email]
+                    properties:
+                      id: { type: string, pattern: '^[a-fA-F0-9]{24}$' }
+                      email: { type: string, format: email, maxLength: 254 }
+                subject: { type: string, minLength: 1, maxLength: 160 }
+                body: { type: string, minLength: 1, maxLength: 5000 }
+                idempotencyKey: { type: string, minLength: 8, maxLength: 100 }
+      responses:
+        '201': { description: Batch ID and per-recipient status/deliveryId or skipped reason; not proof of delivery }
+        '409': { description: Batch key reused for another payload }
+        '503': { description: Resend unconfigured }
+  /crm/{id}/deliveries:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string } }
+    get:
+      summary: Latest 100 delivery summaries for this enquiry (leadership only)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Saved summaries without message body or idempotency secrets }
+        '404': { description: Enquiry not found }
+
+  /lms/teaching-options:
+    get:
+      summary: Active teacher accounts and active class sections (leadership only)
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Teachers and class options }, '403': { description: Leadership required } }
+  /lms/teaching-assignments:
+    get:
+      summary: Teaching mappings; Teacher sees own active class mappings only
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Mapped class, teacher, subject, year and active state } }
+    post:
+      summary: Assign or reactivate a teacher mapping (leadership only)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [teacher, classSection, subject, academicYear]
+              properties:
+                teacher: { type: string, description: Active Teacher User ID }
+                classSection: { type: string, description: Active ClassSection ID }
+                subject: { type: string, minLength: 1, maxLength: 80 }
+                academicYear: { type: string, description: Consecutive academic year e.g. 2026-2027 }
+      responses: { '201': { description: Saved account-backed mapping }, '400': { description: Invalid teacher or section } }
+  /lms/teaching-assignments/{id}:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+    patch:
+      summary: Change mapping active state with optimistic concurrency (leadership only)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [active, expectedUpdatedAt]
+              properties:
+                active: { type: boolean }
+                expectedUpdatedAt: { type: string, format: date-time }
+      responses: { '200': { description: Updated teaching mapping }, '409': { description: Stale mapping } }
+  /lms/templates:
+    get:
+      summary: Latest 100 templates; Teacher sees own and school-shared templates
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Saved coursework templates } }
+    post:
+      summary: Save coursework template; only leadership can share school-wide
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, title, description, subject, maxScore]
+              properties:
+                name: { type: string, minLength: 2, maxLength: 120 }
+                title: { type: string, minLength: 2, maxLength: 160 }
+                description: { type: string, minLength: 1, maxLength: 2000 }
+                subject: { type: string, minLength: 1, maxLength: 80 }
+                maxScore: { type: number, minimum: 1, maximum: 10000 }
+                acceptLate: { type: boolean, default: true }
+                shared: { type: boolean, default: false }
+      responses: { '201': { description: Saved template, no publication or delivery } }
+  /lms/templates/{id}:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+    delete:
+      summary: Delete owned template or leadership-managed template
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Deleted }, '404': { description: Template unavailable } }
+  /lms/assignments/batch:
+    post:
+      summary: Atomic multi-section assignments with retry identity (teaching roles)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [assignment, grades, idempotencyKey]
+              properties:
+                assignment:
+                  type: object
+                  required: [title, description, subject, grade, dueDate, maxScore]
+                  description: Same validated fields as assignment creation. status supports Draft/Scheduled/Published/Closed. publishAt requires an ISO timestamp with offset for Scheduled; notifyEmail and remindersEnabled default false.
+                grades:
+                  type: array
+                  minItems: 1
+                  maxItems: 20
+                  items: { type: string, maxLength: 60 }
+                idempotencyKey: { type: string, minLength: 8, maxLength: 100 }
+      responses:
+        '201': { description: Saved assignments, one per distinct authorized section }
+        '403': { description: Teacher target scope not assigned }
+        '409': { description: Batch key reused for different content }
+  /lms/ai/status:
+    get:
+      summary: Teacher AI configuration status (teaching roles; no credentials)
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Enabled, configured, model and setup reason }, '403': { description: Teaching role required } }
+  /lms/ai/students:
+    get:
+      summary: Active students in a currently authorised teaching context
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: query, name: grade, required: true, schema: { type: string } }
+        - { in: query, name: subject, required: true, schema: { type: string } }
+        - { in: query, name: academicYear, required: true, schema: { type: string } }
+      responses: { '200': { description: Student ids, names and references }, '403': { description: Teaching scope unavailable } }
+  /lms/ai/drafts:
+    get:
+      summary: Latest 50 private accessible teacher AI draft summaries
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Author-owned draft summaries } }
+    post:
+      summary: Generate a private structured draft; never automatically execute
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [requestId, kind, grade, subject, academicYear, topic]
+              properties:
+                requestId: { type: string, format: uuid }
+                kind: { type: string, enum: [Assignment, Quiz, LessonPlan, Feedback, ParentMessage, Progress] }
+                grade: { type: string, maxLength: 60 }
+                subject: { type: string, maxLength: 80 }
+                academicYear: { type: string }
+                topic: { type: string, minLength: 2, maxLength: 500 }
+                instructions: { type: string, maxLength: 2000 }
+                language: { type: string, enum: [English, Arabic], default: English }
+                difficulty: { type: string, enum: [Support, Standard, Challenge], default: Standard }
+                questionCount: { type: integer, minimum: 1, maximum: 20, default: 5 }
+                maxScore: { type: integer, minimum: 1, maximum: 100, default: 20 }
+                duration: { type: integer, minimum: 10, maximum: 180, default: 40 }
+                reportDays: { type: integer, minimum: 7, maximum: 90, default: 30 }
+                studentId: { type: string, description: Required for ParentMessage and Progress }
+                submissionId: { type: string, description: Required for Feedback }
+      responses:
+        '201': { description: Persisted draft or existing generation reservation }
+        '400': { description: Invalid input or generated content }
+        '403': { description: Teaching role or scope unavailable }
+        '409': { description: Request identity reused for different input }
+        '429': { description: Generation quota or provider limit }
+        '502': { description: Provider unavailable or invalid response }
+        '503': { description: AI not configured }
+  /lms/ai/drafts/{id}:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string } }
+    get:
+      summary: Own accessible AI draft including private keys, source facts and warnings
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Draft }, '404': { description: Draft unavailable } }
+    patch:
+      summary: Save reviewed content using expectedUpdatedAt; Draft only
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content, expectedUpdatedAt]
+              properties:
+                expectedUpdatedAt: { type: string, format: date-time }
+                content:
+                  type: object
+                  required: [title, body, questions, suggestedScore, warnings]
+                  description: Validated bounded AI content. Question ids, choices, answers, rubrics and mark totals are checked. Same schema as generated content.
+      responses: { '200': { description: Saved draft }, '400': { description: Invalid content }, '409': { description: Stale or applied draft } }
+  /lms/ai/drafts/{id}/apply:
+    post:
+      summary: Apply one explicitly reviewed matching action atomically
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedUpdatedAt, reviewed, action]
+              properties:
+                expectedUpdatedAt: { type: string, format: date-time }
+                reviewed: { type: boolean, enum: [true] }
+                action: { type: string, enum: [SaveAssignment, Grade, Message] }
+                dueDate: { type: string, format: date-time }
+                status: { type: string, enum: [Draft, Scheduled, Published], default: Draft }
+                publishAt: { type: string, format: date-time }
+                channel: { type: string, enum: [InApp, Email, SMS], default: InApp }
+      responses:
+        '200': { description: Applied draft with record id; identical retries return the same result }
+        '400': { description: Review required or mismatched action/content }
+        '403': { description: Teaching access revoked }
+        '409': { description: Stale draft/submission or different replay options }
+        '503': { description: External channel unconfigured }

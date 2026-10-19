@@ -14,9 +14,18 @@ const auth = (token: string) => ({ Authorization: `Bearer ${token}` });
 const validClass = { grade: 'Grade 6', section: 'A', stream: 'General', capacity: 30 };
 
 async function createStudent(token: string, refId: string, name: string, grade = 'Grade 6 · A') {
-  return request(app).post('/api/v1/students').set(auth(token)).send({
-    refId, name, grade, gender: 'Female', roll: refId.slice(-2), guardianName: 'Guardian', phone: '+971501234567',
-  });
+  return request(app)
+    .post('/api/v1/students')
+    .set(auth(token))
+    .send({
+      refId,
+      name,
+      grade,
+      gender: 'Female',
+      roll: refId.slice(-2),
+      guardianName: 'Guardian',
+      phone: '+971501234567',
+    });
 }
 
 describe('Classes & Sections API', () => {
@@ -36,14 +45,25 @@ describe('Classes & Sections API', () => {
   it('creates a section with an active teaching staff member and computes its live roster count', async () => {
     const admin = await register('Administrator', 'classes-admin@alnoor.ae');
     const staff = await request(app).post('/api/v1/staff').set(auth(admin)).send({
-      refId: 'EMP-CLS-1', name: 'Class Teacher', designation: 'Teacher', department: 'Primary',
-      type: 'Teaching', status: 'Active', email: 'class.teacher@alnoor.ae', phone: '+971501111111', joinedDate: '2026-08-01',
+      refId: 'EMP-CLS-1',
+      name: 'Class Teacher',
+      designation: 'Teacher',
+      department: 'Primary',
+      type: 'Teaching',
+      status: 'Active',
+      email: 'class.teacher@alnoor.ae',
+      phone: '+971501111111',
+      joinedDate: '2026-08-01',
     });
     await createStudent(admin, 'ANS-CLS-01', 'First Learner');
 
-    const created = await request(app).post('/api/v1/classes').set(auth(admin)).send({
-      ...validClass, teacherStaffId: staff.body.data._id,
-    });
+    const created = await request(app)
+      .post('/api/v1/classes')
+      .set(auth(admin))
+      .send({
+        ...validClass,
+        teacherStaffId: staff.body.data._id,
+      });
     expect(created.status).toBe(201);
     expect(created.body.data.className).toBe('Grade 6 · A');
     expect(created.body.data.teacherStaffId.name).toBe('Class Teacher');
@@ -58,30 +78,54 @@ describe('Classes & Sections API', () => {
   it('rejects duplicate grade/section values case-insensitively', async () => {
     const admin = await register('Administrator', 'classes-duplicate@alnoor.ae');
     expect((await request(app).post('/api/v1/classes').set(auth(admin)).send(validClass)).status).toBe(201);
-    const duplicate = await request(app).post('/api/v1/classes').set(auth(admin)).send({ ...validClass, section: 'a' });
+    const duplicate = await request(app)
+      .post('/api/v1/classes')
+      .set(auth(admin))
+      .send({ ...validClass, section: 'a' });
     expect(duplicate.status).toBe(409);
   });
 
   it('rejects a non-teaching class teacher and a capacity below the existing roster', async () => {
     const admin = await register('Administrator', 'classes-safety@alnoor.ae');
     const accountant = await request(app).post('/api/v1/staff').set(auth(admin)).send({
-      refId: 'EMP-CLS-2', name: 'School Accountant', designation: 'Accountant', department: 'Finance',
-      type: 'Non-Teaching', status: 'Active', email: 'school.accountant@alnoor.ae', phone: '+971502222222', joinedDate: '2026-08-01',
+      refId: 'EMP-CLS-2',
+      name: 'School Accountant',
+      designation: 'Accountant',
+      department: 'Finance',
+      type: 'Non-Teaching',
+      status: 'Active',
+      email: 'school.accountant@alnoor.ae',
+      phone: '+971502222222',
+      joinedDate: '2026-08-01',
     });
-    const wrongTeacher = await request(app).post('/api/v1/classes').set(auth(admin)).send({
-      ...validClass, teacherStaffId: accountant.body.data._id,
-    });
+    const wrongTeacher = await request(app)
+      .post('/api/v1/classes')
+      .set(auth(admin))
+      .send({
+        ...validClass,
+        teacherStaffId: accountant.body.data._id,
+      });
     expect(wrongTeacher.status).toBe(409);
 
     await createStudent(admin, 'ANS-CLS-03', 'Learner One');
     await createStudent(admin, 'ANS-CLS-04', 'Learner Two');
-    const unsafeCapacity = await request(app).post('/api/v1/classes').set(auth(admin)).send({ ...validClass, capacity: 1 });
+    const unsafeCapacity = await request(app)
+      .post('/api/v1/classes')
+      .set(auth(admin))
+      .send({ ...validClass, capacity: 1 });
     expect(unsafeCapacity.status).toBe(409);
   });
 
   it('validates input and records section creation in the audit trail', async () => {
     const admin = await register('Administrator', 'classes-audit@alnoor.ae');
-    expect((await request(app).post('/api/v1/classes').set(auth(admin)).send({ ...validClass, grade: 'University' })).status).toBe(400);
+    expect(
+      (
+        await request(app)
+          .post('/api/v1/classes')
+          .set(auth(admin))
+          .send({ ...validClass, grade: 'University' })
+      ).status,
+    ).toBe(400);
     expect((await request(app).post('/api/v1/classes').set(auth(admin)).send(validClass)).status).toBe(201);
     const audit = await request(app).get('/api/v1/audit-log').set(auth(admin)).query({ module: 'Classes' });
     expect(audit.status).toBe(200);

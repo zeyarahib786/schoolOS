@@ -29,7 +29,8 @@ export async function ensureDemoStudentAccount(password: string): Promise<'creat
       { _id: student._id, studentUserId: { $exists: false } },
       { $set: { studentUserId: user._id } },
     );
-    if (result.modifiedCount !== 1) throw new Error('Student link changed concurrently; verify it before using this account');
+    if (result.modifiedCount !== 1)
+      throw new Error('Student link changed concurrently; verify it before using this account');
   }
   return created ? 'created' : 'already linked';
 }

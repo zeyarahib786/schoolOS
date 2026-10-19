@@ -38,6 +38,34 @@ export function create(raisedBy: string, input: RaiseTicketInput): Promise<ITick
   return Ticket.create({ raisedBy, ...input });
 }
 
-export function applyTransition(id: string, from: TicketStatus, input: TransitionTicketInput): Promise<ITicket | null> {
-  return Ticket.findOneAndUpdate({ _id: id, status: from }, input, { new: true, runValidators: true });
+export function applyTransition(
+  id: string,
+  from: TicketStatus,
+  input: TransitionTicketInput,
+  actor: string,
+): Promise<ITicket | null> {
+  const { expectedUpdatedAt, ...fields } = input;
+  if (input.status === 'Open') {
+    delete fields.assignedTo;
+    delete fields.resolutionNotes;
+  }
+  const update: Record<string, unknown> = {
+    $set: fields,
+    $push: {
+      history: {
+        at: new Date(),
+        by: actor,
+        from,
+        to: input.status,
+        notes: input.resolutionNotes || '',
+        assignedTo: input.assignedTo,
+      },
+    },
+  };
+  if (input.status === 'Open') update.$unset = { assignedTo: 1, resolutionNotes: 1 };
+  return Ticket.findOneAndUpdate(
+    { _id: id, status: from, ...(expectedUpdatedAt ? { updatedAt: new Date(expectedUpdatedAt) } : {}) },
+    update,
+    { new: true, runValidators: true },
+  );
 }

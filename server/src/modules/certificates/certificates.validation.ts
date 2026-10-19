@@ -10,7 +10,7 @@ export const listCertificatesSchema = z.object({
     limit: z.coerce.number().int().min(1).max(100).default(20),
     studentId: objectId.optional(),
     type: z.enum(['Bonafide', 'Transfer', 'Character', 'Study', 'ReportCard', 'Provisional']).optional(),
-    status: z.enum(['Pending', 'Issued', 'Rejected']).optional(),
+    status: z.enum(['Pending', 'Issued', 'Rejected', 'Cancelled']).optional(),
   }),
 });
 
@@ -27,9 +27,24 @@ export const issueCertificateSchema = z.object({
 
 export const certificateDecisionSchema = z.object({
   params: z.object({ id: objectId }),
-  body: z.object({ decision: z.enum(['Issued', 'Rejected']) }),
+  body: z.object({
+    decision: z.enum(['Issued', 'Rejected']),
+    expectedUpdatedAt: z.string().datetime().optional(),
+    reason: z.string().trim().min(3).max(500).optional(),
+  }),
   query: z.object({}).optional(),
 });
 
 export type ListCertificatesQuery = z.infer<typeof listCertificatesSchema>['query'];
 export type IssueCertificateInput = z.infer<typeof issueCertificateSchema>['body'];
+
+export const requestCertificateSchema = z.object({
+  params: z.object({}).optional(),
+  query: z.object({}).optional(),
+  body: issueCertificateSchema.shape.body.omit({ status: true }),
+});
+export const cancelCertificateSchema = z.object({
+  params: z.object({ id: objectId }),
+  query: z.object({}).optional(),
+  body: z.object({ expectedUpdatedAt: z.string().datetime(), reason: z.string().trim().min(3).max(500) }),
+});

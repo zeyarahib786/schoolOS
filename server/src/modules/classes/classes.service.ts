@@ -1,9 +1,9 @@
 import { AuthenticatedUser } from '../../middleware/auth';
-import { IClassSection } from '../../models/ClassSection';
+import { ClassSection, IClassSection } from '../../models/ClassSection';
 import { ApiError } from '../../utils/ApiError';
 import { logAudit } from '../audit/audit.service';
 import * as repo from './classes.repository';
-import { CreateClassInput, ListClassesQuery } from './classes.validation';
+import { CreateClassInput, ListClassesQuery, UpdateClassInput } from './classes.validation';
 
 function className(row: Pick<IClassSection, 'grade' | 'section'>): string {
   return `${row.grade} · ${row.section}`;
@@ -50,4 +50,29 @@ export async function createClass(input: CreateClassInput, requester: Authentica
     if ((error as { code?: number }).code === 11000) throw ApiError.conflict('This grade and section already exists');
     throw error;
   }
+}
+
+export async function updateClass(id: string, input: UpdateClassInput, requester: AuthenticatedUser) {
+  if (!['Administrator', 'Principal'].includes(requester.role))
+    throw ApiError.forbidden('Only school managers may edit sections');
+  const row = await ClassSection.findById(id);
+  if (!row) throw ApiError.notFound('Section not found');
+  const filled = await repo.countActiveStudents(className(row));
+  if (input.capacity < filled) throw ApiError.conflict('Capacity cannot be below the active roster');
+  if (input.status === 'Archived' && filled)
+    throw ApiError.conflict('Move active students before archiving this section');
+  if (input.teacherStaffId) {
+    const teacher = await repo.findTeacher(input.teacherStaffId);
+    if (!teacher || teacher.type !== 'Teaching' || teacher.status !== 'Active')
+      throw ApiError.conflict('Choose an active teaching staff member');
+  }
+  const { expectedUpdatedAt, ...changes } = input;
+  const updated = await ClassSection.findOneAndUpdate(
+    { _id: id, updatedAt: new Date(expectedUpdatedAt) },
+    { $set: changes },
+    { new: true, runValidators: true },
+  ).populate('teacherStaffId', 'name type status');
+  if (!updated) throw ApiError.conflict('Section changed. Reload before saving');
+  await logAudit(`Updated section ${className(row)} (${input.status})`, 'Classes', requester.id);
+  return serialize(updated, filled);
 }

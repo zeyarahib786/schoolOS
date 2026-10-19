@@ -26,3 +26,7 @@ export const decide = asyncHandler(async (req: Request, res: Response) => {
   const request = await service.decideLeave(req.params.id, req.body, requester);
   sendSuccess(res, 200, request);
 });
+
+export const cancel = asyncHandler(async (req: Request, res: Response) => {
+  sendSuccess(res, 200, await service.cancelLeave(req.params.id, req.body.reason, requireUser(req)));
+});

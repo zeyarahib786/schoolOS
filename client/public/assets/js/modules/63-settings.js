@@ -48,7 +48,7 @@ function complianceHtml(){const c=COMPLIANCE[CFG.country]||{};const grading=c.gr
     <div style="display:flex;align-items:flex-end"><div style="border:1px solid var(--brand-line);background:var(--brand-soft);border-radius:11px;padding:11px 14px;width:100%"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--brand-deep);font-weight:700;margin-bottom:4px">Audit trail</div><div style="font-size:13px;color:var(--brand-deep);font-weight:600">Settings changes are audited; access logging varies by module</div></div></div></div>
   <div class="muted" style="font-size:11.5px;margin-top:12px">Framework guidance shown for demonstration — confirm current statutory obligations with your compliance officer or local counsel.</div></div>`}
 M.settings=()=>`
-  <div class="page-head"><div class="ph-l"><h2>Settings</h2><p>Branding, localization, academic structure and the modular platform configuration.</p></div></div>
+  <div class="page-head"><div class="ph-l"><h2>Settings</h2><p>Branding, localization, academic structure and the modular platform configuration.</p></div><div class="ph-r"><button class="btn" onclick="settingsWorkspaceRefresh()">Refresh school settings</button></div></div>
   <div class="card pad" style="margin-bottom:16px"><div class="sec-head" style="margin-bottom:4px"><h3>${ic('reports',16)} Region & localization</h3><span class="muted" style="font-size:12.5px">Adapt SchoolOS to your local market</span></div>
     <div class="muted" style="font-size:12.5px;margin-bottom:14px">Region and currency here are display previews only. Financial records keep the school's saved currency (${escHtml(window.SCHOOLOS_ADAPTER?.settings?.currency||'AED')}); amounts are never converted by this preview.</div>
     <div class="grid cols-2" style="gap:14px">
@@ -79,3 +79,5 @@ M.settings=()=>`
     <div class="lrow" style="border:0;padding:8px 0"><span style="font-size:13px;color:var(--slate-600)">Academic year</span><b style="margin-left:auto;color:var(--slate-900);font-size:13px">${escHtml(state.schoolProfile?.academicYear||'—')}</b></div>
     </div>
   </div>`;
+
+window.settingsWorkspaceRefresh=async function(){try{const a=SCHOOLOS_ADAPTER,r=(await a.api('/settings')).data;a.settings=r;a.live.settings=true;CFG.currency=r.currency;CFG.previewCurrency=r.currency;state.schoolProfile={legalName:r.schoolName,license:r.license||'',principal:r.principal||'',address:r.address||'',academicYear:r.academicYear,timezone:r.timezone,currency:r.currency,defaultAnnualLeave:r.defaultAnnualLeave};OPTIONAL.forEach(m=>{state.modules[m.id]=!(r.disabledModules||[]).includes(m.id)});renderNav();render();toast('School settings refreshed')}catch(e){toast(e.message)}};

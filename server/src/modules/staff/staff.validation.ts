@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { calendarDateSchema } from '../../utils/calendarDate';
 
 export const listStaffSchema = z.object({
   body: z.object({}).optional(),
@@ -20,13 +21,21 @@ export const staffIdParamSchema = z.object({
 });
 
 export const staffDocumentParamSchema = z.object({
-  body: z.any().optional(), query: z.object({}).optional(),
-  params: z.object({ id: z.string().regex(/^[a-f0-9]{24}$/i, 'Invalid staff id'), key: z.enum(['id', 'degree', 'photo', 'experience', 'visa', 'attestation']) }),
+  body: z.any().optional(),
+  query: z.object({}).optional(),
+  params: z.object({
+    id: z.string().regex(/^[a-f0-9]{24}$/i, 'Invalid staff id'),
+    key: z.enum(['id', 'degree', 'photo', 'experience', 'visa', 'attestation']),
+  }),
 });
 
 export const onboardingTaskParamSchema = z.object({
-  body: z.object({}).optional(), query: z.object({}).optional(),
-  params: z.object({ id: z.string().regex(/^[a-f0-9]{24}$/i, 'Invalid staff id'), key: z.string().trim().min(1).max(40) }),
+  body: z.object({}).optional(),
+  query: z.object({}).optional(),
+  params: z.object({
+    id: z.string().regex(/^[a-f0-9]{24}$/i, 'Invalid staff id'),
+    key: z.string().trim().min(1).max(40),
+  }),
 });
 
 export const createStaffSchema = z.object({
@@ -44,16 +53,30 @@ export const createStaffSchema = z.object({
       .string()
       .trim()
       .regex(/^\+?[0-9 ]{7,20}$/, 'Invalid phone number'),
-    joinedDate: z.string().refine((v) => !Number.isNaN(Date.parse(v)), 'Invalid date'),
+    joinedDate: calendarDateSchema,
+    annualLeaveRemaining: z.number().int().min(0).max(366).optional(),
   }),
 });
 
 export const updateStaffSchema = z.object({
   query: z.object({}).optional(),
   params: z.object({ id: z.string().regex(/^[a-f0-9]{24}$/i, 'Invalid staff id') }),
-  body: createStaffSchema.shape.body.partial(),
+  body: createStaffSchema.shape.body
+    .partial()
+    .extend({ expectedUpdatedAt: z.string().datetime(), changeReason: z.string().trim().min(3).max(500) }),
 });
 
 export type CreateStaffInput = z.infer<typeof createStaffSchema>['body'];
 export type UpdateStaffInput = z.infer<typeof updateStaffSchema>['body'];
 export type ListStaffQuery = z.infer<typeof listStaffSchema>['query'];
+
+export const staffAccountSchema = z.object({
+  query: z.object({}).optional(),
+  params: z.object({ id: z.string().regex(/^[a-f0-9]{24}$/i) }),
+  body: z.object({
+    email: z.string().email().nullable(),
+    expectedUpdatedAt: z.string().datetime(),
+    reason: z.string().trim().min(3).max(500),
+  }),
+});
+export type StaffAccountInput = z.infer<typeof staffAccountSchema>['body'];

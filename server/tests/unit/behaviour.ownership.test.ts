@@ -17,7 +17,10 @@ describe('scopeIncidentFilter', () => {
 
   it("scopes a Parent to only their linked children's incidents", () => {
     const filter = scopeIncidentFilter({}, makeUser('parent-id', 'Parent'), [childId]);
-    expect(filter).toEqual({ student: { $in: [childId] } });
+    expect(filter).toMatchObject({
+      student: { $in: [childId] },
+      $or: [{ visibility: 'Shared with family' }, { visibility: { $exists: false }, type: { $ne: 'Pastoral note' } }],
+    });
   });
 });
 

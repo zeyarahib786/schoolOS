@@ -94,7 +94,7 @@ describe('Curriculum API', () => {
     const res = await request(app)
       .patch(`/api/v1/curriculum/${created.body.data._id}`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ term: 'Term 3' });
+      .send({ term: 'Term 3', expectedUpdatedAt: created.body.data.updatedAt, reason: 'Reviewed term planning' });
     expect(res.status).toBe(200);
     expect(res.body.data.term).toBe('Term 3');
   });
@@ -121,20 +121,30 @@ describe('Curriculum API', () => {
     const completed = await request(app)
       .patch(`/api/v1/curriculum/${created.body.data._id}`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ completedDate: '2026-09-25' });
+      .send({
+        completedDate: '2026-09-25',
+        expectedUpdatedAt: created.body.data.updatedAt,
+        reason: 'Reviewed actual teaching',
+      });
     expect(completed.status).toBe(200);
     expect(completed.body.data.completedDate).toContain('2026-09-25');
     const reopened = await request(app)
       .patch(`/api/v1/curriculum/${created.body.data._id}`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ completedDate: null });
+      .send({
+        completedDate: null,
+        expectedUpdatedAt: completed.body.data.updatedAt,
+        reason: 'Review needs additional teaching',
+      });
     expect(reopened.status).toBe(200);
     expect(reopened.body.data.completedDate).toBeNull();
   });
 
   it('rejects case-insensitive duplicate units in the same subject and term', async () => {
     const token = await registerAndLogin('Teacher', 'teacher9@alnoor.ae');
-    expect((await request(app).post('/api/v1/curriculum').set('Authorization', `Bearer ${token}`).send(validUnit)).status).toBe(201);
+    expect(
+      (await request(app).post('/api/v1/curriculum').set('Authorization', `Bearer ${token}`).send(validUnit)).status,
+    ).toBe(201);
     const duplicate = await request(app)
       .post('/api/v1/curriculum')
       .set('Authorization', `Bearer ${token}`)
@@ -151,31 +161,40 @@ describe('Curriculum API', () => {
     expect(res.status).toBe(400);
   });
 
-  it('deletes a unit and records add, update, and delete in the immutable audit trail', async () => {
-    const token = await registerAndLogin('Administrator', 'curriculum-admin@alnoor.ae');
-    const created = await request(app)
+  it('preserves reviewed teaching history and audits archive; removes only unused units', async () => {
+    const token = await registerAndLogin('Administrator', 'curriculum-admin@example.invalid');
+    const headers = { Authorization: `Bearer ${token}` };
+    const created = await request(app).post('/api/v1/curriculum').set(headers).send(validUnit);
+    const completed = await request(app).patch(`/api/v1/curriculum/${created.body.data._id}`).set(headers).send({
+      completedDate: '2026-09-25',
+      expectedUpdatedAt: created.body.data.updatedAt,
+      reason: 'Reviewed actual teaching',
+    });
+    expect(completed.status).toBe(200);
+    expect((await request(app).delete(`/api/v1/curriculum/${created.body.data._id}`).set(headers)).status).toBe(409);
+    expect(
+      (
+        await request(app).post(`/api/v1/curriculum/${created.body.data._id}/archive`).set(headers).send({
+          archived: true,
+          expectedUpdatedAt: completed.body.data.updatedAt,
+          reason: 'Historical teaching plan',
+        })
+      ).status,
+    ).toBe(200);
+    const unused = await request(app)
       .post('/api/v1/curriculum')
-      .set('Authorization', `Bearer ${token}`)
-      .send(validUnit);
-    await request(app)
-      .patch(`/api/v1/curriculum/${created.body.data._id}`)
-      .set('Authorization', `Bearer ${token}`)
-      .send({ completedDate: '2026-09-25' });
-    const removed = await request(app)
-      .delete(`/api/v1/curriculum/${created.body.data._id}`)
-      .set('Authorization', `Bearer ${token}`);
-    expect(removed.status).toBe(200);
-    const list = await request(app).get('/api/v1/curriculum').set('Authorization', `Bearer ${token}`);
-    expect(list.body.data).toHaveLength(0);
-    const audit = await request(app)
-      .get('/api/v1/audit-log')
-      .set('Authorization', `Bearer ${token}`)
-      .query({ module: 'Curriculum' });
-    expect(audit.status).toBe(200);
-    expect(audit.body.data.map((entry: { action: string }) => entry.action)).toEqual(expect.arrayContaining([
-      expect.stringContaining('Added curriculum unit'),
-      expect.stringContaining('Completed curriculum unit'),
-      expect.stringContaining('Removed curriculum unit'),
-    ]));
+      .set(headers)
+      .send({ ...validUnit, title: 'Unused draft unit' });
+    expect((await request(app).delete(`/api/v1/curriculum/${unused.body.data._id}`).set(headers)).status).toBe(200);
+    expect((await request(app).get('/api/v1/curriculum').set(headers)).body.data).toHaveLength(0);
+    const audit = await request(app).get('/api/v1/audit-log').set(headers).query({ module: 'Curriculum' });
+    expect(audit.body.data.map((entry: { action: string }) => entry.action)).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('Added curriculum unit'),
+        expect.stringContaining('Completed curriculum unit'),
+        expect.stringContaining('Archived'),
+        expect.stringContaining('Removed curriculum unit'),
+      ]),
+    );
   });
 });

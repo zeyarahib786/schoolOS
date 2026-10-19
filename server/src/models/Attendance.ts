@@ -10,6 +10,10 @@ export interface IAttendance extends Document {
   status: 'Present' | 'Absent' | 'Late' | 'Excused';
   markedBy: Types.ObjectId;
   notes?: string;
+  alertRequestedAt?: Date;
+  alertProcessedAt?: Date;
+  alertChannel?: 'InApp' | 'Email' | 'SMS';
+  alertSummary?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -21,6 +25,10 @@ const attendanceSchema = new Schema<IAttendance>(
     session: { type: String, enum: ['AM', 'PM'], required: true },
     status: { type: String, enum: ['Present', 'Absent', 'Late', 'Excused'], required: true },
     markedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    alertSummary: String,
+    alertRequestedAt: Date,
+    alertProcessedAt: Date,
+    alertChannel: { type: String, enum: ['InApp', 'Email', 'SMS'] },
     notes: { type: String, trim: true, maxlength: 300 },
   },
   { timestamps: true },

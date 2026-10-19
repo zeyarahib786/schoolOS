@@ -3,6 +3,7 @@ import { asyncHandler } from '../../middleware/errorHandler';
 import { sendSuccess } from '../../utils/apiResponse';
 import { ApiError } from '../../utils/ApiError';
 import * as service from './curriculum.service';
+import { listUnitsSchema } from './curriculum.validation';
 
 function requireUser(req: Request) {
   if (!req.user) throw ApiError.unauthorized();
@@ -10,7 +11,7 @@ function requireUser(req: Request) {
 }
 
 export const list = asyncHandler(async (req: Request, res: Response) => {
-  const result = await service.listUnits(req.query as unknown as Parameters<typeof service.listUnits>[0]);
+  const result = await service.listUnits(listUnitsSchema.shape.query.parse(req.query), requireUser(req));
   sendSuccess(res, 200, result.items, { pagination: result.pagination });
 });
 
@@ -35,4 +36,8 @@ export const remove = asyncHandler(async (req: Request, res: Response) => {
   const requester = requireUser(req);
   await service.deleteUnit(req.params.id, requester);
   sendSuccess(res, 200, { message: 'Curriculum unit removed' });
+});
+
+export const archive = asyncHandler(async (req: Request, res: Response) => {
+  sendSuccess(res, 200, await service.archiveUnit(req.params.id, req.body, requireUser(req)));
 });

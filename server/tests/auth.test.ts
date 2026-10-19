@@ -1,4 +1,5 @@
 import request from 'supertest';
+import { User } from '../src/models/User';
 import { createApp } from '../src/app';
 
 const app = createApp();
@@ -100,5 +101,20 @@ describe('Auth API', () => {
 
     const refreshRes = await request(app).post('/api/v1/auth/refresh').send({ refreshToken });
     expect(refreshRes.status).toBe(401);
+  });
+  it('rejects an access token immediately after logout', async () => {
+    const reg = await request(app).post('/api/v1/auth/register').send(validUser);
+    const token = reg.body.data.accessToken;
+    expect((await request(app).post('/api/v1/auth/logout').set('Authorization', `Bearer ${token}`)).status).toBe(200);
+    expect((await request(app).get('/api/v1/students').set('Authorization', `Bearer ${token}`)).status).toBe(401);
+  });
+  it('rejects access after deactivation or a role change without waiting for token expiry', async () => {
+    const reg = await request(app).post('/api/v1/auth/register').send(validUser);
+    const token = reg.body.data.accessToken,
+      id = reg.body.data.user._id;
+    await User.updateOne({ _id: id }, { $set: { isActive: false } });
+    expect((await request(app).get('/api/v1/students').set('Authorization', `Bearer ${token}`)).status).toBe(401);
+    await User.updateOne({ _id: id }, { $set: { isActive: true, role: 'Student' } });
+    expect((await request(app).get('/api/v1/staff').set('Authorization', `Bearer ${token}`)).status).toBe(401);
   });
 });

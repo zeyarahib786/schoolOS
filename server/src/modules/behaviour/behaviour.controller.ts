@@ -25,5 +25,5 @@ export const create = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const updateStatus = asyncHandler(async (req: Request, res: Response) => {
-  sendSuccess(res, 200, await service.updateIncidentStatus(req.params.id, req.body.status, requireUser(req)));
+  sendSuccess(res, 200, await service.updateIncidentStatus(req.params.id, req.body, requireUser(req)));
 });

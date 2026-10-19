@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { asyncHandler } from '../../middleware/errorHandler';
 import { sendSuccess } from '../../utils/apiResponse';
 import { ApiError } from '../../utils/ApiError';
+import { listItemsSchema } from './inventory.validation';
 import * as service from './inventory.service';
 
 function requireUser(req: Request) {
@@ -16,7 +17,7 @@ export const addItem = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const listItems = asyncHandler(async (req: Request, res: Response) => {
-  const result = await service.listItems(req.query as unknown as Parameters<typeof service.listItems>[0]);
+  const result = await service.listItems(listItemsSchema.shape.query.parse(req.query));
   sendSuccess(res, 200, result.items, { pagination: result.pagination });
 });
 
@@ -38,18 +39,22 @@ export const createPO = asyncHandler(async (req: Request, res: Response) => {
 
 export const sendPO = asyncHandler(async (req: Request, res: Response) => {
   const requester = requireUser(req);
-  const po = await service.sendPO(req.params.id, requester);
+  const po = await service.sendPO(req.params.id, requester, req.body);
   sendSuccess(res, 200, po);
 });
 
 export const receivePO = asyncHandler(async (req: Request, res: Response) => {
   const requester = requireUser(req);
-  const po = await service.receivePO(req.params.id, requester);
+  const po = await service.receivePO(req.params.id, requester, req.body);
   sendSuccess(res, 200, po);
 });
 
 export const cancelPO = asyncHandler(async (req: Request, res: Response) => {
   const requester = requireUser(req);
-  const po = await service.cancelPO(req.params.id, requester);
+  const po = await service.cancelPO(req.params.id, requester, req.body);
   sendSuccess(res, 200, po);
+});
+
+export const updateItem = asyncHandler(async (req: Request, res: Response) => {
+  sendSuccess(res, 200, await service.updateItem(req.params.id, req.body, requireUser(req)));
 });

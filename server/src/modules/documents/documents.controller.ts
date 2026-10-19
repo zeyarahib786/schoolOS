@@ -24,20 +24,38 @@ export const publish = asyncHandler(async (req: Request, res: Response) => {
 
 export const publishFile = asyncHandler(async (req: Request, res: Response) => {
   const decode = (header: unknown) => {
-    try { return decodeURIComponent(String(header || '')); } catch { throw ApiError.badRequest('Invalid file metadata'); }
+    try {
+      return decodeURIComponent(String(header || ''));
+    } catch {
+      throw ApiError.badRequest('Invalid file metadata');
+    }
   };
   const input = publishDocumentSchema.shape.body.parse({
     code: decode(req.headers['x-document-code']),
+    expectedVersion:
+      req.headers['x-document-expected-version'] === undefined
+        ? undefined
+        : Number(req.headers['x-document-expected-version']),
+    publicationReason:
+      req.headers['x-document-publication-reason'] === undefined
+        ? undefined
+        : decode(req.headers['x-document-publication-reason']),
     title: decode(req.headers['x-document-title']),
     category: decode(req.headers['x-document-category']),
     description: decode(req.headers['x-document-description']),
   });
-  const document = await service.publishPdf(input, decode(req.headers['x-file-name']), req.body as Buffer, requireUser(req));
+  const document = await service.publishPdf(
+    input,
+    decode(req.headers['x-file-name']),
+    req.body as Buffer,
+    requireUser(req),
+  );
   sendSuccess(res, 201, document);
 });
 
 export const downloadFile = asyncHandler(async (req: Request, res: Response) => {
   const result = await service.getPdf(req.params.id);
+  res.setHeader('Cache-Control', 'private, no-store');
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(result.document.filename!)}`);
   res.setHeader('Content-Length', result.document.size!);

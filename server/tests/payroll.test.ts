@@ -65,14 +65,17 @@ describe('Payroll API', () => {
   it('re-generating for the SAME (staff, month) UPDATES rather than duplicates', async () => {
     const admin = await registerAndLogin('Administrator', 'admin3@alnoor.ae');
     const staffId = await createStaff(admin.token, 'EMP-903');
-    await request(app)
+    const created = await request(app)
       .post('/api/v1/payroll')
       .set('Authorization', `Bearer ${admin.token}`)
       .send({ staffId, month: '2026-06', basicSalary: 15000 });
-    await request(app)
-      .post('/api/v1/payroll')
-      .set('Authorization', `Bearer ${admin.token}`)
-      .send({ staffId, month: '2026-06', basicSalary: 16000 });
+    await request(app).post('/api/v1/payroll').set('Authorization', `Bearer ${admin.token}`).send({
+      staffId,
+      month: '2026-06',
+      basicSalary: 16000,
+      expectedUpdatedAt: created.body.data.updatedAt,
+      correctionReason: 'Updated salary calculation',
+    });
     const res = await request(app)
       .get('/api/v1/payroll')
       .set('Authorization', `Bearer ${admin.token}`)
@@ -90,7 +93,13 @@ describe('Payroll API', () => {
       .send({ staffId, month: '2026-06', basicSalary: 15000 });
     const res = await request(app)
       .post(`/api/v1/payroll/${created.body.data._id}/pay`)
-      .set('Authorization', `Bearer ${admin.token}`);
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({
+        expectedUpdatedAt: created.body.data.updatedAt,
+        paidDate: '2026-06-30',
+        paymentMethod: 'Bank transfer',
+        paymentReference: 'QA fictional payment',
+      });
     expect(res.status).toBe(200);
     expect(res.body.data.status).toBe('Paid');
     expect(res.body.data.paidDate).toBeDefined();
@@ -105,10 +114,22 @@ describe('Payroll API', () => {
       .send({ staffId, month: '2026-06', basicSalary: 15000 });
     await request(app)
       .post(`/api/v1/payroll/${created.body.data._id}/pay`)
-      .set('Authorization', `Bearer ${admin.token}`);
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({
+        expectedUpdatedAt: created.body.data.updatedAt,
+        paidDate: '2026-06-30',
+        paymentMethod: 'Bank transfer',
+        paymentReference: 'QA fictional payment',
+      });
     const res = await request(app)
       .post(`/api/v1/payroll/${created.body.data._id}/pay`)
-      .set('Authorization', `Bearer ${admin.token}`);
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({
+        expectedUpdatedAt: created.body.data.updatedAt,
+        paidDate: '2026-06-30',
+        paymentMethod: 'Bank transfer',
+        paymentReference: 'QA fictional payment',
+      });
     expect(res.status).toBe(409);
   });
 
@@ -140,31 +161,76 @@ describe('Payroll API', () => {
 
   it('rejects payroll for a missing, inactive, or onboarding staff record', async () => {
     const admin = await registerAndLogin('Administrator', 'admin7@alnoor.ae');
-    const missing = await request(app).post('/api/v1/payroll').set('Authorization', `Bearer ${admin.token}`).send({ staffId: 'aaaaaaaaaaaaaaaaaaaaaaaa', month: '2026-06', basicSalary: 15000 });
+    const missing = await request(app)
+      .post('/api/v1/payroll')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({ staffId: 'aaaaaaaaaaaaaaaaaaaaaaaa', month: '2026-06', basicSalary: 15000 });
     expect(missing.status).toBe(404);
     const staffId = await createStaff(admin.token, 'EMP-908');
     const { Staff } = await import('../src/models/Staff');
     await Staff.findByIdAndUpdate(staffId, { status: 'Inactive' });
-    const inactive = await request(app).post('/api/v1/payroll').set('Authorization', `Bearer ${admin.token}`).send({ staffId, month: '2026-06', basicSalary: 15000 });
+    const inactive = await request(app)
+      .post('/api/v1/payroll')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({ staffId, month: '2026-06', basicSalary: 15000 });
     expect(inactive.status).toBe(400);
   });
 
   it('rejects a negative net pay and never overwrites a paid payroll period', async () => {
     const admin = await registerAndLogin('Administrator', 'admin8@alnoor.ae');
     const staffId = await createStaff(admin.token, 'EMP-909');
-    const negative = await request(app).post('/api/v1/payroll').set('Authorization', `Bearer ${admin.token}`).send({ staffId, month: '2026-06', basicSalary: 100, deductions: 101 });
+    const negative = await request(app)
+      .post('/api/v1/payroll')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({ staffId, month: '2026-06', basicSalary: 100, deductions: 101 });
     expect(negative.status).toBe(400);
-    const created = await request(app).post('/api/v1/payroll').set('Authorization', `Bearer ${admin.token}`).send({ staffId, month: '2026-06', basicSalary: 15000 });
-    await request(app).post(`/api/v1/payroll/${created.body.data._id}/pay`).set('Authorization', `Bearer ${admin.token}`);
-    const rerun = await request(app).post('/api/v1/payroll').set('Authorization', `Bearer ${admin.token}`).send({ staffId, month: '2026-06', basicSalary: 16000 });
+    const created = await request(app)
+      .post('/api/v1/payroll')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({ staffId, month: '2026-06', basicSalary: 15000 });
+    await request(app)
+      .post(`/api/v1/payroll/${created.body.data._id}/pay`)
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({
+        expectedUpdatedAt: created.body.data.updatedAt,
+        paidDate: '2026-06-30',
+        paymentMethod: 'Bank transfer',
+        paymentReference: 'QA fictional payment',
+      });
+    const rerun = await request(app)
+      .post('/api/v1/payroll')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({ staffId, month: '2026-06', basicSalary: 16000 });
     expect(rerun.status).toBe(409);
   });
 
   it('concurrent payment requests allow exactly one paid transition', async () => {
     const admin = await registerAndLogin('Administrator', 'admin9@alnoor.ae');
     const staffId = await createStaff(admin.token, 'EMP-910');
-    const created = await request(app).post('/api/v1/payroll').set('Authorization', `Bearer ${admin.token}`).send({ staffId, month: '2026-06', basicSalary: 15000 });
-    const [first, second] = await Promise.all([request(app).post(`/api/v1/payroll/${created.body.data._id}/pay`).set('Authorization', `Bearer ${admin.token}`), request(app).post(`/api/v1/payroll/${created.body.data._id}/pay`).set('Authorization', `Bearer ${admin.token}`)]);
+    const created = await request(app)
+      .post('/api/v1/payroll')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({ staffId, month: '2026-06', basicSalary: 15000 });
+    const [first, second] = await Promise.all([
+      request(app)
+        .post(`/api/v1/payroll/${created.body.data._id}/pay`)
+        .set('Authorization', `Bearer ${admin.token}`)
+        .send({
+          expectedUpdatedAt: created.body.data.updatedAt,
+          paidDate: '2026-06-30',
+          paymentMethod: 'Bank transfer',
+          paymentReference: 'QA fictional payment',
+        }),
+      request(app)
+        .post(`/api/v1/payroll/${created.body.data._id}/pay`)
+        .set('Authorization', `Bearer ${admin.token}`)
+        .send({
+          expectedUpdatedAt: created.body.data.updatedAt,
+          paidDate: '2026-06-30',
+          paymentMethod: 'Bank transfer',
+          paymentReference: 'QA fictional payment',
+        }),
+    ]);
     expect([first.status, second.status].sort()).toEqual([200, 409]);
   });
 });

@@ -133,4 +133,89 @@ describe('Events API', () => {
     expect(res.status).toBe(200);
     expect(res.body.data.every((e: { audience: string }) => e.audience === 'Staff')).toBe(true);
   });
+  it('enforces family audience scope even when a caller requests Staff events', async () => {
+    const teacher = await registerAndLogin('Teacher', 'qa-audience-teacher@example.invalid');
+    await request(app)
+      .post('/api/v1/events')
+      .set('Authorization', `Bearer ${teacher.token}`)
+      .send({ ...validEvent, audience: 'Staff' });
+    const parent = await registerAndLogin('Parent', 'qa-audience-parent@example.invalid');
+    const visible = await request(app)
+      .get('/api/v1/events?audience=Staff')
+      .set('Authorization', `Bearer ${parent.token}`);
+    expect(visible.body.data).toEqual([]);
+  });
+  it('reviews a saved version and cancels a reserved event without losing history or blocking the venue', async () => {
+    const teacher = await registerAndLogin('Teacher', 'qa-calendar-review@example.invalid');
+    const facilityId = await createFacility(teacher.token, 'QA venue');
+    const created = await request(app)
+      .post('/api/v1/events')
+      .set('Authorization', `Bearer ${teacher.token}`)
+      .send({ ...validEvent, venue: { facilityId, startTime: '09:00', endTime: '10:00' } });
+    const id = created.body.data._id;
+    const body = {
+      ...validEvent,
+      audience: 'All',
+      title: 'QA reviewed event',
+      expectedUpdatedAt: created.body.data.updatedAt,
+      reason: 'QA event review',
+    };
+    const updated = await request(app)
+      .patch('/api/v1/events/' + id)
+      .set('Authorization', `Bearer ${teacher.token}`)
+      .send(body);
+    expect(updated.status).toBe(200);
+    expect(updated.body.data.history).toHaveLength(1);
+    expect(
+      (
+        await request(app)
+          .patch('/api/v1/events/' + id)
+          .set('Authorization', `Bearer ${teacher.token}`)
+          .send(body)
+      ).status,
+    ).toBe(409);
+    expect(
+      (
+        await request(app)
+          .patch('/api/v1/events/' + id)
+          .set('Authorization', `Bearer ${teacher.token}`)
+          .send({ ...body, expectedUpdatedAt: updated.body.data.updatedAt, date: '2026-06-15' })
+      ).status,
+    ).toBe(409);
+    const cancelled = await request(app)
+      .post('/api/v1/events/' + id + '/cancel')
+      .set('Authorization', `Bearer ${teacher.token}`)
+      .send({ expectedUpdatedAt: updated.body.data.updatedAt, reason: 'QA cancellation' });
+    expect(cancelled.status).toBe(200);
+    expect(cancelled.body.data.status).toBe('Cancelled');
+    expect(cancelled.body.data.history).toHaveLength(2);
+    const reused = await request(app)
+      .post('/api/v1/events')
+      .set('Authorization', `Bearer ${teacher.token}`)
+      .send({ ...validEvent, title: 'QA replacement', venue: { facilityId, startTime: '09:00', endTime: '10:00' } });
+    expect(reused.status).toBe(201);
+  });
+  it('stale cancellation rolls back the linked booking and impossible dates are rejected', async () => {
+    const teacher = await registerAndLogin('Teacher', 'qa-stale-cancel@example.invalid');
+    const facilityId = await createFacility(teacher.token, 'QA stale venue');
+    const created = await request(app)
+      .post('/api/v1/events')
+      .set('Authorization', `Bearer ${teacher.token}`)
+      .send({ ...validEvent, venue: { facilityId, startTime: '09:00', endTime: '10:00' } });
+    const cancelled = await request(app)
+      .post('/api/v1/events/' + created.body.data._id + '/cancel')
+      .set('Authorization', `Bearer ${teacher.token}`)
+      .send({ expectedUpdatedAt: '2000-01-01T00:00:00.000Z', reason: 'QA stale confirmation' });
+    expect(cancelled.status).toBe(409);
+    const { Booking } = await import('../src/models/Booking');
+    expect((await Booking.findById(created.body.data.booking))?.status).toBe('Active');
+    expect(
+      (
+        await request(app)
+          .post('/api/v1/events')
+          .set('Authorization', `Bearer ${teacher.token}`)
+          .send({ ...validEvent, date: '2026-02-30' })
+      ).status,
+    ).toBe(400);
+  });
 });

@@ -17,12 +17,12 @@ describe('scopeResultFilter', () => {
 
   it('scopes Accountant to their (empty) authorized student list - no business need for exam results', () => {
     const filter = scopeResultFilter({}, makeUser('acct-id', 'Accountant'), []);
-    expect(filter).toEqual({ student: { $in: [] } });
+    expect(filter).toEqual({ $and: [{}, { student: { $in: [] } }] });
   });
 
   it("scopes a Parent to only their linked children's results", () => {
     const filter = scopeResultFilter({}, makeUser('parent-id', 'Parent'), [childId]);
-    expect(filter).toEqual({ student: { $in: [childId] } });
+    expect(filter).toEqual({ $and: [{}, { student: { $in: [childId] } }] });
   });
 });
 

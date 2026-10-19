@@ -35,7 +35,11 @@ export function create(input: CreateApplicationInput): Promise<IAdmissionApplica
  * Enrolled with no Student ever created (a child admitted on paper who doesn't exist in the
  * system).
  */
-export async function enrollApplication(applicationId: string, input: EnrollInput, performedBy: string): Promise<IAdmissionApplication> {
+export async function enrollApplication(
+  applicationId: string,
+  input: EnrollInput,
+  performedBy: string,
+): Promise<IAdmissionApplication> {
   const session = await mongoose.startSession();
   try {
     let updated: IAdmissionApplication | null = null;
@@ -66,7 +70,11 @@ export async function enrollApplication(applicationId: string, input: EnrollInpu
 
       const result = await AdmissionApplication.findByIdAndUpdate(
         applicationId,
-        { status: 'Enrolled', enrolledStudent: student._id, history: [{ from: 'Accepted', to: 'Enrolled', performedBy, at: new Date() }] },
+        {
+          status: 'Enrolled',
+          enrolledStudent: student._id,
+          history: [{ from: 'Accepted', to: 'Enrolled', performedBy, at: new Date() }],
+        },
         { new: true, session },
       );
       updated = result;

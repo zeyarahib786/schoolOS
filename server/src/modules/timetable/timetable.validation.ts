@@ -29,12 +29,14 @@ const slotId = z.string().regex(/^[a-f0-9]{24}$/i, 'Invalid id');
 export const updateSlotSchema = z.object({
   query: z.object({}).optional(),
   params: z.object({ id: slotId }),
-  body: z.object({
-    subject: z.string().trim().min(1).max(80).optional(),
-    teacherName: z.string().trim().min(2).max(120).optional(),
-    room: z.string().trim().max(80).optional(),
-    isSubstitute: z.boolean().optional(),
-  }).refine((value) => Object.keys(value).length > 0, 'At least one field is required'),
+  body: z
+    .object({
+      subject: z.string().trim().min(1).max(80).optional(),
+      teacherName: z.string().trim().min(2).max(120).optional(),
+      room: z.string().trim().max(80).optional(),
+      isSubstitute: z.boolean().optional(),
+    })
+    .refine((value) => Object.keys(value).length > 0, 'At least one field is required'),
 });
 
 export const slotIdSchema = z.object({
@@ -57,14 +59,16 @@ const positionSchema = z.object({
 export const swapSlotsSchema = z.object({
   query: z.object({}).optional(),
   params: z.object({}).optional(),
-  body: z.object({
-    grade: z.string().trim().min(1).max(60),
-    source: positionSchema,
-    target: positionSchema,
-  }).refine(
-    ({ source, target }) => source.dayOfWeek !== target.dayOfWeek || source.periodNumber !== target.periodNumber,
-    'Source and target must be different',
-  ),
+  body: z
+    .object({
+      grade: z.string().trim().min(1).max(60),
+      source: positionSchema,
+      target: positionSchema,
+    })
+    .refine(
+      ({ source, target }) => source.dayOfWeek !== target.dayOfWeek || source.periodNumber !== target.periodNumber,
+      'Source and target must be different',
+    ),
 });
 
 export type UpdateSlotInput = z.infer<typeof updateSlotSchema>['body'];

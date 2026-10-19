@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { productionConfigurationIssues } from './production';
 
 /**
  * Fail fast on boot if required environment variables are missing or malformed,
@@ -7,6 +8,7 @@ import { z } from 'zod';
  */
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).optional(),
   PORT: z.coerce.number().int().positive().default(4000),
   API_PREFIX: z.string().default('/api/v1'),
   MONGO_URI: z.string().min(1, 'MONGO_URI is required'),
@@ -30,6 +32,13 @@ function loadEnv(): Env {
     console.error('Invalid environment configuration:', parsed.error.flatten().fieldErrors);
     throw new Error('Environment validation failed - see errors above. Check .env against .env.example.');
   }
+  const unsafe = productionConfigurationIssues({
+    NODE_ENV: parsed.data.NODE_ENV,
+    JWT_ACCESS_SECRET: parsed.data.JWT_ACCESS_SECRET,
+    JWT_REFRESH_SECRET: parsed.data.JWT_REFRESH_SECRET,
+    CORS_ALLOWED_ORIGINS: parsed.data.CORS_ALLOWED_ORIGINS,
+  });
+  if (unsafe.length) throw new Error('Unsafe production configuration fields: ' + unsafe.join(', '));
   return parsed.data;
 }
 

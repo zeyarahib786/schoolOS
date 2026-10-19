@@ -36,7 +36,7 @@ describe('Alumni API', () => {
     const res = await request(app)
       .post('/api/v1/alumni/graduate')
       .set('Authorization', `Bearer ${parent.token}`)
-      .send({ studentId, graduationYear: 2026 });
+      .send({ studentId, academicCompletionConfirmed: true, graduationYear: 2026 });
     expect(res.status).toBe(403);
   });
 
@@ -47,7 +47,7 @@ describe('Alumni API', () => {
     const graduateRes = await request(app)
       .post('/api/v1/alumni/graduate')
       .set('Authorization', `Bearer ${teacher.token}`)
-      .send({ studentId, graduationYear: 2026 });
+      .send({ studentId, academicCompletionConfirmed: true, graduationYear: 2026 });
     expect(graduateRes.status).toBe(201);
 
     // Confirm the Student's OWN status genuinely changed - real cross-collection consistency, not a disconnected copy
@@ -67,11 +67,11 @@ describe('Alumni API', () => {
     await request(app)
       .post('/api/v1/alumni/graduate')
       .set('Authorization', `Bearer ${teacher.token}`)
-      .send({ studentId, graduationYear: 2026 });
+      .send({ studentId, academicCompletionConfirmed: true, graduationYear: 2026 });
     const res = await request(app)
       .post('/api/v1/alumni/graduate')
       .set('Authorization', `Bearer ${teacher.token}`)
-      .send({ studentId, graduationYear: 2026 });
+      .send({ studentId, academicCompletionConfirmed: true, graduationYear: 2026 });
     expect(res.status).toBe(409);
   });
 
@@ -80,7 +80,7 @@ describe('Alumni API', () => {
     const res = await request(app)
       .post('/api/v1/alumni/graduate')
       .set('Authorization', `Bearer ${teacher.token}`)
-      .send({ studentId: '64b7f9c9a1b2c3d4e5f60789', graduationYear: 2026 });
+      .send({ academicCompletionConfirmed: true, studentId: '64b7f9c9a1b2c3d4e5f60789', graduationYear: 2026 });
     expect(res.status).toBe(404);
   });
 
@@ -90,7 +90,7 @@ describe('Alumni API', () => {
     await request(app)
       .post('/api/v1/alumni/graduate')
       .set('Authorization', `Bearer ${teacher.token}`)
-      .send({ studentId, graduationYear: 2019 });
+      .send({ studentId, academicCompletionConfirmed: true, graduationYear: 2019 });
     const res = await request(app)
       .get('/api/v1/alumni')
       .set('Authorization', `Bearer ${teacher.token}`)

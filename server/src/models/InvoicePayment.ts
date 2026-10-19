@@ -8,6 +8,7 @@ export interface IInvoicePayment extends Document {
   currency: string;
   paymentMethod: 'Card' | 'Bank transfer' | 'Cash' | 'Cheque' | 'Online portal';
   reference?: string;
+  idempotencyKey?: string;
   recordedBy: Types.ObjectId;
   paidAt: Date;
   createdAt: Date;
@@ -25,11 +26,17 @@ const invoicePaymentSchema = new Schema<IInvoicePayment>(
       enum: ['Card', 'Bank transfer', 'Cash', 'Cheque', 'Online portal'],
       required: true,
     },
+    idempotencyKey: { type: String },
     reference: { type: String, trim: true, maxlength: 120 },
     recordedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     paidAt: { type: Date, required: true, default: Date.now, index: true },
   },
   { timestamps: true },
+);
+
+invoicePaymentSchema.index(
+  { idempotencyKey: 1 },
+  { unique: true, partialFilterExpression: { idempotencyKey: { $type: 'string' } } },
 );
 
 export const InvoicePayment = model<IInvoicePayment>('InvoicePayment', invoicePaymentSchema);

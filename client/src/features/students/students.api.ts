@@ -25,6 +25,8 @@ export interface Student {
   transportRequirement?: 'No' | 'One-way' | 'Two-way';
   feeStatus: 'Paid' | 'Pending' | 'Overdue';
   attendancePct: number;
+  attendanceRecords?: number;
+  attendanceEligibleRecords?: number;
   gpa: number;
   status: 'Active' | 'Inactive' | 'Alumni';
 }

@@ -1,98 +1,994 @@
-/* ---- Hostel (Boarding Management) ---- */
-M.hostel=()=>{const tab=getSubTab('host-v','overview');
-  const totalBeds=HOSTEL.reduce((a,h)=>a+h.beds,0),filled=HOSTEL.reduce((a,h)=>a+h.filled,0);
-  const occ=Math.round(filled/totalBeds*100);
-  const onLeave=HLEAVE.filter(l=>l.status==='Out'||l.status==='Approved').length;
-  const openReq=HMAINT.filter(m=>m.status!=='Resolved').length+HLEAVE.filter(l=>l.status==='Requested').length;
-  return `
-  <div class="page-head"><div class="ph-l"><h2>Hostel</h2><p>Boarding houses, room allocation, roll-call, leave and welfare across ${HOSTEL.length} blocks · ${filled} boarders.</p></div>
-  <div class="ph-r"><button class="btn" onclick="setSubTab('host-v','rollcall')">${ic('att',16)} Roll-call</button><button class="btn primary" onclick="allocateForm()">${ic('plus',16)} Allocate room</button></div></div>
-  <div class="grid cols-4" style="margin-bottom:18px">
-    ${kpi('hostel','#17A24A','Total beds',String(totalBeds),null)}${kpi('students','#2563EB','Occupancy',occ+'%',{dir:'up',v:(totalBeds-filled)+' vacant',note:''})}
-    ${kpi('cal','#B45309','On leave',String(onLeave),null)}${kpi('helpdesk','#E11D2A','Open requests',String(openReq),null)}</div>
-  ${subTabs('host-v',[['overview','Overview','hostel'],['rooms','Rooms & blocks','settings'],['boarders','Boarders','students'],['rollcall','Roll-call','att'],['leave','Leave & gate pass','cal'],['maint','Maintenance','helpdesk']])}
-  ${tab==='rooms'?hostelRooms():tab==='boarders'?hostelBoarders():tab==='rollcall'?hostelRoll():tab==='leave'?hostelLeave():tab==='maint'?hostelMaint():hostelOverview()}`};
-
-function hostelActivity(){return [
- {t:'Sara Abdullah signed out — Weekend leave',sub:'Oryx Block · approved by Ms. Farah',time:'2h ago',c:'amber',k:'cal'},
- {t:'Roll-call completed — Falcon Block',sub:'108 accounted · 1 on approved leave',time:'Tonight 21:00',c:'green',k:'att'},
- {t:'Maintenance logged — AC not cooling (FB-203)',sub:'High priority · assigned to facilities',time:'13 Jun',c:'red',k:'helpdesk'},
- {t:'New boarder allocated — Room OB-204',sub:'Nadia Karim · Grade 8',time:'12 Jun',c:'blue',k:'students'}];}
-function hostelOverview(){const present=BOARDERS.filter(b=>b.roll==='Present').length,onL=BOARDERS.filter(b=>b.roll==='On leave').length;
- return `<div class="grid cols-2" style="margin-bottom:18px">
-  ${HOSTEL.map(h=>{const pct=Math.round(h.filled/h.beds*100);return `<div class="card pad hoverable" onclick="setSubTab('host-v','rooms')"><div class="flex ac jb"><div><div style="font-weight:600;color:var(--slate-900);font-size:15px">${h.block}</div><div class="muted" style="font-size:12px;margin-top:2px">${h.rooms} rooms · ${h.floors} floors</div></div>${chip(pct+'% full',h.c)}</div>
-   <div class="flex ac jb" style="margin:14px 0 6px"><span class="muted" style="font-size:12px">Beds occupied</span><span class="num" style="font-weight:600;color:var(--slate-900);font-size:12.5px">${h.filled}/${h.beds}</span></div>
-   ${cbar(pct,h.c)}
-   <div class="flex ac" style="gap:22px;margin-top:14px;padding-top:13px;border-top:1px solid var(--line-soft)"><div><div class="muted" style="font-size:11px">Warden</div><div style="font-size:12.5px;font-weight:600;color:var(--slate-800);margin-top:1px">${h.warden}</div></div><div><div class="muted" style="font-size:11px">Assistant</div><div style="font-size:12.5px;font-weight:600;color:var(--slate-800);margin-top:1px">${h.assist}</div></div></div></div>`}).join('')}
-  </div>
-  <div class="grid cols-4" style="margin-bottom:18px">${miniStat('Present tonight',String(present),'green')}${miniStat('On approved leave',String(onL),'amber')}${miniStat('Curfew compliance','98%','green')}${miniStat('Wardens on duty','4','blue')}</div>
-  <div class="card pad"><div class="sec-head" style="margin-bottom:6px"><h3 style="font-size:15px">Recent activity</h3></div>
-  <div>${hostelActivity().map(a=>`<div class="flex ac" style="gap:12px;padding:11px 2px;border-bottom:1px solid var(--line-soft)"><span class="avatar" style="width:30px;height:30px;font-size:11px;background:${CVAR[a.c]}1a;color:${CVAR[a.c]}">${ic(a.k,14)}</span><div style="flex:1"><div style="font-size:13px;color:var(--slate-800)">${a.t}</div><div class="muted" style="font-size:11.5px">${a.sub}</div></div><span class="muted num" style="font-size:11.5px">${a.time}</span></div>`).join('')}</div></div>`}
-
-function hostelRooms(){const f=getFilter('host-rooms','All');const rooms=HROOMS.filter(r=>f==='All'||r.block===f);
- return `<div class="card pad"><div class="flex ac jb" style="margin-bottom:12px"><h3 style="font-size:15px">Rooms &amp; blocks</h3>${segBtns('host-rooms',['All','Falcon Block (Boys)','Oryx Block (Girls)'],'All')}</div>
- <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Room</th><th>Block</th><th>Floor</th><th>Type</th><th style="width:150px">Occupancy</th><th>Occupants</th><th>Status</th></tr></thead><tbody>
- ${rooms.map(r=>{const pct=Math.round(r.occ.length/r.cap*100);const st=r.status==='Full'?'blue':r.status==='Maintenance'?'red':'green';return `<tr style="cursor:pointer" onclick="openDrawer(roomDetail('${r.no}'))"><td class="num" style="font-weight:600;color:var(--slate-900)">${r.no}</td><td>${r.block.replace(/ \(.*/,'')}</td><td class="num">Floor ${r.floor}</td><td>${r.type}</td><td><div class="flex ac" style="gap:8px">${cbar(pct,r.status==='Maintenance'?'red':pct>=100?'blue':'green')}<span class="num muted" style="font-size:11px">${r.occ.length}/${r.cap}</span></div></td><td class="muted" style="font-size:12px">${r.occ.slice(0,2).join(', ')||'—'}${r.occ.length>2?' +'+(r.occ.length-2):''}</td><td>${chip(r.status,st)}</td></tr>`}).join('')}
- </tbody></table></div></div>`}
-
-function hostelBoarders(){const f=getFilter('host-board','All');const list=BOARDERS.filter(b=>f==='All'||b.block===f);
- return `<div class="card pad"><div class="flex ac jb" style="margin-bottom:12px"><h3 style="font-size:15px">Boarder roster</h3>${segBtns('host-board',['All','Falcon Block (Boys)','Oryx Block (Girls)'],'All')}</div>
- <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Boarder</th><th>Grade</th><th>Room</th><th>Guardian</th><th>Contact</th><th>Medical</th><th>Fee</th></tr></thead><tbody>
- ${list.map(b=>`<tr style="cursor:pointer" onclick="openDrawer(boarderDetail('${b.id}'))"><td>${cellUser(b.name,b.id)}</td><td>${b.grade}</td><td class="num">${b.room}</td><td>${b.guardian}</td><td class="num muted">${b.phone}</td><td>${b.medical==='—'?'<span class="muted">—</span>':chip(b.medical.split('—')[0].trim(),'amber')}</td><td>${chip(b.fee,b.fee==='Paid'?'green':'amber')}</td></tr>`).join('')}
- </tbody></table></div></div>`}
-
-function hostelRoll(){const present=BOARDERS.filter(b=>b.roll==='Present').length,leave=BOARDERS.filter(b=>b.roll==='On leave').length,late=BOARDERS.filter(b=>b.roll==='Late').length,absent=BOARDERS.filter(b=>b.roll==='Absent').length;
- return `<div class="grid cols-4" style="margin-bottom:18px">${miniStat('Present',String(present),'green')}${miniStat('On leave',String(leave),'amber')}${miniStat('Late return',String(late),late?'amber':'green')}${miniStat('Unaccounted',String(absent),absent?'red':'green')}</div>
- <div class="card pad"><div class="flex ac jb" style="margin-bottom:12px"><div><h3 style="font-size:15px">Nightly roll-call</h3><div class="muted" style="font-size:12px;margin-top:2px">Tap a status to update · curfew 21:00</div></div><button class="btn sm primary" onclick="markAllRoll()">${ic('att',14)} Mark all present</button></div>
- <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Boarder</th><th>Room</th><th>Grade</th><th>Curfew check-in</th><th>Status</th></tr></thead><tbody>
- ${BOARDERS.map((b,i)=>{const c=b.roll==='Present'?'green':b.roll==='On leave'?'blue':b.roll==='Late'?'amber':'red';const times=['20:41','20:55','19:30','20:12','20:38','19:58','20:20','20:45','21:05','20:33'];const time=b.roll==='Present'?times[i%10]:b.roll==='Late'?'21:24':'—';return `<tr><td>${cellUser(b.name,b.id)}</td><td class="num">${b.room}</td><td>${b.grade}</td><td class="num" style="${b.roll==='Late'?'color:var(--amber);font-weight:600':'color:var(--slate-400)'}">${time}</td><td><span role="button" tabindex="0" style="cursor:pointer" onclick="cycleRoll('${b.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();cycleRoll('${b.id}')}" aria-label="Change roll-call status for ${b.name}">${chip(b.roll,c)}</span></td></tr>`}).join('')}
- </tbody></table></div></div>`}
-
-function hostelLeave(){const f=getFilter('host-leave','All');const list=HLEAVE.filter(l=>f==='All'||l.status===f);
- return `<div class="card pad"><div class="flex ac jb" style="margin-bottom:12px"><h3 style="font-size:15px">Leave &amp; gate pass</h3><div class="flex ac" style="gap:10px">${segBtns('host-leave',['All','Requested','Approved','Out','Returned'],'All')}<button class="btn sm primary" onclick="leaveForm()">${ic('plus',14)} New request</button></div></div>
- <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Boarder</th><th>Room</th><th>Type</th><th>From</th><th>To</th><th>Reason</th><th>Status</th><th></th></tr></thead><tbody>
- ${list.map(l=>{const c=l.status==='Approved'?'blue':l.status==='Out'?'amber':l.status==='Returned'?'green':'gray';return `<tr style="cursor:pointer" onclick="openDrawer(leaveDetail('${l.id}'))"><td>${cellUser(l.name,l.id)}</td><td class="num">${l.room}</td><td>${l.type}</td><td class="num">${l.from}</td><td class="num">${l.to}</td><td class="muted" style="font-size:12px">${l.reason}</td><td>${chip(l.status,c)}</td><td class="right" onclick="event.stopPropagation()">${l.status==='Requested'?`<button class="btn sm primary" onclick="approveLeave('${l.id}')">Approve</button>`:l.status==='Out'?`<button class="btn sm" onclick="returnLeave('${l.id}')">Mark returned</button>`:''}</td></tr>`}).join('')}
- </tbody></table></div></div>`}
-
-function hostelMaint(){const f=getFilter('host-maint','All');const list=HMAINT.filter(m=>f==='All'||m.status===f);
- return `<div class="card pad"><div class="flex ac jb" style="margin-bottom:12px"><h3 style="font-size:15px">Maintenance requests</h3><div class="flex ac" style="gap:10px">${segBtns('host-maint',['All','Open','In progress','Resolved'],'All')}<button class="btn sm primary" onclick="maintForm()">${ic('plus',14)} Log request</button></div></div>
- <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Ref</th><th>Room</th><th>Issue</th><th>Category</th><th>Priority</th><th>Status</th><th></th></tr></thead><tbody>
- ${list.map(m=>{const pc=m.prio==='High'?'red':m.prio==='Medium'?'amber':'gray';const sc=m.status==='Resolved'?'green':m.status==='In progress'?'amber':'red';return `<tr><td class="num" style="font-weight:600;color:var(--slate-900)">${m.id}</td><td class="num">${m.room}</td><td>${m.issue}</td><td>${m.cat}</td><td>${chip(m.prio,pc)}</td><td>${chip(m.status,sc)}</td><td class="right">${m.status!=='Resolved'?`<button class="btn sm" onclick="resolveMaint('${m.id}')">Resolve</button>`:''}</td></tr>`}).join('')}
- </tbody></table></div></div>`}
-
-function roomDetail(no){const r=HROOMS.find(x=>x.no===no);const pct=Math.round(r.occ.length/r.cap*100);const vac=r.cap-r.occ.length;
- return detailDrawer({title:'Room '+r.no,sub:r.block+' · Floor '+r.floor,color:r.status==='Maintenance'?'#E11D2A':'#2563EB',badge:ic('hostel',18),
-  stats:[['Type',r.type,'blue'],['Occupancy',r.occ.length+'/'+r.cap,pct>=100?'blue':'green'],['Status',r.status,r.status==='Maintenance'?'red':r.status==='Full'?'blue':'green'],['Vacant',String(vac),vac?'green':'gray']],
-  sections:[{h:'Occupants',html:r.occ.length?`<div class="card pad" style="box-shadow:none">${r.occ.map(n=>`<div class="flex ac" style="gap:10px;padding:7px 0">${avatar(n)}<span style="font-size:13px;color:var(--slate-800)">${n}</span></div>`).join('')}</div>`:'<div class="muted" style="font-size:13px">No occupants — room available.</div>'}],
-  footer:vac>0&&r.status!=='Maintenance'?[['Allocate to this room','allocateForm(\''+r.no+'\')',true]]:[[ic('helpdesk',15)+' Log maintenance','maintForm(\''+r.no+'\')',true]]})}
-
-function boarderDetail(id){const b=BOARDERS.find(x=>x.id===id);const rc=b.roll==='Present'?'green':b.roll==='On leave'?'blue':b.roll==='Late'?'amber':'red';
- return detailDrawer({title:b.name,sub:b.id+' · '+b.grade,color:avc(b.name),
-  stats:[['Room',b.room,'blue'],['Block',b.block.replace(/ \(.*/,''),'green'],['Fee',b.fee,b.fee==='Paid'?'green':'amber'],['Roll-call',b.roll,rc]],
-  sections:[{h:'Guardian & contact',rows:[['Guardian',b.guardian],['Phone',b.phone],['Medical',b.medical]]},{h:'Boarding',rows:[['Boarding since',b.joined],['Curfew','21:00']]}],
-  footer:[[ic('comm',16)+' Message guardian',"const gg=buildGuardians().find(g=>g.children.some(cid=>{const st=STUDENTS.find(s=>s.id===cid);return st&&st.name==='"+b.name.replace(/'/g,"\\'")+"'}));if(gg)openDrawer(guardianThread(gg.id));else toast('No guardian on file for "+b.name.replace(/'/g,"")+"')"],['View leave','setSubTab(\'host-v\',\'leave\');closeDrawer()',true]]})}
-
-function leaveDetail(id){const l=HLEAVE.find(x=>x.id===id);const c=l.status==='Approved'?'#2563EB':l.status==='Out'?'#E2920C':l.status==='Returned'?'#17A24A':'#64748B';
- return detailDrawer({title:l.name,sub:l.id+' · '+l.type,color:c,badge:ic('cal',18),
-  stats:[['Type',l.type,'blue'],['From',l.from,'amber'],['To',l.to,'amber'],['Status',l.status,l.status==='Returned'?'green':l.status==='Out'?'amber':'blue']],
-  sections:[{h:'Details',rows:[['Room',l.room],['Reason',l.reason],['Approved by',l.by]]}],
-  footer:l.status==='Requested'?[['Reject','rejectLeave(\''+l.id+'\')'],['Approve','approveLeave(\''+l.id+'\')',true]]:l.status==='Out'?[['Mark returned','returnLeave(\''+l.id+'\')',true]]:[['Close','closeDrawer()',true]]})}
-
-function allocateForm(room){formDrawer('Allocate room','Assign a boarder to a room',[{section:'Boarder'},{label:'Student name',key:'name',req:true,opts:STUDENTS.map(s=>s.name+' - '+s.grade)},{section:'Placement'},{label:'Block',key:'block',opts:['Falcon Block (Boys)','Oryx Block (Girls)']},{label:'Room',key:'room',val:room||'',ph:'e.g. FB-102'},{label:'Guardian',key:'guardian',half:true},{label:'Contact',key:'phone',half:true}],'Allocate','','allocateRoom')}
-window.allocateRoom=function(v){const pick=(v.name||'').trim();if(!pick){toast('Student name is required');return false}
- const name=pick.split(' - ')[0].trim();const st=STUDENTS.find(s=>s.name===name);const grade=st?st.grade:'—';
- const block=v.block||'Falcon Block (Boys)';const blk=HOSTEL.find(h=>h.block===block);if(blk&&blk.filled<blk.beds)blk.filled++;const room=(v.room||'').trim();const r=HROOMS.find(x=>x.no.toUpperCase()===room.toUpperCase());if(r&&r.occ.length<r.cap){r.occ.push(name);if(r.occ.length>=r.cap)r.status='Full'}BOARDERS.push({name,id:nextNum(BOARDERS,'ANS'),grade:v.grade||grade,room:(r?r.no:room)||(blk?blk.code+'-NEW':'—'),block,guardian:v.guardian||'—',phone:v.phone||'—',fee:'Paid',medical:'—',joined:'Today',roll:'Present'});closeDrawer();render();toast(name+' allocated · '+block);return false};
-function leaveForm(){formDrawer('New leave request','Gate pass / boarder leave',[{label:'Boarder name',key:'name',req:true,opts:BOARDERS.map(b=>b.name+' - '+b.room)},{label:'Room',key:'room',half:true},{label:'Type',key:'type',half:true,opts:['Weekend leave','Day-out','Home leave','Medical']},{label:'From',key:'from',type:'date',half:true},{label:'To',key:'to',type:'date',half:true},{label:'Reason',key:'reason',area:true,aiContext:'general',maxlen:300}],'Submit request','','addHostelLeave')}
-window.addHostelLeave=function(v){const pick=(v.name||'').trim();if(!pick){toast('Boarder name is required');return false}
- const name=pick.split(' - ')[0].trim();const b=BOARDERS.find(x=>x.name===name);const room=v.room||(b?b.room:'—');
- HLEAVE.unshift({id:nextNum(HLEAVE,'GP'),name,room,type:v.type||'Weekend leave',from:v.from||'Today',to:v.to||'Today',reason:v.reason||'—',status:'Requested',by:'—'});closeDrawer();render();toast('Leave request submitted for '+name);return false};
-window.approveLeave=function(id){const l=HLEAVE.find(x=>x.id===id);if(l){l.status='Approved';l.by='Warden';logAudit('Approved gate pass · '+id,'Hostel')}closeDrawer();render();toast('Leave approved · '+id)};
-window.rejectLeave=function(id){const i=HLEAVE.findIndex(x=>x.id===id);if(i>=0)HLEAVE.splice(i,1);closeDrawer();render();toast('Leave request rejected')};
-window.returnLeave=function(id){const l=HLEAVE.find(x=>x.id===id);if(l){l.status='Returned';const b=BOARDERS.find(x=>x.name===l.name);if(b)b.roll='Present'}closeDrawer();render();toast('Marked returned · '+id)};
-function maintForm(room){formDrawer('Log maintenance','Hostel maintenance request',[{label:'Room',key:'room',req:true,val:room||'',ph:'e.g. FB-203'},{label:'Issue',key:'issue',req:true},{label:'Category',key:'cat',half:true,opts:['HVAC','Plumbing','Electrical','Furniture','Cleaning','Other']},{label:'Priority',key:'prio',half:true,opts:['High','Medium','Low']}],'Log request','','addMaint')}
-window.addMaint=function(v){const room=(v.room||'').trim(),issue=(v.issue||'').trim();if(!room||!issue){toast('Room and issue are required');return false}HMAINT.unshift({id:nextNum(HMAINT,'HM'),room,issue,cat:v.cat||'Other',prio:v.prio||'Medium',by:'Warden',status:'Open',date:'Today'});closeDrawer();render();toast('Maintenance logged · '+room);return false};
-window.resolveMaint=function(id){const m=HMAINT.find(x=>x.id===id);if(m){m.status='Resolved';logAudit('Resolved maintenance · '+id,'Hostel')}render();toast('Marked resolved · '+id)};
-window.cycleRoll=function(id){const b=BOARDERS.find(x=>x.id===id);if(!b)return;const order=['Present','Late','On leave','Absent'];b.roll=order[(order.indexOf(b.roll)+1)%order.length];render()};
-window.markAllRoll=function(){BOARDERS.forEach(b=>{if(b.roll!=='On leave')b.roll='Present'});render();toast('Roll-call marked — all present')};
-
-
+/* Boarding workspace: saved accommodation, gate passes and confirmed roll-call. */
+function hostelWorkspaceManage() {
+  return ["Administrator", "Principal", "Teacher"].includes(state.role);
+}
+function hostelWorkspaceFamily() {
+  return ["Parent", "Student"].includes(state.role);
+}
+function hostelWorkspaceState() {
+  const userId = commUserId();
+  if (state.hostelWorkspace?.userId !== userId)
+    state.hostelWorkspace = {
+      userId,
+      rooms: [],
+      leave: [],
+      roll: [],
+      maintenance: [],
+      students: [],
+      loaded: false,
+      loading: false,
+      saving: false,
+      error: "",
+      tab: "Rooms",
+      q: "",
+      archived: false,
+      date: healthDay(),
+      page: 1,
+    };
+  return state.hostelWorkspace;
+}
+window.hostelWorkspaceLoad = async function () {
+  const b = hostelWorkspaceState();
+  if (b.loading) return;
+  b.loading = true;
+  const requestedDate = b.date;
+  b.error = "";
+  try {
+    const r = await Promise.all([
+      SCHOOLOS_ADAPTER.apiAll("/hostel/rooms"),
+      SCHOOLOS_ADAPTER.apiAll("/hostel/rooms?archived=true"),
+      SCHOOLOS_ADAPTER.apiAll("/hostel/leave"),
+      SCHOOLOS_ADAPTER.api("/hostel/roll-call?date=" + requestedDate),
+      hostelWorkspaceManage()
+        ? SCHOOLOS_ADAPTER.apiAll("/hostel/maintenance")
+        : Promise.resolve({ data: [] }),
+      hostelWorkspaceManage()
+        ? SCHOOLOS_ADAPTER.apiAll("/students")
+        : Promise.resolve({ data: [] }),
+    ]);
+    if (requestedDate !== b.date) {
+      b.loaded = false;
+      return;
+    }
+    b.rooms = [...(r[0].data || []), ...(r[1].data || [])];
+    b.leave = r[2].data || [];
+    b.roll = r[3].data || [];
+    b.maintenance = r[4].data || [];
+    b.students = r[5].data || [];
+    b.loaded = true;
+  } catch (e) {
+    b.error = e.message;
+  } finally {
+    b.loading = false;
+    if (requestedDate !== b.date && !b.error) hostelWorkspaceLoad();
+    if (state.module === "hostel") render();
+  }
+};
+function hostelWorkspaceBoarders() {
+  return hostelWorkspaceState().rooms.flatMap((room) =>
+    room.occupants.map((s) => ({
+      ...s,
+      roomId: room._id,
+      roomLabel: room.block + " · " + room.roomNumber,
+      bedLabel:
+        room.allocations.find((a) => a.student === s._id)?.bedLabel ||
+        "Not configured",
+    })),
+  );
+}
+function hostelWorkspaceRollRows() {
+  const b = hostelWorkspaceState();
+  return hostelWorkspaceBoarders().map((s) => ({
+    student: s,
+    ...(b.roll.find((r) => (r.student?._id || r.student) === s._id) || {
+      status: "Unmarked",
+    }),
+  }));
+}
+window.hostelWorkspaceFilter = function (k, v) {
+  const b = hostelWorkspaceState();
+  b[k] = v;
+  if (k !== "page") b.page = 1;
+  if (k === "date") {
+    b.roll = [];
+    b.loaded = false;
+    hostelWorkspaceLoad();
+  } else render();
+};
+function hostelWorkspaceFiltered() {
+  const b = hostelWorkspaceState(),
+    rows =
+      b.tab === "Gate passes"
+        ? b.leave
+        : b.tab === "Roll-call"
+          ? hostelWorkspaceRollRows()
+          : b.tab === "Maintenance"
+            ? b.maintenance
+            : b.rooms;
+  return rows.filter(
+    (r) =>
+      (b.tab !== "Rooms" || !!r.archived === b.archived) &&
+      (!b.q ||
+        [
+          r.roomNumber,
+          r.block,
+          r.student?.name,
+          r.student?.refId,
+          r.reason,
+          r.type,
+          r.issue,
+          r.refId,
+          r.room?.roomNumber,
+        ]
+          .join(" ")
+          .toLowerCase()
+          .includes(b.q.toLowerCase())),
+  );
+}
+window.hostelWorkspaceRoomForm = function (id) {
+  if (!hostelWorkspaceManage()) return;
+  const b = hostelWorkspaceState(),
+    r = b.rooms.find((r) => r._id === id);
+  b.editId = id || null;
+  b.mode = "room";
+  studentFormDrawer(
+    r ? "Review room" : "Add room",
+    "Accommodation policy and warden contacts.",
+    [
+      {
+        key: "roomNumber",
+        label: "Room number",
+        req: true,
+        val: r?.roomNumber || "",
+        half: true,
+      },
+      {
+        key: "block",
+        label: "Block",
+        req: true,
+        val: r?.block || "",
+        half: true,
+      },
+      {
+        key: "capacity",
+        label: "Bed capacity",
+        type: "number",
+        req: true,
+        val: r?.capacity || 2,
+        half: true,
+      },
+      {
+        key: "genderPolicy",
+        label: "Gender policy",
+        opts: ["Any", "Male", "Female"],
+        val: r?.genderPolicy || "Any",
+        half: true,
+      },
+      { key: "warden", label: "Warden", val: r?.warden || "", half: true },
+      {
+        key: "wardenPhone",
+        label: "Warden phone",
+        val: r?.wardenPhone || "",
+        half: true,
+      },
+      ...(r
+        ? [
+            {
+              key: "status",
+              label: "Availability",
+              opts: ["Available", "Unavailable"],
+              val: r.status,
+            },
+            {
+              key: "archived",
+              label: "Directory state",
+              opts: ["Active", "Archived"],
+              val: r.archived ? "Archived" : "Active",
+            },
+            {
+              key: "reason",
+              label: "Reason for review",
+              req: true,
+              area: true,
+            },
+          ]
+        : []),
+    ],
+    "Save room",
+    "",
+    "hostelWorkspaceSave",
+  );
+};
+window.hostelWorkspaceAllocateForm = function (id) {
+  if (!hostelWorkspaceManage()) return;
+  const b = hostelWorkspaceState(),
+    r = b.rooms.find((r) => r._id === id);
+  if (!r) return;
+  b.editId = id;
+  b.mode = "allocate";
+  b.studentChoices = b.students
+    .filter((s) => s.status === "Active")
+    .map((s) => ({
+      id: s._id,
+      label: s.name + " · " + s.grade + " · " + s.refId,
+    }));
+  studentFormDrawer(
+    "Allocate boarder",
+    r.block + " · " + r.roomNumber,
+    [
+      {
+        key: "student",
+        label: "Student",
+        req: true,
+        opts: b.studentChoices.map((s) => s.label),
+      },
+      { key: "bedLabel", label: "Confirmed bed label", req: true },
+    ],
+    "Allocate bed",
+    "",
+    "hostelWorkspaceSave",
+  );
+};
+window.hostelWorkspaceDischargeForm = function (id, studentId) {
+  if (!hostelWorkspaceManage()) return;
+  const b = hostelWorkspaceState();
+  b.editId = id;
+  b.studentId = studentId;
+  b.mode = "discharge";
+  studentFormDrawer(
+    "Discharge boarder",
+    "Active gate passes must be decided or returned first.",
+    [
+      {
+        key: "reason",
+        label: "Reason for accommodation change",
+        req: true,
+        area: true,
+      },
+    ],
+    "Discharge",
+    "",
+    "hostelWorkspaceSave",
+  );
+};
+window.hostelWorkspaceLeaveForm = function () {
+  if (!hostelWorkspaceManage() && !hostelWorkspaceFamily()) return;
+  const b = hostelWorkspaceState();
+  b.editId = null;
+  b.mode = "leave";
+  b.boarderChoices = hostelWorkspaceBoarders().map((s) => ({
+    id: s._id,
+    roomId: s.roomId,
+    label: s.name + " · " + s.refId + " · " + s.roomLabel,
+  }));
+  studentFormDrawer(
+    "Request gate pass",
+    "Approval records authorized pickup and guardian consent.",
+    [
+      {
+        key: "student",
+        label: "Boarder",
+        req: true,
+        opts: b.boarderChoices.map((s) => s.label),
+      },
+      {
+        key: "type",
+        label: "Leave type",
+        opts: [
+          "Day leave",
+          "Weekend leave",
+          "Family event",
+          "Appointment",
+          "Other",
+        ],
+      },
+      {
+        key: "fromDate",
+        label: "From",
+        req: true,
+        type: "date",
+        val: healthDay(),
+        half: true,
+      },
+      {
+        key: "toDate",
+        label: "Until",
+        req: true,
+        type: "date",
+        val: healthDay(),
+        half: true,
+      },
+      { key: "reason", label: "Reason", req: true, area: true },
+    ],
+    "Request leave",
+    "",
+    "hostelWorkspaceSave",
+  );
+};
+window.hostelWorkspaceTransitionForm = function (id) {
+  if (!hostelWorkspaceManage() && !hostelWorkspaceFamily()) return;
+  const b = hostelWorkspaceState(),
+    r = b.leave.find((r) => r._id === id);
+  if (!r || ["Returned", "Rejected", "Cancelled"].includes(r.status)) return;
+  b.editId = id;
+  b.mode = "transition";
+  if (!hostelWorkspaceManage() && r.status !== "Requested") return;
+  const actions = !hostelWorkspaceManage()
+    ? ["cancel"]
+    : r.status === "Requested"
+      ? ["approve", "reject"]
+      : r.status === "Approved"
+        ? ["mark-out", "reject"]
+        : ["return"];
+  studentFormDrawer(
+    "Review gate pass",
+    r.student?.name + " · " + r.status,
+    [
+      { key: "action", label: "Action", opts: actions },
+      ...(r.status === "Requested" && hostelWorkspaceManage()
+        ? [
+            {
+              key: "pickupName",
+              label: "Authorized pickup person",
+              val: r.pickupName || "",
+            },
+            {
+              key: "pickupPhone",
+              label: "Pickup phone",
+              val: r.pickupPhone || "",
+            },
+            {
+              key: "consent",
+              label: "Guardian consent verified",
+              opts: ["Not confirmed", "Confirmed"],
+            },
+          ]
+        : []),
+      {
+        key: "reason",
+        label: "Review / physical departure or return confirmation",
+        req: true,
+        area: true,
+      },
+    ],
+    "Record action",
+    "",
+    "hostelWorkspaceSave",
+  );
+};
+window.hostelWorkspaceRollForm = function (studentId) {
+  if (!hostelWorkspaceManage()) return;
+  const b = hostelWorkspaceState(),
+    s = hostelWorkspaceBoarders().find((s) => s._id === studentId),
+    r = b.roll.find((r) => (r.student?._id || r.student) === studentId);
+  if (!s) return;
+  b.editId = studentId;
+  b.mode = "roll";
+  studentFormDrawer(
+    r ? "Correct roll-call" : "Mark roll-call",
+    s.name + " · " + b.date,
+    [
+      {
+        key: "status",
+        label: "Confirmed status",
+        opts: ["Present", "Late", "On leave", "Absent"],
+        val: r?.status || "Present",
+      },
+      ...(r
+        ? [
+            {
+              key: "reason",
+              label: "Reason for correction",
+              req: true,
+              area: true,
+            },
+          ]
+        : []),
+    ],
+    "Save roll-call",
+    "",
+    "hostelWorkspaceSave",
+  );
+};
+window.hostelWorkspaceConfirmUnmarked = async function () {
+  if (
+    !hostelWorkspaceManage() ||
+    !confirm(
+      "Confirm you physically checked all currently unmarked boarders as present? Existing marks and departed boarders will be preserved.",
+    )
+  )
+    return;
+  const b = hostelWorkspaceState();
+  if (b.saving) return;
+  b.saving = true;
+  try {
+    await SCHOOLOS_ADAPTER.api("/hostel/roll-call/all", {
+      method: "PUT",
+      body: JSON.stringify({ date: b.date }),
+    });
+    await hostelWorkspaceLoad();
+    toast("Unmarked present boarders recorded");
+  } catch (e) {
+    toast(e.message);
+  } finally {
+    b.saving = false;
+  }
+};
+window.hostelWorkspaceMaintenanceForm = function (id) {
+  if (!hostelWorkspaceManage()) return;
+  const b = hostelWorkspaceState(),
+    r = b.maintenance.find((r) => r._id === id);
+  b.editId = id || null;
+  b.mode = "maintenance";
+  b.roomChoices = b.rooms.map((r) => ({
+    id: r._id,
+    label: r.block + " · " + r.roomNumber,
+  }));
+  studentFormDrawer(
+    r ? "Review maintenance" : "Report maintenance",
+    r?.refId || "Saved hostel repair request.",
+    r
+      ? [
+          {
+            key: "status",
+            label: "Work status",
+            opts: ["Open", "In progress", "Resolved"],
+            val: r.status,
+          },
+          {
+            key: "resolution",
+            label: "Work performed / next action",
+            req: true,
+            area: true,
+            val: r.resolution || "",
+          },
+          { key: "reason", label: "Review reason", req: true, area: true },
+        ]
+      : [
+          {
+            key: "refId",
+            label: "Request reference",
+            req: true,
+            val: "HM-" + crypto.randomUUID().slice(0, 8),
+          },
+          {
+            key: "room",
+            label: "Room",
+            req: true,
+            opts: b.roomChoices.map((r) => r.label),
+          },
+          { key: "issue", label: "Issue", req: true, area: true },
+          {
+            key: "category",
+            label: "Category",
+            req: true,
+            opts: [
+              "Electrical",
+              "Plumbing",
+              "HVAC",
+              "Furniture",
+              "Cleaning",
+              "Other",
+            ],
+          },
+          {
+            key: "priority",
+            label: "Priority",
+            opts: ["High", "Medium", "Low"],
+          },
+        ],
+    "Save maintenance",
+    "",
+    "hostelWorkspaceSave",
+  );
+};
+window.hostelWorkspaceSave = async function (v) {
+  const b = hostelWorkspaceState();
+  if (b.saving) return false;
+  let path,
+    payload,
+    method = "POST";
+  if (b.mode === "room") {
+    const r = b.rooms.find((r) => r._id === b.editId);
+    path = "/hostel/rooms" + (r ? "/" + r._id : "");
+    payload = {
+      roomNumber: v.roomNumber,
+      block: v.block,
+      capacity: Number(v.capacity),
+      genderPolicy: v.genderPolicy,
+      warden: v.warden,
+      wardenPhone: v.wardenPhone,
+    };
+    if (r) {
+      method = "PATCH";
+      Object.assign(payload, {
+        status: v.status,
+        archived: v.archived === "Archived",
+        expectedUpdatedAt: r.updatedAt,
+        reason: v.reason,
+      });
+    }
+  } else if (b.mode === "allocate") {
+    const s = b.studentChoices.find((s) => s.label === v.student);
+    if (!s) {
+      toast("Select an active saved student");
+      return false;
+    }
+    path = "/hostel/rooms/" + b.editId + "/allocate";
+    payload = { studentId: s.id, bedLabel: v.bedLabel };
+  } else if (b.mode === "discharge") {
+    path = "/hostel/rooms/" + b.editId + "/discharge";
+    payload = {
+      studentId: b.studentId,
+      expectedUpdatedAt: b.rooms.find((r) => r._id === b.editId).updatedAt,
+      reason: v.reason,
+    };
+  } else if (b.mode === "leave") {
+    const s = b.boarderChoices.find((s) => s.label === v.student);
+    if (!s) {
+      toast("Select an authorized allocated boarder");
+      return false;
+    }
+    path = "/hostel/leave";
+    payload = {
+      studentId: s.id,
+      roomId: s.roomId,
+      type: v.type,
+      fromDate: v.fromDate,
+      toDate: v.toDate,
+      reason: v.reason,
+    };
+  } else if (b.mode === "transition") {
+    const r = b.leave.find((r) => r._id === b.editId);
+    path = "/hostel/leave/" + b.editId + "/transition";
+    payload = {
+      action: v.action,
+      expectedUpdatedAt: r.updatedAt,
+      reason: v.reason,
+      ...(v.action === "approve"
+        ? {
+            pickupName: v.pickupName,
+            pickupPhone: v.pickupPhone,
+            guardianConsentConfirmed: v.consent === "Confirmed",
+          }
+        : {}),
+    };
+  } else if (b.mode === "roll") {
+    const r = b.roll.find((r) => (r.student?._id || r.student) === b.editId);
+    path = "/hostel/roll-call";
+    method = "PUT";
+    payload = {
+      studentId: b.editId,
+      date: b.date,
+      status: v.status,
+      ...(r ? { expectedUpdatedAt: r.updatedAt, reason: v.reason } : {}),
+    };
+  } else {
+    const r = b.maintenance.find((r) => r._id === b.editId);
+    path = "/hostel/maintenance" + (r ? "/" + r._id + "/resolve" : "");
+    if (r)
+      payload = {
+        status: v.status,
+        resolution: v.resolution,
+        expectedUpdatedAt: r.updatedAt,
+        reason: v.reason,
+      };
+    else {
+      const room = b.roomChoices.find((r) => r.label === v.room);
+      if (!room) {
+        toast("Select a saved room");
+        return false;
+      }
+      payload = {
+        refId: v.refId,
+        roomId: room.id,
+        issue: v.issue,
+        category: v.category,
+        priority: v.priority,
+      };
+    }
+  }
+  b.saving = true;
+  try {
+    await SCHOOLOS_ADAPTER.api(path, { method, body: JSON.stringify(payload) });
+    closeDrawer();
+    await hostelWorkspaceLoad();
+    toast("Hostel record saved");
+  } catch (e) {
+    toast(e.message);
+  } finally {
+    b.saving = false;
+  }
+  return false;
+};
+window.hostelWorkspaceDetail = function (id) {
+  const b = hostelWorkspaceState(),
+    r = (
+      b.tab === "Gate passes"
+        ? b.leave
+        : b.tab === "Maintenance"
+          ? b.maintenance
+          : b.rooms
+    ).find((r) => r._id === id);
+  if (!r) return;
+  const esc = studentEscape,
+    staff = hostelWorkspaceManage();
+  let sections,
+    footer = [];
+  if (b.tab === "Rooms") {
+    sections = [
+      {
+        h: "Accommodation",
+        rows: [
+          ["Room", esc(r.block + " · " + r.roomNumber)],
+          ["Capacity", String(r.capacity)],
+          ["Status", r.archived ? "Archived" : esc(r.status)],
+          ["Gender policy", esc(r.genderPolicy)],
+          ["Warden", esc(r.warden || "Not configured")],
+          ["Contact", esc(r.wardenPhone || "Not configured")],
+        ],
+      },
+      {
+        h: "Authorized boarders",
+        html: r.occupants.length
+          ? r.occupants
+              .map(
+                (s) =>
+                  '<div class="lrow"><div><b>' +
+                  esc(s.name) +
+                  "</b><p>" +
+                  esc(s.refId + " · " + s.grade) +
+                  '</p><span class="muted">' +
+                  esc(
+                    r.allocations.find((a) => a.student === s._id)?.bedLabel ||
+                      "Bed not configured",
+                  ) +
+                  "</span></div>" +
+                  (staff
+                    ? '<button class="btn" onclick="hostelWorkspaceDischargeForm(\'' +
+                      id +
+                      "','" +
+                      s._id +
+                      "')\">Discharge</button>"
+                    : "") +
+                  "</div>",
+              )
+              .join("")
+          : '<p class="muted">No boarders assigned.</p>',
+      },
+      ...(staff
+        ? [
+            {
+              h: "Room history",
+              rows: r.history.map((h) => [
+                esc(commDate(h.at)),
+                esc(h.action + (h.reason ? " · " + h.reason : "")),
+              ]),
+            },
+          ]
+        : []),
+    ];
+    if (staff)
+      footer.push(
+        ["Review room", studentClick("hostelWorkspaceRoomForm", id)],
+        ...(!r.archived && r.status === "Available"
+          ? [
+              [
+                "Allocate boarder",
+                studentClick("hostelWorkspaceAllocateForm", id),
+                true,
+              ],
+            ]
+          : []),
+      );
+  } else if (b.tab === "Gate passes") {
+    sections = [
+      {
+        h: "Gate pass",
+        rows: [
+          ["Boarder", esc(r.student?.name || "")],
+          [
+            "Room",
+            esc((r.room?.block || "") + " · " + (r.room?.roomNumber || "")),
+          ],
+          [
+            "Dates",
+            esc(
+              curriculumWorkspaceDay(r.fromDate) +
+                " → " +
+                curriculumWorkspaceDay(r.toDate),
+            ),
+          ],
+          ["Status", esc(r.status)],
+          ["Reason", esc(r.reason)],
+          ["Pickup person", esc(r.pickupName || "Not recorded")],
+          ["Pickup phone", esc(r.pickupPhone || "Not recorded")],
+          [
+            "Guardian consent",
+            r.guardianConsentConfirmed ? "Recorded confirmed" : "Not confirmed",
+          ],
+          [
+            "Actual departure",
+            r.departedAt ? esc(commDate(r.departedAt)) : "Not departed",
+          ],
+          [
+            "Actual return",
+            r.returnedAt ? esc(commDate(r.returnedAt)) : "Not returned",
+          ],
+        ],
+      },
+      ...(staff
+        ? [
+            {
+              h: "Gate history",
+              rows: r.history.map((h) => [
+                esc(commDate(h.at)),
+                esc(h.action + " · " + h.reason),
+              ]),
+            },
+          ]
+        : []),
+    ];
+    if (
+      (staff || (hostelWorkspaceFamily() && r.status === "Requested")) &&
+      !["Returned", "Rejected", "Cancelled"].includes(r.status)
+    )
+      footer.push([
+        "Review gate pass",
+        studentClick("hostelWorkspaceTransitionForm", id),
+        true,
+      ]);
+  } else {
+    sections = [
+      {
+        h: "Maintenance",
+        rows: [
+          ["Reference", esc(r.refId)],
+          ["Room", esc(r.room?.roomNumber || "")],
+          ["Issue", esc(r.issue)],
+          ["Category", esc(r.category)],
+          ["Priority", esc(r.priority)],
+          ["Status", esc(r.status)],
+          ["Work / next action", esc(r.resolution || "Awaiting review")],
+        ],
+      },
+      {
+        h: "Work history",
+        rows: r.history.map((h) => [
+          esc(commDate(h.at)),
+          esc(h.status + " · " + h.reason),
+        ]),
+      },
+    ];
+    if (staff)
+      footer.push([
+        "Review maintenance",
+        studentClick("hostelWorkspaceMaintenanceForm", id),
+        true,
+      ]);
+  }
+  openDrawer(
+    detailDrawer({
+      title: esc(
+        r.roomNumber ? r.block + " · " + r.roomNumber : r.refId || "Gate pass",
+      ),
+      sub: esc(r.student?.name || r.status),
+      sections,
+      footer: [...footer, ["Close", "closeDrawer()"]],
+    }),
+  );
+};
+window.hostelWorkspaceExport = function () {
+  const b = hostelWorkspaceState();
+  studentDownloadCSV(
+    "hostel-" + b.tab.toLowerCase().replace(/ /g, "-") + ".csv",
+    b.tab === "Rooms"
+      ? [
+          ["Block", "Room", "Capacity", "Boarders in view", "Status", "Warden"],
+          ...hostelWorkspaceFiltered().map((r) => [
+            r.block,
+            r.roomNumber,
+            r.capacity,
+            r.occupants.length,
+            r.status,
+            r.warden,
+          ]),
+        ]
+      : b.tab === "Roll-call"
+        ? [
+            ["Student", "Reference", "Date", "Status"],
+            ...hostelWorkspaceFiltered().map((r) => [
+              r.student.name,
+              r.student.refId,
+              b.date,
+              r.status,
+            ]),
+          ]
+        : [
+            ["Reference", "Student", "Status", "Reason / Issue"],
+            ...hostelWorkspaceFiltered().map((r) => [
+              r.refId || r._id,
+              r.student?.name || "",
+              r.status,
+              r.reason || r.issue,
+            ]),
+          ],
+  );
+};
+M.hostel = () => {
+  const b = hostelWorkspaceState();
+  if (!b.loaded && !b.loading && !b.error) hostelWorkspaceLoad();
+  const rows = hostelWorkspaceFiltered(),
+    pages = Math.max(1, Math.ceil(rows.length / 20));
+  b.page = Math.min(b.page, pages);
+  const esc = studentEscape,
+    staff = hostelWorkspaceManage();
+  return (
+    '<div class="page-head"><div class="ph-l"><h2>Hostel</h2><p>Accommodation, authorized gate passes and confirmed boarder roll-call.</p></div><div class="ph-r">' +
+    (staff
+      ? '<button class="btn primary" onclick="hostelWorkspaceRoomForm()">Add room</button>'
+      : "") +
+    (staff || hostelWorkspaceFamily()
+      ? '<button class="btn" onclick="hostelWorkspaceLeaveForm()">Request gate pass</button>'
+      : "") +
+    '<button class="btn" onclick="hostelWorkspaceLoad()">Refresh</button></div></div><div class="grid cols-4" style="margin-bottom:18px">' +
+    kpi(
+      "hostel",
+      "#17A24A",
+      "Rooms in view",
+      String(b.rooms.filter((r) => !r.archived).length),
+    ) +
+    kpi(
+      "students",
+      "#2563EB",
+      "Boarders in view",
+      String(hostelWorkspaceBoarders().length),
+    ) +
+    kpi(
+      "reports",
+      "#0E7C39",
+      staff ? "Available beds" : "Unmarked roll-call",
+      String(
+        staff
+          ? b.rooms
+              .filter((r) => !r.archived && r.status === "Available")
+              .reduce((n, r) => n + r.capacity - r.occupants.length, 0)
+          : hostelWorkspaceRollRows().filter((r) => r.status === "Unmarked")
+              .length,
+      ),
+    ) +
+    kpi(
+      "comm",
+      "#B45309",
+      "Currently out",
+      String(b.leave.filter((r) => r.status === "Out").length),
+    ) +
+    '</div><div class="card pad" style="margin-bottom:16px"><div class="flex ac" style="gap:10px;flex-wrap:wrap">' +
+    ["Rooms", "Gate passes", "Roll-call", ...(staff ? ["Maintenance"] : [])]
+      .map(
+        (t) =>
+          '<button class="btn ' +
+          (b.tab === t ? "primary" : "") +
+          "\" onclick=\"hostelWorkspaceFilter('tab','" +
+          t +
+          "')\">" +
+          t +
+          "</button>",
+      )
+      .join("") +
+    '<input aria-label="Search hostel" placeholder="Search hostel" value="' +
+    esc(b.q) +
+    '" onchange="hostelWorkspaceFilter(\'q\',this.value)"><label><input type="checkbox" ' +
+    (b.archived ? "checked" : "") +
+    ' onchange="hostelWorkspaceFilter(\'archived\',this.checked)"> Archived rooms</label><button class="btn" onclick="hostelWorkspaceExport()">Export view</button></div>' +
+    (b.tab === "Roll-call"
+      ? '<div class="flex ac" style="gap:10px;margin-top:12px"><label>Roll-call date <input type="date" value="' +
+        b.date +
+        '" onchange="hostelWorkspaceFilter(\'date\',this.value)"></label>' +
+        (staff
+          ? '<button class="btn" onclick="hostelWorkspaceConfirmUnmarked()">Confirm unmarked present</button>'
+          : "") +
+        "</div>"
+      : b.tab === "Maintenance" && staff
+        ? '<button class="btn" style="margin-top:12px" onclick="hostelWorkspaceMaintenanceForm()">Report maintenance</button>'
+        : "") +
+    "</div>" +
+    (b.error ? '<div class="card pad">' + esc(b.error) + "</div>" : "") +
+    '<div class="card"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Room / boarder</th><th>Status</th><th>Details</th><th></th></tr></thead><tbody>' +
+    rows
+      .slice((b.page - 1) * 20, b.page * 20)
+      .map(
+        (r) =>
+          "<tr><td><b>" +
+          esc(
+            b.tab === "Rooms"
+              ? r.block + " · " + r.roomNumber
+              : b.tab === "Maintenance"
+                ? r.refId
+                : r.student?.name || "",
+          ) +
+          '</b><div class="muted">' +
+          esc(r.student?.refId || r.room?.roomNumber || r.warden || "") +
+          "</div></td><td>" +
+          chip(
+            r.archived ? "Archived" : r.status || "Available",
+            r.status === "Out" || r.status === "Absent"
+              ? "amber"
+              : r.status === "Unavailable"
+                ? "red"
+                : "blue",
+          ) +
+          "</td><td>" +
+          esc(
+            b.tab === "Rooms"
+              ? r.occupants.length +
+                  " boarders in view · " +
+                  r.capacity +
+                  " capacity"
+              : b.tab === "Gate passes"
+                ? curriculumWorkspaceDay(r.fromDate) +
+                  " → " +
+                  curriculumWorkspaceDay(r.toDate)
+                : b.tab === "Roll-call"
+                  ? r.student.roomLabel + " · " + r.student.bedLabel
+                  : r.issue,
+          ) +
+          "</td><td>" +
+          (b.tab === "Roll-call"
+            ? staff
+              ? '<button class="btn" onclick="' +
+                studentClick("hostelWorkspaceRollForm", r.student._id) +
+                '">' +
+                (r.status === "Unmarked" ? "Mark" : "Correct") +
+                "</button>"
+              : ""
+            : '<button class="btn" onclick="' +
+              studentClick("hostelWorkspaceDetail", r._id) +
+              '">View</button>') +
+          "</td></tr>",
+      )
+      .join("") +
+    "</tbody></table></div>" +
+    (!rows.length
+      ? '<p class="pad muted">' +
+        (b.loading ? "Loading hostel…" : "No hostel records in your view.") +
+        "</p>"
+      : "") +
+    '<div class="pad flex ac jb"><span>' +
+    rows.length +
+    " records · Page " +
+    b.page +
+    " of " +
+    pages +
+    '</span><div><button class="btn" ' +
+    (b.page === 1 ? "disabled" : "") +
+    " onclick=\"hostelWorkspaceFilter('page'," +
+    (b.page - 1) +
+    ')">Previous</button><button class="btn" ' +
+    (b.page === pages ? "disabled" : "") +
+    " onclick=\"hostelWorkspaceFilter('page'," +
+    (b.page + 1) +
+    ')">Next</button></div></div></div><p class="muted">Unmarked boarders have no confirmed roll-call. Departure requires approved pickup details and recorded guardian consent.</p>'
+  );
+};
+/* Dashboard approvals open reviewed forms instead of silently deciding a request. */
+window.approveLeave =
+  window.rejectLeave =
+  window.returnLeave =
+    function (id) {
+      return hostelWorkspaceLoad().then(() => {
+        go("hostel");
+        hostelWorkspaceTransitionForm(id);
+      });
+    };
+window.approveLeave.__apiBacked = true;
+window.resolveMaint = function (ref) {
+  return hostelWorkspaceLoad().then(() => {
+    go("hostel");
+    const r = hostelWorkspaceState().maintenance.find(
+      (r) => r.refId === ref || r._id === ref,
+    );
+    if (r) hostelWorkspaceMaintenanceForm(r._id);
+  });
+};
+window.resolveMaint.__apiBacked = true;

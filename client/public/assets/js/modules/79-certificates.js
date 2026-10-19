@@ -1,17 +1,47 @@
-/* ---- Certificates ---- */
-M.certificates=()=>{const api=window.SCHOOLOS_ADAPTER;
- const records=api?.connected&&!api.live.certificates?[]:CERTS;
- const visible=records.filter(c=>{const f=getFilter('certificates','All');return f==='All'||c.status===f});
- return `
-  <div class="page-head"><div class="ph-l"><h2>Certificates</h2><p>Issue and review certificate records — official signed copies require school-office verification.</p></div>
-  <div class="ph-r"><button class="btn" onclick="openDrawer(templateLibrary())">${ic('curric',16)} Templates</button><button class="btn primary" onclick="issueCertForm()">${ic('plus',16)} Issue certificate</button></div></div>
-  <div class="grid cols-4" style="margin-bottom:18px">
-    ${kpi('cert','#17A24A','Issued records',api?.connected&&!api.live.certificates?'—':String(records.filter(c=>c.status==='Issued').length),null,"setFilter('certificates','Issued')")}${kpi('exam','#E2920C','Pending',api?.connected&&!api.live.certificates?'—':String(records.filter(c=>c.status==='Pending').length),null,"setFilter('certificates','Pending')")}
-    ${kpi('curric','#2563EB','Templates',String(Object.keys(CERT_TEMPLATE_BODY).length),null,"openDrawer(templateLibrary())")}${kpi('reports','#0E7C39','Server records',api?.connected?(api.live.certificates?String(records.length):'Unavailable'):'Demo',null)}</div>
-  <div class="card pad"><div class="flex ac jb" style="margin-bottom:12px"><h3 style="font-size:15px">Recent requests</h3>
-  ${segBtns('certificates',['All','Pending','Issued'],'All')}</div>
-  <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Student</th><th>Class</th><th>Document</th><th>Reference</th><th>Date</th><th>Status</th><th></th></tr></thead><tbody>
-  ${visible.map(c=>`<tr style="cursor:pointer" onclick="openDrawer(certDetail('${c.ref}'))"><td>${cellUser(c.name,'')}</td><td class="num">${c.cls}</td><td>${c.type}</td><td class="num">${c.ref}</td><td class="num">${c.date}</td>
-    <td>${chip(c.status,c.status==='Issued'?'green':c.status==='Rejected'?'red':'amber')}</td><td class="right">${c.status==='Issued'?`<button class="btn sm" onclick="event.stopPropagation();downloadCertificate('${c.name}','${c.type}','${c.ref}','${c.cls}')">${ic('download',13)} Record</button>`:c.status==='Pending'?`<button class="btn sm primary" onclick="event.stopPropagation();approveCert('${c.ref}')">Approve</button>`:'<span class="muted">Closed</span>'}</td></tr>`).join('')}
-  ${!visible.length?'<tr><td colspan="7" class="muted">No certificate records in this view.</td></tr>':''}
-  </tbody></table></div>${api?.connected?'<p class="muted" style="margin-top:10px">Pending requests require Administrator or Principal approval. Printed copies require school signature; digital signing and public verification are not available.</p>':''}${api?.connected&&!api.live.certificates?'<p class="muted">Certificate records are unavailable.</p>':''}</div>`};
+/* Certificate registry and owned family requests use saved records and actual PDFs. */
+function certificatesWorkspaceManage(){return ['Administrator','Principal','Teacher'].includes(state.role)}
+function certificatesWorkspaceOffice(){return ['Administrator','Principal'].includes(state.role)}
+function certificatesWorkspaceFamily(){return ['Parent','Student'].includes(state.role)}
+function certificatesWorkspaceState(){const userId=commUserId();if(state.certificatesWorkspace?.userId!==userId)state.certificatesWorkspace={userId,records:[],students:[],loaded:false,loading:false,saving:false,error:'',q:'',status:'All',page:1};return state.certificatesWorkspace}
+window.certificatesWorkspaceLoad=async function(){const b=certificatesWorkspaceState();if(b.loading)return;b.loading=true;b.error='';try{const r=await Promise.all([SCHOOLOS_ADAPTER.apiAll('/certificates'),SCHOOLOS_ADAPTER.api('/certificates/requests'),certificatesWorkspaceManage()||certificatesWorkspaceFamily()?SCHOOLOS_ADAPTER.apiAll('/students'):Promise.resolve({data:[]})]);b.records=Array.from(new Map([...(r[0].data||[]),...(r[1].data||[])].map(x=>[x._id,x])).values());b.students=r[2].data||[];b.loaded=true}catch(e){b.error=e.message}finally{b.loading=false;if(state.module==='certificates')render()}};
+window.certificatesWorkspaceFilter=function(k,v){const b=certificatesWorkspaceState();b[k]=v;if(k!=='page')b.page=1;render()};
+function certificatesWorkspaceRows(){const b=certificatesWorkspaceState();return b.records.filter(r=>(b.status==='All'||(r.status||'Issued')===b.status)&&(!b.q||JSON.stringify(r).toLowerCase().includes(b.q.toLowerCase())))}
+window.certificatesWorkspaceSave=async function(path,body){const b=certificatesWorkspaceState();if(b.saving)return false;b.saving=true;try{await SCHOOLOS_ADAPTER.api(path,{method:'POST',body:JSON.stringify(body)});closeDrawer();await certificatesWorkspaceLoad();toast('Certificate record saved')}catch(e){toast(e.message)}finally{b.saving=false;render()}return false};
+window.certificatesWorkspaceForm=function(){const b=certificatesWorkspaceState(),family=certificatesWorkspaceFamily();if(!family&&!certificatesWorkspaceManage())return;b.studentChoices=b.students.map(s=>({id:s._id,label:s.refId+' · '+s.name}));studentFormDrawer(family?'Request certificate':'Create certificate record','Report cards with assessment results are issued through Exams.',[{key:'student',label:'Student',opts:b.studentChoices.map(s=>s.label),req:true},{key:'type',label:'Document type',opts:['Bonafide','Transfer','Character','Study','Provisional']},{key:'purpose',label:'Purpose',area:true,req:true},...(family?[]:[{key:'status',label:'Record status',opts:['Pending','Issued'],val:'Pending'}])],family?'Submit request':'Save record','','certificatesWorkspaceFormSave')};
+window.certificatesWorkspaceFormSave=function(v){const b=certificatesWorkspaceState(),s=b.studentChoices.find(s=>s.label===v.student);if(!s){toast('Select a student');return false}return certificatesWorkspaceSave('/certificates'+(certificatesWorkspaceFamily()?'/requests':''),{studentId:s.id,type:v.type,purpose:v.purpose,...(certificatesWorkspaceFamily()?{}:{status:v.status})})};
+window.certificatesWorkspaceDecisionForm=function(id){const b=certificatesWorkspaceState(),r=b.records.find(r=>r._id===id);if(!r||!certificatesWorkspaceOffice())return;b.actionRecord=r;b.action='Decision';studentFormDrawer('Review certificate request',r.student?.name+' · '+r.type,[{key:'decision',label:'Decision',opts:['Issued','Rejected']},{key:'reason',label:'Decision reason',area:true,req:true}],'Save decision','','certificatesWorkspaceDecisionSave')};
+window.certificatesWorkspaceDecisionSave=function(v){const r=certificatesWorkspaceState().actionRecord;return certificatesWorkspaceSave('/certificates/'+r._id+'/decision',{expectedUpdatedAt:r.updatedAt,decision:v.decision,reason:v.reason})};
+window.certificatesWorkspaceCancelForm=function(id){const b=certificatesWorkspaceState(),r=b.records.find(r=>r._id===id);if(!r||!certificatesWorkspaceFamily())return;b.actionRecord=r;studentFormDrawer('Cancel own request',r.type+' · '+r.student?.name,[{key:'reason',label:'Cancellation reason',req:true,area:true}],'Cancel request','','certificatesWorkspaceCancelSave')};
+window.certificatesWorkspaceCancelSave=function(v){const r=certificatesWorkspaceState().actionRecord;return certificatesWorkspaceSave('/certificates/'+r._id+'/cancel',{expectedUpdatedAt:r.updatedAt,reason:v.reason})};
+window.certificatesWorkspacePDF=function(id){certificateDownloadPDF(id,false)};window.certificatesWorkspaceSignedPDF=function(id){certificateDownloadPDF(id,true)};
+window.certificatesWorkspaceDetail=function(id){const r=certificatesWorkspaceState().records.find(r=>r._id===id);if(!r)return;const e=studentEscape,issued=!r.status||r.status==='Issued',footer=[];if(issued)footer.push(['Download PDF',studentClick('certificatesWorkspacePDF',id),true],['Signed PDF',studentClick('certificatesWorkspaceSignedPDF',id)]);if(r.status==='Pending'&&certificatesWorkspaceOffice())footer.push(['Review request',studentClick('certificatesWorkspaceDecisionForm',id),true]);if(r.status==='Pending'&&certificatesWorkspaceFamily()&&r.requestedBy===commUserId())footer.push(['Cancel own request',studentClick('certificatesWorkspaceCancelForm',id)]);openDrawer(detailDrawer({title:e(r.type)+' certificate',sub:e(r.certNumber)+' · '+e(r.status||'Issued'),sections:[{h:'Saved record',rows:[['Student',e(r.student?.name)],['Admission reference',e(r.student?.refId)],['Grade',e(r.student?.grade)],['Purpose',e(r.purpose||'Not recorded')],['Requested',e(commDate(r.createdAt))],['Issued',e(r.issuedDate?commDate(r.issuedDate):'Not issued')],['Decision',e(r.decisionAt?commDate(r.decisionAt):'Not recorded')],['Decision reason',e(r.decisionReason||'Not recorded')]]}],footer}))};
+window.certificatesWorkspaceExport=function(){studentDownloadCSV('certificate-register.csv',[['Reference','Student','Admission','Type','Status','Purpose','Issued date','Decision reason'],...certificatesWorkspaceRows().map(r=>[r.certNumber,r.student?.name,r.student?.refId,r.type,r.status||'Issued',r.purpose,r.issuedDate,r.decisionReason])])};
+M.certificates=function(){const b=certificatesWorkspaceState(),e=studentEscape;if(!b.loaded&&!b.loading&&!b.error)setTimeout(certificatesWorkspaceLoad,0);const rows=certificatesWorkspaceRows(),page=rows.slice((b.page-1)*20,b.page*20);return `<div class="page-head"><div class="ph-l"><h2>Certificates</h2><p>Saved issuances, reviewed requests and authenticated PDF copies.</p></div><div class="ph-r">${certificatesWorkspaceManage()||certificatesWorkspaceFamily()?'<button class="btn primary" onclick="certificatesWorkspaceForm()">'+(certificatesWorkspaceFamily()?'Request certificate':'Create certificate')+'</button>':''}<button class="btn" onclick="certificatesWorkspaceLoad()">Refresh</button><button class="btn" onclick="certificatesWorkspaceExport()">Export CSV</button></div></div><div class="card pad"><div class="flex ac" style="gap:12px;flex-wrap:wrap"><input class="input" aria-label="Search certificates" placeholder="Search student or reference" value="${e(b.q)}" onchange="certificatesWorkspaceFilter('q',this.value)"><select class="input" aria-label="Certificate status" onchange="certificatesWorkspaceFilter('status',this.value)">${['All','Pending','Issued','Rejected','Cancelled'].map(s=>'<option '+(b.status===s?'selected':'')+'>'+s+'</option>').join('')}</select></div>${b.error?'<p role="alert">'+e(b.error)+'</p>':''}${b.loading?'<p>Loading certificates…</p>':''}<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Student</th><th>Type</th><th>Reference</th><th>Status</th><th>Issued</th><th>Actions</th></tr></thead><tbody>${page.map(r=>'<tr><td data-i18n-skip="true">'+e(r.student?.name||'Student record')+'</td><td>'+e(r.type)+'</td><td>'+e(r.certNumber)+'</td><td>'+e(r.status||'Issued')+'</td><td>'+e(r.issuedDate?commDate(r.issuedDate):'Not issued')+'</td><td><button class="btn sm" onclick="'+studentClick('certificatesWorkspaceDetail',r._id)+'">View</button>'+(!r.status||r.status==='Issued'?'<button class="btn sm" onclick="'+studentClick('certificatesWorkspacePDF',r._id)+'">PDF</button>':'')+'</td></tr>').join('')||'<tr><td colspan="6">No certificates for this view.</td></tr>'}</tbody></table></div><div class="flex ac jb" style="margin-top:12px"><span>${rows.length} records · Page ${b.page}</span><div><button class="btn sm" ${b.page<=1?'disabled':''} onclick="certificatesWorkspaceFilter('page',${b.page-1})">Previous</button><button class="btn sm" ${b.page*20>=rows.length?'disabled':''} onclick="certificatesWorkspaceFilter('page',${b.page+1})">Next</button></div></div><p class="muted">Unsigned copies are registry PDFs. Official digital signing requires the configured school signing certificate; families download existing signed copies.</p></div>`};
+window.certificateDownloadPDF = async function (id, signed = false) {
+  if (!SCHOOLOS_ADAPTER.connected || !id)
+    return toast("Connect to the school server to download a PDF");
+  if (
+    signed &&
+    ["Administrator", "Principal"].includes(state.role) &&
+    !confirm(
+      "Generate or download the official digitally signed school record?",
+    )
+  )
+    return;
+  try {
+    const blob = await SCHOOLOS_ADAPTER.apiBlob(
+        "/certificates/" + id + "/pdf?signed=" + String(signed),
+      ),
+      url = URL.createObjectURL(blob),
+      a = document.createElement("a");
+    a.href = url;
+    a.download = "certificate-" + id + (signed ? "-signed" : "") + ".pdf";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    toast(signed ? "Signed PDF downloaded" : "Unsigned PDF downloaded");
+  } catch (e) {
+    toast(e.message);
+  }
+};

@@ -14,20 +14,10 @@ async function rejectCollision(
   slot: Pick<ITimetableSlot, 'dayOfWeek' | 'periodNumber' | 'teacherName'> & { room?: string },
   excludeId?: string,
 ) {
-  const collision = await repo.findCollision(
-    slot.dayOfWeek,
-    slot.periodNumber,
-    slot.teacherName,
-    slot.room,
-    excludeId,
-  );
+  const collision = await repo.findCollision(slot.dayOfWeek, slot.periodNumber, slot.teacherName, slot.room, excludeId);
   if (!collision) return;
-  const resource = collision.teacherName === slot.teacherName
-    ? `Teacher ${slot.teacherName}`
-    : `Room ${slot.room}`;
-  throw ApiError.conflict(
-    `${resource} is already scheduled for ${slot.dayOfWeek} period ${slot.periodNumber}`,
-  );
+  const resource = collision.teacherName === slot.teacherName ? `Teacher ${slot.teacherName}` : `Room ${slot.room}`;
+  throw ApiError.conflict(`${resource} is already scheduled for ${slot.dayOfWeek} period ${slot.periodNumber}`);
 }
 
 /** Read is open to every authenticated role, like Curriculum - a timetable only has value if
@@ -56,12 +46,15 @@ export async function updateSlot(id: string, input: UpdateSlotInput, requester: 
     throw ApiError.forbidden('Only Administrator, Principal, or Teacher may edit a period');
   const existing = await repo.findById(id);
   if (!existing) throw ApiError.notFound('Timetable slot not found');
-  await rejectCollision({
-    dayOfWeek: existing.dayOfWeek,
-    periodNumber: existing.periodNumber,
-    teacherName: input.teacherName ?? existing.teacherName,
-    room: input.room ?? existing.room,
-  }, id);
+  await rejectCollision(
+    {
+      dayOfWeek: existing.dayOfWeek,
+      periodNumber: existing.periodNumber,
+      teacherName: input.teacherName ?? existing.teacherName,
+      room: input.room ?? existing.room,
+    },
+    id,
+  );
   try {
     const slot = await repo.update(id, input);
     if (!slot) throw ApiError.notFound('Timetable slot not found');

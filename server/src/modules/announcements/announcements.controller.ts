@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { asyncHandler } from '../../middleware/errorHandler';
 import { sendSuccess } from '../../utils/apiResponse';
 import { ApiError } from '../../utils/ApiError';
+import { listAnnouncementsSchema, audiencePreviewSchema } from './announcements.validation';
 import * as service from './announcements.service';
 
 function requireUser(req: Request) {
@@ -11,10 +12,7 @@ function requireUser(req: Request) {
 
 export const list = asyncHandler(async (req: Request, res: Response) => {
   const requester = requireUser(req);
-  const result = await service.listAnnouncements(
-    req.query as unknown as Parameters<typeof service.listAnnouncements>[0],
-    requester,
-  );
+  const result = await service.listAnnouncements(listAnnouncementsSchema.shape.query.parse(req.query), requester);
   sendSuccess(res, 200, result.items, { pagination: result.pagination });
 });
 
@@ -28,3 +26,14 @@ export const changeStatus = asyncHandler(async (req: Request, res: Response) => 
   const announcement = await service.changeStatus(req.params.id, req.body, requireUser(req));
   sendSuccess(res, 200, announcement);
 });
+
+export const update = asyncHandler(async (req: Request, res: Response) =>
+  sendSuccess(res, 200, await service.updateAnnouncement(req.params.id, req.body, requireUser(req))),
+);
+export const preview = asyncHandler(async (req: Request, res: Response) =>
+  sendSuccess(
+    res,
+    200,
+    await service.previewAudience(audiencePreviewSchema.shape.query.parse(req.query).audience, requireUser(req)),
+  ),
+);

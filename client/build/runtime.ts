@@ -9,6 +9,7 @@ export function runtimeBundle(): Plugin {
   const resolvedId = '\0' + virtualId;
   let root: string;
   let command: string;
+  let apiBase: string;
   const source = async () => (await Promise.all(APP_SCRIPTS.map(async (script) => {
     const filename = resolve(root, 'public', script);
     return `\n;\n// ${script}\n${await readFile(filename, 'utf8')}\n`;
@@ -16,7 +17,10 @@ export function runtimeBundle(): Plugin {
 
   return {
     name: 'schoolos-runtime',
-    configResolved(config) { root = config.root; command = config.command; },
+    configResolved(config) { root = config.root; command = config.command; apiBase = config.env.VITE_API_BASE_URL || ''; },
+    generateBundle() {
+      this.emitFile({ type: 'asset', fileName: 'build-info.json', source: JSON.stringify({ format: 1, apiBase }) });
+    },
     resolveId(id) { if (id === virtualId) return resolvedId; },
     async load(id) {
       if (id !== resolvedId) return;
@@ -25,7 +29,7 @@ export function runtimeBundle(): Plugin {
         return 'export default "/schoolos-runtime.js";';
       }
       const result = await transformWithEsbuild(await source(), 'schoolos-runtime.js', {
-        loader: 'js', target: 'es2022', minifyWhitespace: true,
+        loader: 'js', target: 'es2022', charset: 'utf8', minifyWhitespace: true,
         minifySyntax: true, minifyIdentifiers: false,
       });
       const reference = this.emitFile({ type: 'asset', name: 'schoolos-runtime.js', source: result.code });

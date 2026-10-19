@@ -210,8 +210,14 @@ describe('Fees API', () => {
       .post('/api/v1/fees')
       .set('Authorization', `Bearer ${admin.token}`)
       .send({ refId: 'INV-1014', studentId: otherChildId, term: 'Term 2', amount: 1000, dueDate: '2026-07-01' });
-    await request(app).post(`/api/v1/fees/${mine.body.data._id}/pay`).set('Authorization', `Bearer ${admin.token}`).send({ paymentMethod: 'Cash' });
-    await request(app).post(`/api/v1/fees/${other.body.data._id}/pay`).set('Authorization', `Bearer ${admin.token}`).send({ paymentMethod: 'Cash' });
+    await request(app)
+      .post(`/api/v1/fees/${mine.body.data._id}/pay`)
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({ paymentMethod: 'Cash' });
+    await request(app)
+      .post(`/api/v1/fees/${other.body.data._id}/pay`)
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({ paymentMethod: 'Cash' });
     const res = await request(app).get('/api/v1/fees/payments').set('Authorization', `Bearer ${parent.token}`);
     expect(res.status).toBe(200);
     expect(res.body.data).toHaveLength(1);
@@ -250,18 +256,23 @@ describe('Fees API', () => {
 
   it('uses the saved school currency and rejects mismatched invoice currency', async () => {
     const admin = await registerAndLogin('Administrator', 'admin-school-currency@alnoor.ae');
-    const settings = await request(app).put('/api/v1/settings')
-      .set('Authorization', `Bearer ${admin.token}`)
-      .send({ schoolName: 'Currency Test School', academicYear: '2027-2028', timezone: 'Asia/Dubai', currency: 'USD', defaultAnnualLeave: 30 });
+    const settings = await request(app).put('/api/v1/settings').set('Authorization', `Bearer ${admin.token}`).send({
+      schoolName: 'Currency Test School',
+      academicYear: '2027-2028',
+      timezone: 'Asia/Dubai',
+      currency: 'USD',
+      defaultAnnualLeave: 30,
+    });
     expect(settings.status).toBe(200);
     const studentId = await createStudent(admin.token, 'ANS-CURRENCY-1');
     const body = { refId: 'INV-CURRENCY-1', studentId, term: 'Term 1', amount: 100, dueDate: '2027-12-01' };
-    const created = await request(app).post('/api/v1/fees')
-      .set('Authorization', `Bearer ${admin.token}`).send(body);
+    const created = await request(app).post('/api/v1/fees').set('Authorization', `Bearer ${admin.token}`).send(body);
     expect(created.status).toBe(201);
     expect(created.body.data.currency).toBe('USD');
-    const rejected = await request(app).post('/api/v1/fees')
-      .set('Authorization', `Bearer ${admin.token}`).send({ ...body, refId: 'INV-CURRENCY-2', currency: 'AED' });
+    const rejected = await request(app)
+      .post('/api/v1/fees')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({ ...body, refId: 'INV-CURRENCY-2', currency: 'AED' });
     expect(rejected.status).toBe(400);
   });
 });

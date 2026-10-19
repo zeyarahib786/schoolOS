@@ -8,7 +8,9 @@ export const listApplicationsSchema = z.object({
   query: z.object({
     page: z.coerce.number().int().min(1).default(1),
     limit: z.coerce.number().int().min(1).max(100).default(20),
-    status: z.enum(['Applied', 'Shortlisted', 'Interviewed', 'Accepted', 'Enrolled', 'Rejected', 'Waitlisted']).optional(),
+    status: z
+      .enum(['Applied', 'Shortlisted', 'Interviewed', 'Accepted', 'Enrolled', 'Rejected', 'Waitlisted'])
+      .optional(),
   }),
 });
 
@@ -45,7 +47,8 @@ export const transitionSchema = z.object({
 });
 
 export const admissionDocumentParamSchema = z.object({
-  body: z.any().optional(), query: z.object({}).optional(),
+  body: z.any().optional(),
+  query: z.object({}).optional(),
   params: z.object({ id: objectId, key: z.enum(['id', 'birth', 'photo', 'report', 'immun', 'tc']) }),
 });
 

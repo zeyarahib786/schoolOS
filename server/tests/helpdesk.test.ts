@@ -122,7 +122,7 @@ describe('Helpdesk API', () => {
     await request(app)
       .post(`/api/v1/helpdesk/${id}/transition`)
       .set('Authorization', `Bearer ${teacher.token}`)
-      .send({ status: 'Resolved' });
+      .send({ status: 'Resolved', resolutionNotes: 'QA completed repair and checked operation' });
     await request(app)
       .post(`/api/v1/helpdesk/${id}/transition`)
       .set('Authorization', `Bearer ${teacher.token}`)
@@ -172,16 +172,30 @@ describe('Helpdesk API', () => {
   it('rejects assigning a ticket to a missing or inactive staff record', async () => {
     const admin = await registerAndLogin('Administrator', 'admin-helpdesk-assignee@alnoor.ae');
     const teacher = await registerAndLogin('Teacher', 'teacher-helpdesk-assignee@alnoor.ae');
-    const created = await request(app).post('/api/v1/helpdesk').set('Authorization', `Bearer ${teacher.token}`).send(validTicket);
-    const missing = await request(app).post(`/api/v1/helpdesk/${created.body.data._id}/transition`).set('Authorization', `Bearer ${admin.token}`)
+    const created = await request(app)
+      .post('/api/v1/helpdesk')
+      .set('Authorization', `Bearer ${teacher.token}`)
+      .send(validTicket);
+    const missing = await request(app)
+      .post(`/api/v1/helpdesk/${created.body.data._id}/transition`)
+      .set('Authorization', `Bearer ${admin.token}`)
       .send({ status: 'Assigned', assignedTo: '64b7f9c9a1b2c3d4e5f60789' });
     expect(missing.status).toBe(400);
 
     const inactive = await request(app).post('/api/v1/staff').set('Authorization', `Bearer ${admin.token}`).send({
-      refId: 'EMP-HELPDESK-INACTIVE', name: 'Inactive Technician', designation: 'IT Technician', department: 'IT', type: 'Non-Teaching',
-      email: 'inactive-helpdesk@alnoor.ae', phone: '+971502223344', joinedDate: '2020-08-15', status: 'Inactive',
+      refId: 'EMP-HELPDESK-INACTIVE',
+      name: 'Inactive Technician',
+      designation: 'IT Technician',
+      department: 'IT',
+      type: 'Non-Teaching',
+      email: 'inactive-helpdesk@alnoor.ae',
+      phone: '+971502223344',
+      joinedDate: '2020-08-15',
+      status: 'Inactive',
     });
-    const rejected = await request(app).post(`/api/v1/helpdesk/${created.body.data._id}/transition`).set('Authorization', `Bearer ${admin.token}`)
+    const rejected = await request(app)
+      .post(`/api/v1/helpdesk/${created.body.data._id}/transition`)
+      .set('Authorization', `Bearer ${admin.token}`)
       .send({ status: 'Assigned', assignedTo: inactive.body.data._id });
     expect(rejected.status).toBe(409);
   });
@@ -190,10 +204,19 @@ describe('Helpdesk API', () => {
     const admin = await registerAndLogin('Administrator', 'admin-helpdesk-concurrent@alnoor.ae');
     const teacher = await registerAndLogin('Teacher', 'teacher-helpdesk-concurrent@alnoor.ae');
     const staffId = await createStaff(admin.token, 'EMP-HELPDESK-CONCURRENT');
-    const created = await request(app).post('/api/v1/helpdesk').set('Authorization', `Bearer ${teacher.token}`).send(validTicket);
+    const created = await request(app)
+      .post('/api/v1/helpdesk')
+      .set('Authorization', `Bearer ${teacher.token}`)
+      .send(validTicket);
     const [first, second] = await Promise.all([
-      request(app).post(`/api/v1/helpdesk/${created.body.data._id}/transition`).set('Authorization', `Bearer ${admin.token}`).send({ status: 'Assigned', assignedTo: staffId }),
-      request(app).post(`/api/v1/helpdesk/${created.body.data._id}/transition`).set('Authorization', `Bearer ${admin.token}`).send({ status: 'Assigned', assignedTo: staffId }),
+      request(app)
+        .post(`/api/v1/helpdesk/${created.body.data._id}/transition`)
+        .set('Authorization', `Bearer ${admin.token}`)
+        .send({ status: 'Assigned', assignedTo: staffId }),
+      request(app)
+        .post(`/api/v1/helpdesk/${created.body.data._id}/transition`)
+        .set('Authorization', `Bearer ${admin.token}`)
+        .send({ status: 'Assigned', assignedTo: staffId }),
     ]);
     expect([first.status, second.status].sort()).toEqual([200, 409]);
   });

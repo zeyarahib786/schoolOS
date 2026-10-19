@@ -7,6 +7,7 @@ export interface AttendanceRecord {
   session: 'AM' | 'PM';
   status: 'Present' | 'Absent' | 'Late' | 'Excused';
   notes?: string;
+  updatedAt?: string;
 }
 
 export interface Paginated<T> {

@@ -15,6 +15,7 @@ export interface ISchoolDocument extends Document {
   version: number;
   description: string;
   isCurrent: boolean;
+  publicationReason?: string;
   publishedBy: Types.ObjectId;
   fileId?: Types.ObjectId;
   filename?: string;
@@ -31,6 +32,7 @@ const schoolDocumentSchema = new Schema<ISchoolDocument>(
     category: { type: String, enum: ['Policy', 'Form', 'Circular', 'Guideline'], required: true, index: true },
     version: { type: Number, required: true, min: 1 },
     description: { type: String, required: true, trim: true, maxlength: 2000 },
+    publicationReason: { type: String, trim: true, maxlength: 500 },
     isCurrent: { type: Boolean, required: true, default: true },
     publishedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     fileId: { type: Schema.Types.ObjectId },

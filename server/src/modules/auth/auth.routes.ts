@@ -4,6 +4,7 @@ import * as controller from './auth.controller';
 import { validate } from '../../middleware/validate';
 import { registerSchema, loginSchema, refreshSchema } from './auth.validation';
 import { requireAuth } from '../../middleware/auth';
+import { registrationAccess } from './registration-access';
 import { env } from '../../config/env';
 
 const router = Router();
@@ -19,7 +20,13 @@ const authLimiter = rateLimit({
   message: { success: false, error: { code: 'RATE_LIMITED', message: 'Too many attempts - try again later' } },
 });
 
-router.post('/register', authLimiter, validate(registerSchema), controller.register);
+router.post(
+  '/register',
+  authLimiter,
+  registrationAccess(env.NODE_ENV === 'test'),
+  validate(registerSchema),
+  controller.register,
+);
 router.post('/login', authLimiter, validate(loginSchema), controller.login);
 router.post('/refresh', authLimiter, validate(refreshSchema), controller.refresh);
 router.post('/logout', requireAuth, controller.logout);

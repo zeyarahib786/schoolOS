@@ -1,4 +1,5 @@
 import { ApiError } from '../../utils/ApiError';
+import { Staff } from '../../models/Staff';
 import { IMeetingSlot } from '../../models/MeetingSlot';
 import * as repo from './meetings.repository';
 import { ListSlotsQuery, CreateSlotInput, BookSlotInput } from './meetings.validation';
@@ -10,8 +11,8 @@ function canPublishSlots(role: Role): boolean {
 }
 
 /** Open read like Timetable: a bookable slot only has value if parents can browse it. */
-export async function listSlots(query: ListSlotsQuery) {
-  const { items, total } = await repo.findMany(query);
+export async function listSlots(query: ListSlotsQuery, requester: AuthenticatedUser) {
+  const { items, total } = await repo.findMany(query, requester);
   return {
     items,
     pagination: { page: query.page, limit: query.limit, total, totalPages: Math.ceil(total / query.limit) },
@@ -21,6 +22,10 @@ export async function listSlots(query: ListSlotsQuery) {
 export async function publishSlot(input: CreateSlotInput, requester: AuthenticatedUser): Promise<IMeetingSlot> {
   if (!canPublishSlots(requester.role))
     throw ApiError.forbidden('Only Administrator, Principal, or Teacher may publish a meeting slot');
+  const teacher = await Staff.findOne({ _id: input.teacherStaffId, type: 'Teaching', status: { $ne: 'Inactive' } });
+  if (!teacher) throw ApiError.badRequest('Choose an existing active teaching staff record');
+  if (requester.role === 'Teacher' && String(teacher.userId) !== requester.id)
+    throw ApiError.forbidden('Teachers may publish only their own meeting slots');
   try {
     return await repo.create(input);
   } catch (err) {

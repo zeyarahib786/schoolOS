@@ -11,6 +11,8 @@ async function registerAndLogin(role: 'Administrator' | 'Teacher' | 'Parent' | '
 }
 
 async function createStudent(token: string, refId: string, guardianUserId?: string) {
+  // Account linking belongs to school managers; teachers can still mark registers.
+  if (guardianUserId) token = (await registerAndLogin('Administrator', 'fixture-manager@example.invalid')).token;
   const res = await request(app).post('/api/v1/students').set('Authorization', `Bearer ${token}`).send({
     refId,
     name: 'Fatima Al Hashimi',
@@ -248,7 +250,13 @@ describe('Attendance API', () => {
     const rejected = await request(app)
       .post('/api/v1/attendance/absence-requests')
       .set('Authorization', `Bearer ${parent.token}`)
-      .send({ studentId: otherStudentId, fromDate: '2026-06-19', toDate: '2026-06-19', type: 'Other', note: 'No link.' });
+      .send({
+        studentId: otherStudentId,
+        fromDate: '2026-06-19',
+        toDate: '2026-06-19',
+        type: 'Other',
+        note: 'No link.',
+      });
     expect(rejected.status).toBe(404);
 
     const created = await request(app)

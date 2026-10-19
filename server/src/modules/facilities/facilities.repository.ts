@@ -1,3 +1,4 @@
+import { ApiError } from '../../utils/ApiError';
 import mongoose, { FilterQuery } from 'mongoose';
 import { Booking, IBooking } from '../../models/Booking';
 import { Facility, IFacility } from '../../models/Facility';
@@ -34,6 +35,7 @@ export function findOverlapping(
   // the day into the app to check in memory.
   return Booking.findOne({
     facility: facilityId,
+    status: { $ne: 'Cancelled' },
     date,
     startTime: { $lt: endTime },
     endTime: { $gt: startTime },
@@ -48,48 +50,48 @@ export function findOverlapping(
  * the transaction layer guarantees one succeeds and the other's overlap check will see the first
  * request's write (or the transaction is retried/aborted on write conflict), rather than both
  * checks racing against a stale "no overlap" read. Requires a replica-set-enabled MongoDB (Atlas
- * provides this by default) - documented explicitly in AWS_DEPLOYMENT.md and LOCAL_SETUP.md,
+ * provides this by default) - documented explicitly in docs/setup/deployment.md and docs/setup/local.md,
  * since a plain standalone `mongod` does not support transactions at all.
  */
+/** The shared booking operation can participate in an event transaction. */
+export async function createBookingInSession(
+  input: CreateBookingInput,
+  bookedBy: string,
+  session: mongoose.ClientSession,
+): Promise<IBooking> {
+  const date = new Date(input.date);
+  const facility = await Facility.findByIdAndUpdate(
+    input.facilityId,
+    { $inc: { bookingRevision: 1 } },
+    { session, new: true },
+  );
+  if (facility?.status === 'Maintenance') throw ApiError.conflict('Facility is under maintenance');
+  if (!facility) throw Object.assign(new Error('FACILITY_NOT_FOUND'), { code: 'FACILITY_NOT_FOUND' });
+  const existing = await findOverlapping(input.facilityId, date, input.startTime, input.endTime, session);
+  if (existing) throw Object.assign(new Error('OVERLAP'), { code: 'OVERLAP' });
+  const [created] = await Booking.create(
+    [
+      {
+        facility: input.facilityId,
+        date,
+        startTime: input.startTime,
+        endTime: input.endTime,
+        bookedBy,
+        purpose: input.purpose,
+      },
+    ],
+    { session },
+  );
+  return created;
+}
 export async function createBookingIfNoOverlap(input: CreateBookingInput, bookedBy: string): Promise<IBooking> {
   const session = await mongoose.startSession();
+  let created: IBooking | null = null;
   try {
-    let created: IBooking | null = null;
     await session.withTransaction(async () => {
-      const date = new Date(input.date);
-
-      // Snapshot isolation does not make inserts of different booking documents conflict. Touch
-      // one shared facility document first, so concurrent attempts contend and MongoDB retries
-      // the loser against a snapshot that includes the winning booking.
-      const facility = await Facility.findByIdAndUpdate(
-        input.facilityId,
-        { $inc: { bookingRevision: 1 } },
-        { session, new: true },
-      );
-      if (!facility) {
-        throw Object.assign(new Error('FACILITY_NOT_FOUND'), { code: 'FACILITY_NOT_FOUND' });
-      }
-
-      const existing = await findOverlapping(input.facilityId, date, input.startTime, input.endTime, session);
-      if (existing) {
-        throw Object.assign(new Error('OVERLAP'), { code: 'OVERLAP' });
-      }
-      const [doc] = await Booking.create(
-        [
-          {
-            facility: input.facilityId,
-            date,
-            startTime: input.startTime,
-            endTime: input.endTime,
-            bookedBy,
-            purpose: input.purpose,
-          },
-        ],
-        { session },
-      );
-      created = doc;
+      created = await createBookingInSession(input, bookedBy, session);
     });
-    if (!created) throw new Error('Booking transaction completed without producing a document');
+    if (!created) throw new Error('Booking transaction produced no document');
     return created;
   } finally {
     await session.endSession();

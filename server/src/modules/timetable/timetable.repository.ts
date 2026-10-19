@@ -68,9 +68,7 @@ export async function swapSlots(input: SwapSlotsInput): Promise<ITimetableSlot[]
       if (target) ids.push(target._id);
       await TimetableSlot.deleteMany({ _id: { $in: ids } }).session(session);
 
-      const documents = [
-        { grade: input.grade, ...input.target, ...content(source), status: 'Draft' as const },
-      ];
+      const documents = [{ grade: input.grade, ...input.target, ...content(source), status: 'Draft' as const }];
       if (target) {
         documents.push({ grade: input.grade, ...input.source, ...content(target), status: 'Draft' as const });
       }

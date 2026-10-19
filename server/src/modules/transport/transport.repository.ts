@@ -21,14 +21,14 @@ export async function findManyRoutes(
   query: ListRoutesQuery,
   applyOwnershipScope: (base: FilterQuery<IRoute>) => FilterQuery<IRoute>,
 ): Promise<{ items: IRoute[]; total: number }> {
-  const filter = applyOwnershipScope({});
+  const filter = applyOwnershipScope({ archived: query.archived ? true : { $ne: true } });
   const skip = (query.page - 1) * query.limit;
   const [items, total] = await Promise.all([
     Route.find(filter)
       .sort({ name: 1 })
       .skip(skip)
       .limit(query.limit)
-      .populate('vehicle', 'regNumber capacity driverName')
+      .populate('vehicle', 'regNumber capacity driverName driverPhone status insuranceExpiry driverLicenseExpiry')
       .populate('assignedStudents', 'name refId grade'),
     Route.countDocuments(filter),
   ]);
@@ -39,16 +39,26 @@ export function findRouteById(id: string): Promise<IRoute | null> {
   return Route.findById(id);
 }
 
-export function findRouteByVehicle(vehicleId: string): Promise<IRoute | null> { return Route.findOne({ vehicle: vehicleId }); }
+export function findRouteByVehicle(vehicleId: string): Promise<IRoute | null> {
+  return Route.findOne({ vehicle: vehicleId });
+}
 
 export function findRouteForStudent(studentId: string, excludingRouteId: string): Promise<IRoute | null> {
   return Route.findOne({ _id: { $ne: excludingRouteId }, assignedStudents: studentId });
 }
 
-export function findStudentById(id: string) { return Student.findById(id); }
+export function findStudentById(id: string) {
+  return Student.findById(id);
+}
 
 export function createRoute(input: CreateRouteInput): Promise<IRoute> {
-  return Route.create({ name: input.name, vehicle: input.vehicleId, stops: input.stops, gpsId: input.gpsId, assignedStudents: [] });
+  return Route.create({
+    name: input.name,
+    vehicle: input.vehicleId,
+    stops: input.stops,
+    gpsId: input.gpsId,
+    assignedStudents: [],
+  });
 }
 
 export function setRouteOperationalStatus(id: string, status: 'Depot' | 'On road' | 'Delayed'): Promise<IRoute | null> {
@@ -61,14 +71,31 @@ export async function markVehicleMaintenance(id: string): Promise<IVehicle | nul
   return vehicle;
 }
 
-export function createIncident(route: string, input: { type: string; severity: string; location?: string; description: string }, reportedBy: string): Promise<ITransportIncident> {
-  return TransportIncident.create({ route, type: input.type, severity: input.severity, location: input.location, description: input.description, reportedBy });
+export function createIncident(
+  route: string,
+  input: { type: string; severity: string; location?: string; description: string; occurredAt?: string },
+  reportedBy: string,
+): Promise<ITransportIncident> {
+  return TransportIncident.create({
+    route,
+    type: input.type,
+    severity: input.severity,
+    location: input.location,
+    description: input.description,
+    occurredAt: input.occurredAt,
+    reportedBy,
+  });
 }
 
-export async function findManyIncidents(query: ListIncidentsQuery): Promise<{ items: ITransportIncident[]; total: number }> {
+export async function findManyIncidents(
+  query: ListIncidentsQuery,
+): Promise<{ items: ITransportIncident[]; total: number }> {
   const filter: FilterQuery<ITransportIncident> = query.status ? { status: query.status } : {};
   const skip = (query.page - 1) * query.limit;
-  const [items, total] = await Promise.all([TransportIncident.find(filter).sort({ createdAt: -1 }).skip(skip).limit(query.limit).populate('route', 'name'), TransportIncident.countDocuments(filter)]);
+  const [items, total] = await Promise.all([
+    TransportIncident.find(filter).sort({ createdAt: -1 }).skip(skip).limit(query.limit).populate('route', 'name'),
+    TransportIncident.countDocuments(filter),
+  ]);
   return { items, total };
 }
 
@@ -95,8 +122,14 @@ export function assignStudentIfCapacityAvailable(
   );
 }
 
-export function findAuthorizedStudentIds(guardianUserId: string) {
-  return Student.find({ guardianUserId })
+export function findAuthorizedStudentIds(userId: string, role: string) {
+  return Student.find(
+    role === 'Student'
+      ? { studentUserId: userId }
+      : role === 'Parent'
+        ? { guardianUserId: userId }
+        : { _id: { $in: [] } },
+  )
     .select('_id')
     .then((students) => students.map((s) => s._id));
 }

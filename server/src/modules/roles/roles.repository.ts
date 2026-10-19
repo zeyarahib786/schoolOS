@@ -3,12 +3,15 @@ import { User } from '../../models/User';
 import { DEFAULT_ACCESS_ROLES, AccessModule, PermissionMap, roleKey } from './roles.constants';
 
 export async function ensureSystemRoles(): Promise<void> {
+  const createdAt = new Date();
   await AccessRole.bulkWrite(
     DEFAULT_ACCESS_ROLES.map((role) => ({
       updateOne: {
         filter: { key: roleKey(role.name) },
         update: {
           $setOnInsert: {
+            createdAt,
+            updatedAt: createdAt,
             key: roleKey(role.name),
             name: role.name,
             description: role.description,
@@ -19,7 +22,22 @@ export async function ensureSystemRoles(): Promise<void> {
         upsert: true,
       },
     })),
+    { timestamps: false },
   );
+  // Add only absent permission keys; preserve every existing administrator decision.
+  const roles = await AccessRole.find();
+  const operations = roles.flatMap((role) => {
+    const defaults = DEFAULT_ACCESS_ROLES.find((r) => r.name === (role.isSystem ? role.name : role.basedOn));
+    return (Object.keys(DEFAULT_ACCESS_ROLES[0].permissions) as AccessModule[])
+      .filter((moduleName) => !role.permissions.has(moduleName))
+      .map((moduleName) => ({
+        updateOne: {
+          filter: { _id: role._id, [`permissions.${moduleName}`]: { $exists: false } },
+          update: { $set: { [`permissions.${moduleName}`]: defaults?.permissions[moduleName] === true } },
+        },
+      }));
+  });
+  if (operations.length) await AccessRole.bulkWrite(operations);
 }
 
 export function listRoles(): Promise<IAccessRole[]> {
@@ -46,10 +64,28 @@ export function createRole(input: {
   });
 }
 
-export function updatePermission(id: string, moduleName: AccessModule, enabled: boolean): Promise<IAccessRole | null> {
-  return AccessRole.findByIdAndUpdate(
-    id,
-    { $set: { [`permissions.${moduleName}`]: enabled } },
+export function updatePermission(
+  id: string,
+  moduleName: AccessModule,
+  enabled: boolean,
+  actor: string,
+  expectedUpdatedAt?: string,
+  reason?: string,
+): Promise<IAccessRole | null> {
+  return AccessRole.findOneAndUpdate(
+    { _id: id, ...(expectedUpdatedAt ? { updatedAt: new Date(expectedUpdatedAt) } : {}) },
+    {
+      $set: { [`permissions.${moduleName}`]: enabled },
+      $push: {
+        history: {
+          at: new Date(),
+          by: actor,
+          module: moduleName,
+          enabled,
+          reason: reason || 'Reviewed module visibility',
+        },
+      },
+    },
     { new: true, runValidators: true },
   );
 }

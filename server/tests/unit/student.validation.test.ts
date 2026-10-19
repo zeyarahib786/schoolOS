@@ -73,7 +73,8 @@ describe('createStudentSchema', () => {
         medicalNotes: 'None',
         transportRequirement: 'Two-way',
       },
-      params: {}, query: {},
+      params: {},
+      query: {},
     });
     expect(result.success).toBe(true);
     if (result.success) expect(result.data.body.dateOfBirth).toBeInstanceOf(Date);
@@ -82,7 +83,8 @@ describe('createStudentSchema', () => {
   it('rejects future birth dates and malformed guardian contacts', () => {
     const result = createStudentSchema.safeParse({
       body: { ...validStudentBody, dateOfBirth: '2999-01-01', guardianEmail: 'invalid', emergencyContact: 'abc' },
-      params: {}, query: {},
+      params: {},
+      query: {},
     });
     expect(result.success).toBe(false);
   });

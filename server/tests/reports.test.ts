@@ -48,7 +48,8 @@ describe('Reports API', () => {
     const studentA = await createStudent(admin.token, 'ANS-7101');
     const studentB = await createStudent(admin.token, 'ANS-7102');
     const attendanceDate = new Date().toISOString().slice(0, 10);
-    const marked = await request(app).post('/api/v1/attendance/mark')
+    const marked = await request(app)
+      .post('/api/v1/attendance/mark')
       .set('Authorization', `Bearer ${admin.token}`)
       .send({ date: attendanceDate, session: 'AM', entries: [{ studentId: studentA, status: 'Present' }] });
     expect(marked.status).toBe(201);
@@ -64,15 +65,18 @@ describe('Reports API', () => {
       .set('Authorization', `Bearer ${admin.token}`)
       .send({ paymentMethod: 'Cash', amount: 1000, reference: 'REPORT-TEST-1' });
     expect(partial.status).toBe(200);
-    const exam = await request(app).post('/api/v1/exams')
+    const exam = await request(app)
+      .post('/api/v1/exams')
       .set('Authorization', `Bearer ${admin.token}`)
       .send({ name: 'Report Test Exam', term: 'Term 1', subjects: ['Mathematics'], maxMarks: 100, passMark: 50 });
     expect(exam.status).toBe(201);
-    const result = await request(app).post('/api/v1/exams/results')
+    const result = await request(app)
+      .post('/api/v1/exams/results')
       .set('Authorization', `Bearer ${admin.token}`)
       .send({ examId: exam.body.data._id, studentId: studentA, scores: [{ subject: 'Mathematics', marks: 90 }] });
     expect(result.status).toBe(201);
-    const secondResult = await request(app).post('/api/v1/exams/results')
+    const secondResult = await request(app)
+      .post('/api/v1/exams/results')
       .set('Authorization', `Bearer ${admin.token}`)
       .send({ examId: exam.body.data._id, studentId: studentB, scores: [{ subject: 'Mathematics', marks: 75 }] });
     expect(secondResult.status).toBe(201);
@@ -97,7 +101,12 @@ describe('Reports API', () => {
     expect(exams.byGrade).toContainEqual({ _id: 'A+ / A', count: 2 });
     expect(typeof applications.count).toBe('number');
     expect(attendance.monthly).toHaveLength(6);
-    expect(attendance.monthly.at(-1)).toMatchObject({ month: attendanceDate.slice(0, 7), attended: 1, eligible: 1, rate: 100 });
+    expect(attendance.monthly.at(-1)).toMatchObject({
+      month: attendanceDate.slice(0, 7),
+      attended: 1,
+      eligible: 1,
+      rate: 100,
+    });
   });
 
   it('an empty school returns empty groupings and null averages rather than crashing', async () => {

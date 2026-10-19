@@ -24,12 +24,16 @@ export async function markAllPresent(date: string, markedBy: string) {
   if (!ids.length) return [];
   const onLeave = await HostelRollCall.find({ date, student: { $in: ids }, status: 'On leave' }).distinct('student');
   const onLeaveIds = new Set(onLeave.map(String));
-  await HostelRollCall.bulkWrite(ids.filter((student) => !onLeaveIds.has(student)).map((student) => ({
-    updateOne: {
-      filter: { student: new Types.ObjectId(student), date },
-      update: { $set: { status: 'Present', markedBy: new Types.ObjectId(markedBy) } },
-      upsert: true,
-    },
-  })));
+  await HostelRollCall.bulkWrite(
+    ids
+      .filter((student) => !onLeaveIds.has(student))
+      .map((student) => ({
+        updateOne: {
+          filter: { student: new Types.ObjectId(student), date },
+          update: { $set: { status: 'Present', markedBy: new Types.ObjectId(markedBy) } },
+          upsert: true,
+        },
+      })),
+  );
   return list(date);
 }

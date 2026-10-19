@@ -2,11 +2,19 @@ import { Router } from 'express';
 import * as controller from './inventory.controller';
 import { validate } from '../../middleware/validate';
 import { requireAuth, requireRole } from '../../middleware/auth';
-import { createItemSchema, listItemsSchema, createPOSchema, poIdParamSchema, adjustStockSchema } from './inventory.validation';
+import {
+  createItemSchema,
+  listItemsSchema,
+  createPOSchema,
+  poIdParamSchema,
+  adjustStockSchema,
+  updateItemSchema,
+} from './inventory.validation';
 
 const router = Router();
 
 router.use(requireAuth);
+router.use(requireRole('Administrator', 'Principal', 'Teacher', 'Accountant'));
 
 router.get('/items', validate(listItemsSchema), controller.listItems);
 router.post(
@@ -15,7 +23,12 @@ router.post(
   validate(createItemSchema),
   controller.addItem,
 );
-router.post('/items/:id/adjust', requireRole('Administrator', 'Principal', 'Teacher', 'Accountant'), validate(adjustStockSchema), controller.adjustStock);
+router.post(
+  '/items/:id/adjust',
+  requireRole('Administrator', 'Principal', 'Teacher', 'Accountant'),
+  validate(adjustStockSchema),
+  controller.adjustStock,
+);
 
 router.get('/purchase-orders', controller.listPOs);
 router.post(
@@ -42,5 +55,7 @@ router.post(
   validate(poIdParamSchema),
   controller.cancelPO,
 );
+
+router.patch('/items/:id', validate(updateItemSchema), controller.updateItem);
 
 export default router;

@@ -1,3 +1,5 @@
+import mongoose from 'mongoose';
+import { ApiError } from '../../utils/ApiError';
 import { FilterQuery } from 'mongoose';
 import { Staff, IStaff } from '../../models/Staff';
 import { User } from '../../models/User';
@@ -39,10 +41,28 @@ export function findByEmail(email: string): Promise<IStaff | null> {
   return Staff.findOne({ email: email.toLowerCase() });
 }
 
-export function create(input: CreateStaffInput): Promise<IStaff> {
-  return User.findOne({ email: input.email.toLowerCase() }).select('_id').then((user) =>
-    Staff.create({ ...input, userId: user?._id }),
-  );
+export async function create(input: CreateStaffInput): Promise<IStaff> {
+  const session = await mongoose.startSession();
+  let result: IStaff | undefined;
+  try {
+    await session.withTransaction(async () => {
+      const user = await User.findOne({
+        email: input.email.toLowerCase(),
+        isActive: true,
+        role: { $in: ['Administrator', 'Principal', 'Teacher', 'Accountant'] },
+      }).session(session);
+      if (user) {
+        await User.updateOne({ _id: user._id }, { $inc: { __v: 1 } }, { session });
+        if (await Staff.exists({ userId: user._id }).session(session))
+          throw ApiError.conflict('Staff account is already linked');
+      }
+      [result] = await Staff.create([{ ...input, userId: user?._id }], { session });
+    });
+  } finally {
+    await session.endSession();
+  }
+  if (!result) throw new Error('Staff record could not be saved');
+  return result;
 }
 
 export function updateById(id: string, input: UpdateStaffInput): Promise<IStaff | null> {
@@ -57,13 +77,36 @@ export function deleteById(id: string): Promise<IStaff | null> {
  * support history. Those records must remain referentially meaningful for an audit. */
 export async function countDependencies(id: string): Promise<number> {
   const [leave, payslips, expenses, meetings, tickets] = await Promise.all([
-    LeaveRequest.countDocuments({ staff: id }), Payslip.countDocuments({ staff: id }),
-    ExpenseClaim.countDocuments({ staff: id }), MeetingSlot.countDocuments({ teacher: id }),
+    LeaveRequest.countDocuments({ staff: id }),
+    Payslip.countDocuments({ staff: id }),
+    ExpenseClaim.countDocuments({ staff: id }),
+    MeetingSlot.countDocuments({ teacher: id }),
     Ticket.countDocuments({ assignedTo: id }),
   ]);
   return leave + payslips + expenses + meetings + tickets;
 }
 
-export function linkAccountByEmail(userId: string, email: string) {
-  return Staff.findOneAndUpdate({ email: email.toLowerCase(), userId: { $exists: false } }, { userId }, { new: true });
+export async function linkAccountByEmail(userId: string, email: string) {
+  const session = await mongoose.startSession();
+  let result: IStaff | null = null;
+  try {
+    await session.withTransaction(async () => {
+      const user = await User.findOne({
+        _id: userId,
+        isActive: true,
+        role: { $in: ['Administrator', 'Principal', 'Teacher', 'Accountant'] },
+      }).session(session);
+      if (!user) return;
+      await User.updateOne({ _id: userId }, { $inc: { __v: 1 } }, { session });
+      if (await Staff.exists({ userId }).session(session)) return;
+      result = await Staff.findOneAndUpdate(
+        { email: email.toLowerCase(), status: { $ne: 'Inactive' }, userId: { $exists: false } },
+        { $set: { userId } },
+        { new: true, session },
+      );
+    });
+  } finally {
+    await session.endSession();
+  }
+  return result;
 }

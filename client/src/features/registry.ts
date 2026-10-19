@@ -14,6 +14,7 @@ export interface RuntimeModule {
 export const RUNTIME_MODULES: readonly RuntimeModule[] = [
   { id: 'navigation', kind: 'core', script: 'assets/js/core/00-icons-nav-state.js' },
   { id: 'localization', kind: 'core', script: 'assets/js/i18n/10-localization.js' },
+  { id: 'arabic', kind: 'core', script: 'assets/js/i18n/11-arabic.js' },
   { id: 'theme-documents', kind: 'core', script: 'assets/js/core/20-theme-documents.js' },
   { id: 'academic-data', kind: 'core', script: 'assets/js/data/30-academic-history.js' },
   { id: 'operations-data', kind: 'core', script: 'assets/js/data/31-operations-data.js' },

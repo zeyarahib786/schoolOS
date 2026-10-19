@@ -19,20 +19,19 @@ describe('scopeAttendanceFilter', () => {
 
   it('scopes a Parent to only their authorized (linked) student ids', () => {
     const filter = scopeAttendanceFilter({}, makeUser('parent-a', 'Parent'), [childAId, childBId]);
-    expect(filter).toEqual({ student: { $in: [childAId, childBId] } });
+    expect(filter).toEqual({ $and: [{}, { student: { $in: [childAId, childBId] } }] });
   });
 
   it('scopes a Parent with NO linked students to match nothing (empty $in), not everything', () => {
     const filter = scopeAttendanceFilter({}, makeUser('parent-a', 'Parent'), []);
-    expect(filter).toEqual({ student: { $in: [] } });
+    expect(filter).toEqual({ $and: [{}, { student: { $in: [] } }] });
   });
 
   it('never lets a caller-supplied "student" filter escape the ownership scope for a restricted role', () => {
     const someoneElsesChild = new Types.ObjectId();
     const filter = scopeAttendanceFilter({ student: someoneElsesChild }, makeUser('parent-a', 'Parent'), [childAId]);
-    // The ownership scope is applied AFTER and completely replaces any caller-supplied `student`
-    // filter for a restricted role - this is the actual security property being tested.
-    expect(filter.student).toEqual({ $in: [childAId] });
+    // Both filters must match: asking for another child returns no records.
+    expect(filter).toEqual({ $and: [{ student: someoneElsesChild }, { student: { $in: [childAId] } }] });
   });
 });
 

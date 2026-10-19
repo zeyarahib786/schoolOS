@@ -18,7 +18,11 @@ export const createAccessRoleSchema = z.object({
 
 export const updatePermissionSchema = z.object({
   params: z.object({ id: z.string().regex(/^[a-f\d]{24}$/i, 'Invalid role id'), module: z.enum(ACCESS_MODULES) }),
-  body: z.object({ enabled: z.boolean() }),
+  body: z.object({
+    enabled: z.boolean(),
+    expectedUpdatedAt: z.string().datetime().optional(),
+    reason: z.string().trim().min(3).max(500).optional(),
+  }),
 });
 
 export type CreateAccessRoleInput = z.infer<typeof createAccessRoleSchema>['body'];

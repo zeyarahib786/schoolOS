@@ -1,3 +1,5 @@
+import { assertGuardianPortalAccess } from '../guardians/guardians.access';
+import { Guardian } from '../../models/Guardian';
 import jwt, { SignOptions } from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { User, IUser } from '../../models/User';
@@ -37,11 +39,18 @@ function signRefreshToken(user: IUser): string {
 }
 
 export function verifyAccessToken(token: string): AccessTokenPayload {
-  return jwt.verify(token, env.JWT_ACCESS_SECRET) as AccessTokenPayload;
+  return jwt.verify(token, env.JWT_ACCESS_SECRET, { algorithms: ['HS256'] }) as AccessTokenPayload;
+}
+
+/** Revocation, deactivation and role changes apply to every protected request. */
+export async function validateAccessSession(payload: AccessTokenPayload): Promise<void> {
+  const user = await User.findById(payload.sub).select('role isActive refreshTokenVersion').lean();
+  if (!user || !user.isActive || user.refreshTokenVersion !== payload.tokenVersion || user.role !== payload.role)
+    throw ApiError.unauthorized('Session is no longer valid');
 }
 
 export function verifyRefreshToken(token: string): AccessTokenPayload {
-  return jwt.verify(token, env.JWT_REFRESH_SECRET) as AccessTokenPayload;
+  return jwt.verify(token, env.JWT_REFRESH_SECRET, { algorithms: ['HS256'] }) as AccessTokenPayload;
 }
 
 function issueTokenPair(user: IUser): { accessToken: string; refreshToken: string } {
@@ -70,7 +79,6 @@ export async function register(
 export async function login(input: LoginInput): Promise<{ user: IUser; accessToken: string; refreshToken: string }> {
   const user = await User.findOne({ email: input.email.toLowerCase() }).select('+passwordHash');
   if (!user) throw ApiError.unauthorized('Invalid email or password');
-  if (!user.isActive) throw ApiError.forbidden('This account has been deactivated');
 
   const valid = await user.comparePassword(input.password);
   if (!valid) {
@@ -80,6 +88,9 @@ export async function login(input: LoginInput): Promise<{ user: IUser; accessTok
     throw ApiError.unauthorized('Invalid email or password');
   }
 
+  if (!user.isActive) throw ApiError.forbidden('This account has been deactivated');
+  await assertGuardianPortalAccess(user._id.toString(), user.role);
+  if (user.role === 'Parent') await Guardian.updateOne({ userId: user._id }, { $set: { lastLoginAt: new Date() } });
   const tokens = issueTokenPair(user);
   await logAudit(`${user.email} logged in`, 'Auth', user._id.toString(), 'Info');
   return { user, ...tokens };
@@ -97,6 +108,7 @@ export async function refresh(refreshToken: string): Promise<{ accessToken: stri
   // Reject tokens issued before the last logout/password-change bumped the version.
   if (user.refreshTokenVersion !== payload.tokenVersion) throw ApiError.unauthorized('Session has been revoked');
 
+  await assertGuardianPortalAccess(user._id.toString(), user.role);
   return issueTokenPair(user);
 }
 

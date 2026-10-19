@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { asyncHandler } from '../../middleware/errorHandler';
 import { sendSuccess } from '../../utils/apiResponse';
 import { ApiError } from '../../utils/ApiError';
+import { listSlotsSchema } from './meetings.validation';
 import * as service from './meetings.service';
 import * as staffService from './meetings.staff.service';
 
@@ -11,7 +12,7 @@ function requireUser(req: Request) {
 }
 
 export const list = asyncHandler(async (req: Request, res: Response) => {
-  const result = await service.listSlots(req.query as unknown as Parameters<typeof service.listSlots>[0]);
+  const result = await service.listSlots(listSlotsSchema.shape.query.parse(req.query), requireUser(req));
   sendSuccess(res, 200, result.items, { pagination: result.pagination });
 });
 

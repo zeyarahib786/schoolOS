@@ -20,7 +20,7 @@ export function scopePayslipFilter(
   if (UNRESTRICTED_READ_ROLES.includes(requester.role)) {
     return base;
   }
-  if (!ownStaffId) {
+  if (requester.role !== 'Teacher' || !ownStaffId) {
     return { ...base, _id: { $in: [] } };
   }
   return { ...base, staff: ownStaffId };

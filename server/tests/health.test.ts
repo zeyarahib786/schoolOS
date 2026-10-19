@@ -10,7 +10,12 @@ async function registerAndLogin(role: 'Administrator' | 'Teacher' | 'Parent', em
   return { token: res.body.data.accessToken as string, userId: res.body.data.user._id as string };
 }
 
-async function createStudent(token: string, refId: string, guardianUserId?: string, status: 'Active' | 'Inactive' = 'Active') {
+async function createStudent(
+  token: string,
+  refId: string,
+  guardianUserId?: string,
+  status: 'Active' | 'Inactive' = 'Active',
+) {
   const res = await request(app).post('/api/v1/students').set('Authorization', `Bearer ${token}`).send({
     refId,
     name: 'Fatima Al Hashimi',
@@ -22,6 +27,7 @@ async function createStudent(token: string, refId: string, guardianUserId?: stri
     status,
     phone: '+971501234567',
   });
+  expect(res.status).toBe(201);
   return res.body.data._id as string;
 }
 
@@ -56,11 +62,15 @@ describe('Health API', () => {
 
   it('rejects a clinic visit for a missing or inactive student', async () => {
     const admin = await registerAndLogin('Administrator', 'admin-health-active-check@alnoor.ae');
-    const missing = await request(app).post('/api/v1/health-records').set('Authorization', `Bearer ${admin.token}`)
+    const missing = await request(app)
+      .post('/api/v1/health-records')
+      .set('Authorization', `Bearer ${admin.token}`)
       .send({ studentId: '64b7f9c9a1b2c3d4e5f60789', ...validVisit });
     expect(missing.status).toBe(404);
     const inactiveId = await createStudent(admin.token, 'ANS-9102-INACTIVE', undefined, 'Inactive');
-    const inactive = await request(app).post('/api/v1/health-records').set('Authorization', `Bearer ${admin.token}`)
+    const inactive = await request(app)
+      .post('/api/v1/health-records')
+      .set('Authorization', `Bearer ${admin.token}`)
       .send({ studentId: inactiveId, ...validVisit });
     expect(inactive.status).toBe(409);
   });
@@ -95,7 +105,8 @@ describe('Health API', () => {
   it('a Parent sees only visits for their linked child', async () => {
     const teacher = await registerAndLogin('Teacher', 'teacher4@alnoor.ae');
     const parent = await registerAndLogin('Parent', 'parent2@alnoor.ae');
-    const myChildId = await createStudent(teacher.token, 'ANS-9105', parent.userId);
+    const office = await registerAndLogin('Administrator', 'health-family-link-office@example.invalid');
+    const myChildId = await createStudent(office.token, 'ANS-9105', parent.userId);
     const otherChildId = await createStudent(teacher.token, 'ANS-9106');
     await request(app)
       .post('/api/v1/health-records')
@@ -114,15 +125,35 @@ describe('Health API', () => {
   it('persists full clinic UI fields and administrator follow-up updates', async () => {
     const admin = await registerAndLogin('Administrator', 'admin-health-workflow@alnoor.ae');
     const studentId = await createStudent(admin.token, 'ANS-9110');
-    const created = await request(app).post('/api/v1/health-records').set('Authorization', `Bearer ${admin.token}`).send({
-      studentId, reason: 'High temperature', treatment: 'Rest and fluids', outcome: 'Under observation',
-      severity: 'Urgent', vitals: 'Temp 38.2 C', medicine: 'Paracetamol 250mg',
-    });
+    const created = await request(app)
+      .post('/api/v1/health-records')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({
+        studentId,
+        reason: 'High temperature',
+        treatment: 'Rest and fluids',
+        outcome: 'Under observation',
+        severity: 'Urgent',
+        vitals: 'Temp 38.2 C',
+        medicine: 'Paracetamol 250mg',
+      });
     expect(created.status).toBe(201);
-    expect(created.body.data).toMatchObject({ severity: 'Urgent', outcome: 'Under observation', parentContacted: false });
+    expect(created.body.data).toMatchObject({
+      severity: 'Urgent',
+      outcome: 'Under observation',
+      parentContacted: false,
+    });
     const id = created.body.data._id as string;
 
-    const updated = await request(app).patch(`/api/v1/health-records/${id}`).set('Authorization', `Bearer ${admin.token}`).send({ outcome: 'Sent home', parentContacted: true });
+    const updated = await request(app)
+      .patch(`/api/v1/health-records/${id}`)
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({
+        outcome: 'Sent home',
+        parentContacted: true,
+        expectedUpdatedAt: created.body.data.updatedAt,
+        reason: 'Guardian collected student',
+      });
     expect(updated.status).toBe(200);
     expect(updated.body.data.outcome).toBe('Sent home');
     expect(updated.body.data.parentContacted).toBe(true);
@@ -132,9 +163,15 @@ describe('Health API', () => {
   it('does not allow a Teacher to update clinic follow-up fields', async () => {
     const admin = await registerAndLogin('Administrator', 'admin-health-owner@alnoor.ae');
     const studentId = await createStudent(admin.token, 'ANS-9111');
-    const created = await request(app).post('/api/v1/health-records').set('Authorization', `Bearer ${admin.token}`).send({ studentId, ...validVisit });
+    const created = await request(app)
+      .post('/api/v1/health-records')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({ studentId, ...validVisit });
     const teacher = await registerAndLogin('Teacher', 'teacher-health-update@alnoor.ae');
-    const res = await request(app).patch(`/api/v1/health-records/${created.body.data._id}`).set('Authorization', `Bearer ${teacher.token}`).send({ parentContacted: true });
+    const res = await request(app)
+      .patch(`/api/v1/health-records/${created.body.data._id}`)
+      .set('Authorization', `Bearer ${teacher.token}`)
+      .send({ parentContacted: true });
     expect(res.status).toBe(403);
   });
 });

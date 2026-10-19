@@ -114,3 +114,40 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13.5px}
 .vbars .vb .col.alt{background:linear-gradient(180deg,#CFEEDB,#A6DEBC)}
 .vbars .vb .lb{font-size:10.5px;color:var(--slate-400);font-weight:600}
 
+
+/* CRM outreach follows the shared social-composer card treatment. */
+.crm-bulk-card{box-shadow:none;min-width:0}
+.crm-bulk-card .seg{display:flex;max-width:100%;flex-wrap:wrap}
+.crm-bulk-card p{font-size:12.5px;line-height:1.6;color:var(--slate-600);margin:12px 0}
+.crm-bulk-recipients{max-height:220px;overflow:auto;display:grid;gap:8px}
+.crm-bulk-recipient{display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);cursor:pointer}
+.crm-bulk-recipient input{flex:0 0 auto;width:16px;height:16px;accent-color:var(--brand-strong)}
+.crm-bulk-contact{display:grid;gap:4px;min-width:0;font-size:12.5px}
+.crm-bulk-contact strong{font-weight:600;color:var(--slate-900)}
+.crm-bulk-contact bdi{color:var(--slate-500);overflow-wrap:anywhere}
+.crm-bulk-message{display:grid;gap:16px}
+.crm-bulk-message label{display:grid;gap:8px;font-size:12px;font-weight:600;color:var(--slate-600);min-width:0}
+.crm-bulk-message input,.crm-bulk-message textarea{box-sizing:border-box;display:block;width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--surface);color:var(--slate-900);font-family:inherit;font-size:13px;font-weight:400;line-height:1.6}
+.crm-bulk-message input{min-height:42px}
+.crm-bulk-message textarea{min-height:190px;resize:vertical}
+.crm-bulk-message input:focus,.crm-bulk-message textarea:focus{outline:2px solid var(--brand-strong);outline-offset:2px}
+#crmBulkResult:not(:empty){margin-top:16px;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2);font-size:12.5px;line-height:1.7;overflow-wrap:anywhere}
+
+/* Attendance alert controls stack within narrow classroom registers. */
+.field.att-alert-options{display:grid;gap:10px;min-width:0;max-width:100%}
+.att-alert-options>label:first-child{display:flex;align-items:flex-start;gap:8px;line-height:1.5;min-width:0}
+.att-alert-options input[type=checkbox]{width:18px;height:18px;flex:0 0 18px;padding:0;margin:2px 0}
+.att-alert-options input:not([type=checkbox]),.att-alert-options select{width:100%;min-width:0;box-sizing:border-box}
+.att-alert-options p{margin:0;font-size:12px;line-height:1.6;overflow-wrap:anywhere}
+
+/* Teacher AI Studio follows the shared drawer/card system. */
+.teacher-ai-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.teacher-ai-draft{display:flex;width:100%;flex-direction:column;align-items:flex-start;gap:6px;text-align:start;margin-bottom:10px;white-space:normal}
+.teacher-ai-editor,.teacher-ai-field,.teacher-ai-student{display:flex;flex-direction:column;gap:10px;min-width:0}
+.teacher-ai-editor{gap:18px}.teacher-ai-field>span{font-weight:600;color:var(--text2,#64748b)}
+.teacher-ai-editor input,.teacher-ai-editor textarea,.teacher-ai-student select{width:100%;box-sizing:border-box;border:1px solid var(--border,#dfe5ef);border-radius:12px;background:var(--surface,#fff);color:inherit;font:inherit;padding:12px;min-width:0}
+.teacher-ai-editor textarea{resize:vertical;line-height:1.6}.teacher-ai-question{display:flex;flex-direction:column;gap:12px}.teacher-ai-facts{margin:0}.teacher-ai-facts>div{display:flex;justify-content:space-between;gap:14px;padding:9px 0;border-bottom:1px solid var(--border,#dfe5ef);overflow-wrap:anywhere}.teacher-ai-facts dd{margin:0}
+@media(max-width:480px){.teacher-ai-actions{grid-template-columns:1fr}.teacher-ai-facts>div{flex-direction:column;gap:3px}}
+.teacher-ai-editor input,.teacher-ai-editor textarea{text-align:start}
+.teacher-ai-student{grid-column:1/-1}
+#drawer:has(.teacher-ai-editor) .df,#drawer:has(.teacher-ai-form) .df{flex-wrap:wrap;padding-inline-end:88px}

@@ -33,7 +33,9 @@ export async function myAccess(requester: AuthenticatedUser) {
   await repo.ensureSystemRoles();
   const role = await repo.findRoleByName(requester.role);
   if (!role) throw ApiError.notFound('Access role is not configured');
-  return role;
+  const row = role.toObject();
+  if (requester.role !== 'Administrator') row.history = [];
+  return row;
 }
 
 export async function createRole(input: CreateAccessRoleInput, requester: AuthenticatedUser) {
@@ -63,8 +65,19 @@ export async function updatePermission(
   input: UpdatePermissionInput,
   requester: AuthenticatedUser,
 ) {
-  const role = await repo.updatePermission(roleId, moduleName, input.enabled);
-  if (!role) throw ApiError.notFound('Role not found');
+  const current = (await repo.listRoles()).find((r) => String(r._id) === roleId);
+  if (!current) throw ApiError.notFound('Role not found');
+  if (current.name === 'Administrator' && ['Roles & Access', 'Settings'].includes(moduleName) && !input.enabled)
+    throw ApiError.conflict('Administrator recovery access must remain enabled');
+  const role = await repo.updatePermission(
+    roleId,
+    moduleName,
+    input.enabled,
+    requester.id,
+    input.expectedUpdatedAt,
+    input.reason,
+  );
+  if (!role) throw ApiError.conflict('Role changed; reload before editing permissions');
   await logAudit(
     `${input.enabled ? 'Granted' : 'Revoked'} ${moduleName} access - ${role.name}`,
     'Roles & Access',

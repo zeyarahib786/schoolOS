@@ -15,6 +15,11 @@ router.post(
   validate(createIncidentSchema),
   controller.create,
 );
-router.patch('/:id/status', requireRole('Administrator', 'Principal', 'Teacher'), validate(updateIncidentStatusSchema), controller.updateStatus);
+router.patch(
+  '/:id/status',
+  requireRole('Administrator', 'Principal', 'Teacher'),
+  validate(updateIncidentStatusSchema),
+  controller.updateStatus,
+);
 
 export default router;

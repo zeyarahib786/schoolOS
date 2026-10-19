@@ -13,12 +13,12 @@ function ttConflicts(){ttAllData();const seen={};const out=[];
   const kt='T|'+t+'|'+di+'|'+r[0];if(t&&t!=='Staff'){if(seen[kt]&&seen[kt]!==cls)out.push({type:'Teacher',who:t,day:di,time:r[0],a:seen[kt],b:cls});else seen[kt]=cls}
   const kr='R|'+room+'|'+di+'|'+r[0];if(room!=='—'){if(seen[kr]&&seen[kr]!==cls)out.push({type:'Room',who:room,day:di,time:r[0],a:seen[kr],b:cls});else seen[kr]=cls}})));
  return out}
-M.timetable=()=>{const days=['Mon','Tue','Wed','Thu','Fri'];const cls=state.ttClass||'Grade 10 · A';const d=ttData(cls);const tab=getSubTab('tt-v','grid');
+M.timetable=()=>{const days=['Mon','Tue','Wed','Thu','Fri'];const cls=TTCLASSES.includes(state.ttClass)?state.ttClass:TTCLASSES[0];if(!cls)return '<div class="page-head"><div class="ph-l"><h2>Timetable</h2><p>No saved classes or timetable periods. Create an active class first.</p></div></div>';state.ttClass=cls;const d=ttData(cls);const tab=getSubTab('tt-v','grid');
   const conf=ttConflicts();const myConf=conf.filter(c=>c.a===cls||c.b===cls);
   return `<div class="page-head"><div class="ph-l"><h2>Timetable</h2><p>Editable schedules with teacher & room views, conflict checks and a publish workflow. Click any period to edit.</p></div>
   <div class="ph-r"><div class="field sel"><select onchange="state.ttClass=this.value;render()" aria-label="Select class">${TTCLASSES.map(o=>`<option ${o===cls?'selected':''}>${o}</option>`).join('')}</select></div>
   <button class="btn" onclick="const c=state.ttClass||'Grade 10 · A';exportCSV('timetable-'+c.replace(/[^A-Za-z0-9]+/g,'-')+'.csv',['Period','Mon','Tue','Wed','Thu','Fri'],ttData(c).rows.map(r=>[r[0]].concat(r[1].map(x=>String(x).split('|')[0]))))">${ic('download',16)} Export</button>
-  <button class="btn primary" onclick="publishTT('${cls}')">${ic('reports',16)} ${d.status==='Published'?'Republish':'Publish'}</button></div></div>
+  ${canWrite()?`<button class="btn primary" onclick="publishTT('${cls}')">${ic('reports',16)} ${d.status==='Published'?'Republish':'Publish'}</button>`:''}</div></div>
   <div class="grid cols-4" style="margin-bottom:16px">
     ${kpi('tt','#17A24A','Status',d.status,{dir:'flat',v:d.status==='Published'?'live to parents':'not yet visible',note:''})}
     ${kpi('staff','#2563EB','Teachers scheduled',String(ttTeachers().length),null,"setSubTab('tt-v','teacher')",tab==='teacher')}
@@ -29,7 +29,7 @@ M.timetable=()=>{const days=['Mon','Tue','Wed','Thu','Fri'];const cls=state.ttCl
   ${tab==='teacher'?ttTeacherView():tab==='room'?ttRoomView():tab==='conflicts'?ttConflictView():ttClassGrid(cls,days)}`};
 
 function ttClassGrid(cls,days){const d=ttData(cls);
- return `<div class="card pad"><div class="flex ac jb" style="margin-bottom:4px;flex-wrap:wrap;gap:8px"><h3 style="font-size:15px">${cls} · weekly grid</h3><span class="badge ${d.status==='Published'?'b-green':'b-amber'}"><span class="bd"></span>${d.status}</span></div><div class="muted" style="font-size:11.5px;margin-bottom:10px">Live · ${ttNow().label} highlighted as today · ${canWrite()?'click a period to edit · drag one period onto another to swap - conflicts re-check instantly.':'view only - editing requires Teacher or Admin access.'}</div>
+ return `<div class="card pad"><div class="flex ac jb" style="margin-bottom:4px;flex-wrap:wrap;gap:8px"><h3 style="font-size:15px">${cls} · weekly grid</h3><span class="badge ${d.status==='Published'?'b-green':'b-amber'}"><span class="bd"></span>${d.status}</span></div><div class="muted" style="font-size:11.5px;margin-bottom:10px"><span>Live</span> · <span>${ttNow().label}</span> <span>highlighted as today</span> · ${canWrite()?'<span>click a period to edit</span> · <span>drag one period onto another to swap - conflicts re-check instantly.</span>':'<span>view only - editing requires Teacher or Admin access.</span>'}</div>
  <div style="overflow-x:auto"><div class="tt">
   <div class="h"></div>${days.map((x,i)=>`<div class="h" style="${i===ttNow().di?'color:var(--brand-deep);text-decoration:underline':''}">${x}${i===ttNow().di?' · today':''}</div>`).join('')}
   ${d.rows.map((row,ri)=>`<div class="tm">${row[0]}</div>${row[1].map((cell,di)=>{
@@ -47,13 +47,13 @@ function ttPeriodDetail(cls,ri,di){const d=ttData(cls);const days=['Mon','Tue','
  const[s,t,room]=cell.split('|');const isSub=/\(sub\)/.test(t);
  return detailDrawer({title:s,sub:cls+' · '+days[di]+' '+time,color:'#2563EB',badge:ic('tt',18),
    stats:[['Teacher',t.replace(' (sub)',''),isSub?'amber':'blue'],['Room',room,'green'],['Day',days[di],'gray'],['Time',time,'gray']],
-   sections:[{h:'Details',rows:[['Subject',s],['Teacher',t],['Room',room],['Linked lesson plan','Unit '+((ri+di)%6+1)+' · see Curriculum'],['Timetable status',d.status]]}],
-   footer:[['Assign substitute','assignSub(\''+cls+'\','+ri+','+di+')'],['Edit period','ttEditForm(\''+cls+'\','+ri+','+di+')',true]]})}
+   sections:[{h:'Details',rows:[['Subject',s],['Teacher',t],['Room',room],['Curriculum reference','No lesson plan linked'],['Timetable status',d.status]]}],
+   footer:[...(canWrite()?[['Assign substitute','assignSub(\''+cls+'\','+ri+','+di+')'],['Edit period','ttEditForm(\''+cls+'\','+ri+','+di+')',true]]:[])]})}
 
 function ttEditForm(cls,ri,di){if(!guardWrite('Editing the timetable'))return;state._tt={cls,ri,di};const d=ttData(cls);const cell=d.rows[ri][1][di];const[s,t,room]=(cell==='FREE'?'||':cell).split('|');
- formDrawer('Edit period',cls+' · '+d.rows[ri][0],[
-  {label:'Subject',key:'subj',opts:Object.keys(SUBJCOLOR).filter(k=>!/ $/.test(k)),val:s},
-  {label:'Teacher',key:'teacher',opts:Object.values(SUBJTEACH).filter((v,i,a)=>a.indexOf(v)===i),val:(t||'').replace(' (sub)','')},
+ studentFormDrawer('Edit period',cls+' · '+d.rows[ri][0],[
+  {label:'Subject',key:'subj',val:s,req:true},
+  {label:'Teacher',key:'teacher',val:(t||'').replace(' (sub)',''),req:true},
   {label:'Room',key:'room',val:room||'',ph:'e.g. Rm 204 / Lab 1',half:true},
   {label:'Or mark as',key:'clear',opts:['— keep scheduled —','Free period'],half:true},
   {note:'Saving re-runs conflict checks. A teacher or room double-booked in the same period across classes is flagged in the Conflicts tab, and publishing is blocked until resolved.'}
@@ -89,10 +89,10 @@ window.ttDrop=function(e,cls,ri,di){e.preventDefault();if(!canWrite())return;let
  const tmp=a.rows[r1][1][c1];a.rows[r1][1][c1]=a.rows[ri][1][di];a.rows[ri][1][di]=tmp;
  a.status='Draft';logAudit('Swapped periods (drag) · '+cls+' '+a.rows[r1][0]+' ↔ '+a.rows[ri][0],'Timetable');render();
  const conf=ttConflicts().filter(c=>c.a===cls||c.b===cls);toast(conf.length?('Periods swapped · '+conf.length+' conflict'+(conf.length>1?'s':'')+' flagged'):'Periods swapped · no conflicts')};
-function ttNow(){const d=new Date();const day=d.getDay();const di=day>=1&&day<=5?day-1:0;const hr=d.getHours();return{di,hr,label:['Mon','Tue','Wed','Thu','Fri'][di]}}
+function ttNow(){const zone=window.SCHOOLOS_ADAPTER?.settings?.timezone||'Asia/Dubai';const parts=new Intl.DateTimeFormat('en-US',{timeZone:zone,weekday:'short',hour:'numeric',hourCycle:'h23'}).formatToParts(new Date());const get=k=>parts.find(p=>p.type===k)?.value;const di=['Mon','Tue','Wed','Thu','Fri'].indexOf(get('weekday'));return{di,hr:Number(get('hour')),label:get('weekday')}}
 window.publishTT=function(cls){if(!guardWrite('Publishing the timetable'))return;const d=ttData(cls);const conf=ttConflicts().filter(c=>c.a===cls||c.b===cls);
  if(conf.length){toast('Cannot publish — '+conf.length+' conflict'+(conf.length>1?'s':'')+' involve '+cls+'. Open the Conflicts tab.');setSubTab('tt-v','conflicts');return}
- d.status='Published';logAudit('Published timetable · '+cls,'Timetable');render();toast('Timetable published · '+cls+' — parents & teachers notified')};
+ d.status='Published';logAudit('Published timetable · '+cls,'Timetable');render();toast('Timetable published · '+cls+' — saved on the server')};
 
 function ttTeachers(){ttAllData();const set=new Set();Object.values(TTDATA).forEach(d=>d.rows.forEach(r=>r[1].forEach(c=>{if(c!=='BREAK'&&c!=='FREE')set.add(String(c).split('|')[1].replace(' (sub)',''))})));return[...set].sort()}
 function ttRooms(){ttAllData();const set=new Set();Object.values(TTDATA).forEach(d=>d.rows.forEach(r=>r[1].forEach(c=>{if(c!=='BREAK'&&c!=='FREE')set.add(String(c).split('|')[2])})));return[...set].sort()}

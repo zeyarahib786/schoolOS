@@ -10,6 +10,7 @@ export interface IExam extends Document {
   maxMarks: number;
   passMark: number;
   locked: boolean;
+  schedule: Array<{ subject: string; date: string; startTime: string; durationMinutes: number; venue: string }>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -25,6 +26,10 @@ const examSchema = new Schema<IExam>(
     },
     maxMarks: { type: Number, required: true, min: 1, default: 100 },
     passMark: { type: Number, required: true, min: 0, default: 50 },
+    schedule: {
+      type: [{ subject: String, date: String, startTime: String, durationMinutes: Number, venue: String }],
+      default: [],
+    },
     locked: { type: Boolean, default: false },
   },
   { timestamps: true },

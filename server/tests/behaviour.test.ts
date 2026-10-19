@@ -21,6 +21,7 @@ async function createStudent(token: string, refId: string, guardianUserId?: stri
     guardianUserId,
     phone: '+971501234567',
   });
+  expect(res.status).toBe(201);
   return res.body.data._id as string;
 }
 
@@ -55,7 +56,8 @@ describe('Behaviour API', () => {
   it('a Parent sees only incidents for their linked child', async () => {
     const teacher = await registerAndLogin('Teacher', 'teacher2@alnoor.ae');
     const parent = await registerAndLogin('Parent', 'parent2@alnoor.ae');
-    const myChildId = await createStudent(teacher.token, 'ANS-2003', parent.userId);
+    const office = await registerAndLogin('Administrator', 'behaviour-family-link-office@example.invalid');
+    const myChildId = await createStudent(office.token, 'ANS-2003', parent.userId);
     const otherChildId = await createStudent(teacher.token, 'ANS-2004');
     await request(app)
       .post('/api/v1/behaviour')
@@ -90,18 +92,36 @@ describe('Behaviour API', () => {
     const teacher = await registerAndLogin('Teacher', 'teacher-behaviour-workflow@alnoor.ae');
     const studentId = await createStudent(teacher.token, 'ANS-2010');
     const created = await request(app).post('/api/v1/behaviour').set('Authorization', `Bearer ${teacher.token}`).send({
-      studentId, category: 'Incident', description: 'Repeated disruption', severity: 'Serious',
-      type: 'Incident', points: -5, location: 'Room 4B', witness: 'Class teacher',
+      studentId,
+      category: 'Incident',
+      description: 'Repeated disruption',
+      severity: 'Serious',
+      type: 'Incident',
+      points: -5,
+      location: 'Room 4B',
+      witness: 'Class teacher',
     });
     expect(created.status).toBe(201);
     expect(created.body.data).toMatchObject({ type: 'Incident', points: -5, location: 'Room 4B', status: 'Logged' });
     const id = created.body.data._id as string;
 
-    const escalated = await request(app).patch(`/api/v1/behaviour/${id}/status`).set('Authorization', `Bearer ${teacher.token}`).send({ status: 'Escalated' });
+    const escalated = await request(app)
+      .patch(`/api/v1/behaviour/${id}/status`)
+      .set('Authorization', `Bearer ${teacher.token}`)
+      .send({ status: 'Escalated', expectedUpdatedAt: created.body.data.updatedAt, reason: 'Office review requested' });
     expect(escalated.status).toBe(200);
     expect(escalated.body.data.status).toBe('Escalated');
 
-    const closed = await request(app).patch(`/api/v1/behaviour/${id}/status`).set('Authorization', `Bearer ${teacher.token}`).send({ status: 'Closed' });
+    const office = await registerAndLogin('Administrator', 'behaviour-review-office@example.invalid');
+    const closed = await request(app)
+      .patch(`/api/v1/behaviour/${id}/status`)
+      .set('Authorization', `Bearer ${office.token}`)
+      .send({
+        status: 'Closed',
+        expectedUpdatedAt: escalated.body.data.updatedAt,
+        reason: 'Reviewed with family',
+        actionTaken: 'Recorded school office resolution',
+      });
     expect(closed.status).toBe(200);
     expect(closed.body.data.status).toBe('Closed');
   });

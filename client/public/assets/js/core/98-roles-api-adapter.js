@@ -6,7 +6,8 @@
   var MODULE_IDS = {
     Students: 'students', Admissions: 'admissions', Attendance: 'attendance', 'Exams & Gradebook': 'exams',
     'Fees & Finance': 'fees', Payroll: 'payroll', Communication: 'comm', 'AI Insights': 'aiinsights',
-    Reports: 'reports', 'Audit Log': 'audit', Settings: 'settings'
+    Reports: 'reports', 'Audit Log': 'audit', Settings: 'settings',
+    'Enrolment CRM':'crm', 'Staff & HR':'staff', Parents:'parents', 'Classes & Sections':'classes', Timetable:'timetable', Curriculum:'curriculum', 'Learning (LMS)':'lms', Behaviour:'behaviour', 'Health & Clinic':'health', Cafeteria:'cafeteria', Expenses:'expenses', Library:'library', Transport:'transport', Hostel:'hostel', Inventory:'inventory', 'Biometric Registry':'biometric', 'Visitor Management':'visitors', 'Facilities & Bookings':'facilities', 'Events Calendar':'calendar', 'Surveys & Feedback':'surveys', Certificates:'certificates', Documents:'documents', 'ID Cards':'idcards', Alumni:'alumni', Helpdesk:'helpdesk', 'Roles & Access':'roles'
   };
   function adapter() { return window.SCHOOLOS_ADAPTER; }
   function fail(error) { console.warn('[SchoolOS] Roles write failed:', error); if (typeof toast === 'function') toast('Not saved — ' + error.message); }
@@ -15,7 +16,7 @@
     Object.keys(MODULE_IDS).forEach(function (moduleName) {
       var id = MODULE_IDS[moduleName];
       NAV.forEach(function (group) { group.items.forEach(function (item) {
-        if (item.id === id) item.roles = roles.filter(function (role) { return role.permissions && role.permissions[moduleName]; }).map(function (role) { return role.name; });
+        if (item.id === id) item.roles = roles.filter(function (role) { return role.isSystem && role.permissions && role.permissions[moduleName]; }).map(function (role) { return role.name; });
       }); });
     });
   }
@@ -56,7 +57,7 @@
       var writeKey = roleName + '|' + row[0]; api.roleWrites = api.roleWrites || {};
       if (api.roleWrites[writeKey]) { toast('Saving permission change…'); return api.roleWrites[writeKey]; }
       var enabled = !Boolean(row[1][roleIndex]);
-      api.roleWrites[writeKey] = api.api('/roles/' + id + '/permissions/' + encodeURIComponent(row[0]), { method: 'PATCH', body: JSON.stringify({ enabled: enabled }) })
+      api.roleWrites[writeKey] = api.api('/roles/' + id + '/permissions/' + encodeURIComponent(row[0]), { method: 'PATCH', body: JSON.stringify({ enabled: enabled, expectedUpdatedAt: api.accessRoles.find(function(r){return r._id===id;}).updatedAt, reason: 'Reviewed '+row[0]+' module visibility' }) })
         .then(hydrateRoles).then(function () { toast(row[0] + ' · ' + roleName + (enabled ? ' granted' : ' revoked')); })
         .catch(fail).finally(function () { delete api.roleWrites[writeKey]; });
       return api.roleWrites[writeKey];

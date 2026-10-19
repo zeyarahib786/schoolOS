@@ -34,10 +34,17 @@ const COMPLIANCE={
   'Egypt':{privacy:'PDPL (Law 151 of 2020)',authority:'Data Protection Center',tax:'VAT 14% · education exempt',residency:'Egypt residency supported',grading:['MOE (Egypt)','British','American','IB']},
   'Australia':{privacy:'Privacy Act 1988 (APPs)',authority:'OAIC',tax:'GST · education GST-free',residency:'Australia residency supported',grading:['ATAR','IB','Cambridge']}};
 CFG.gradingSystem=(COMPLIANCE[CFG.country]||{}).grading?COMPLIANCE[CFG.country].grading[0]:'MOE (UAE)';
-function money(n){const c=CURRENCIES[CFG.currency]||{sym:String(CFG.currency||'AED'),loc:'en-US'};const num=Number(n||0).toLocaleString(c.loc);return /^[A-Za-z]/.test(c.sym)?c.sym+' '+num:c.sym+num}
-function previewMoney(n){const c=CURRENCIES[CFG.previewCurrency]||CURRENCIES.AED;const num=Number(n||0).toLocaleString(c.loc);return /^[A-Za-z]/.test(c.sym)?c.sym+' '+num:c.sym+num}
+function schoolArabicDigits(s){
+  if(typeof LANG==='undefined'||LANG==='en'||!s) return String(s);
+  if(LANG==='ar') return String(s).replace(/\d/g,n=>'٠١٢٣٤٥٦٧٨٩'[Number(n)]);
+  if(LANG==='ur') return String(s).replace(/\d/g,n=>'۰۱۲۳۴۵۶۷۸۹'[Number(n)]);
+  if(LANG==='hi') return String(s).replace(/\d/g,n=>'०१२३४५६७८९'[Number(n)]);
+  return String(s);
+}
+function money(n){const c=CURRENCIES[CFG.currency]||{sym:String(CFG.currency||'AED'),loc:'en-US'};let num=Number(n||0).toLocaleString(c.loc);if(LANG==='ar'||LANG==='ur'||LANG==='hi')num=schoolArabicDigits(num);return /^[A-Za-z]/.test(c.sym)?c.sym+' '+num:c.sym+num}
+function previewMoney(n){const c=CURRENCIES[CFG.previewCurrency]||CURRENCIES.AED;let num=Number(n||0).toLocaleString(c.loc);if(LANG==='ar'||LANG==='ur'||LANG==='hi')num=schoolArabicDigits(num);return /^[A-Za-z]/.test(c.sym)?c.sym+' '+num:c.sym+num}
 function aed(n){return money(n)}
-function aedC(n){const c=CURRENCIES[CFG.currency]||{sym:String(CFG.currency||'AED')};const pre=/^[A-Za-z]/.test(c.sym)?c.sym+' ':c.sym;n=Number(n||0);if(n>=1e6)return pre+(n/1e6).toFixed(n%1e6?2:0).replace(/\.?0+$/,'')+'M';if(n>=1e3)return pre+Math.round(n/1e3)+'K';return pre+n}
+function aedC(n){const c=CURRENCIES[CFG.currency]||{sym:String(CFG.currency||'AED')};const pre=/^[A-Za-z]/.test(c.sym)?c.sym+' ':c.sym;n=Number(n||0);let res;if(n>=1e6)res=pre+(n/1e6).toFixed(n%1e6?2:0).replace(/\.?0+$/,'')+'M';else if(n>=1e3)res=pre+Math.round(n/1e3)+'K';else res=pre+n;if(LANG==='ar'||LANG==='ur'||LANG==='hi')res=schoolArabicDigits(res);return res}
 function applyRegion(country){const r=REGIONS[country];if(!r)return;CFG.country=country;CFG.previewCurrency=r.cur;CFG.language=r.lang;CFG.dir=r.dir;CFG.tz=r.tz;const c=COMPLIANCE[country];if(c&&c.grading)CFG.gradingSystem=c.grading[0];document.documentElement.setAttribute('dir',r.dir);document.documentElement.lang=(r.lang==='العربية')?'ar':'en';render();toast('Region preview · '+country+' · '+r.cur)}
 function setCurrency(code){if(!CURRENCIES[code])return;CFG.previewCurrency=code;render();toast('Currency preview · '+code)}
 /* ================= INTERNATIONALIZATION (EN / AR / UR / HI) ================= */
@@ -46,8 +53,8 @@ const LANGS={
   ar:{name:'Arabic',native:'العربية',dir:'rtl'},
   ur:{name:'Urdu',native:'اردو',dir:'rtl'},
   hi:{name:'Hindi',native:'हिन्दी',dir:'ltr'}};
-let LANG='en';
-let LANG_ENABLED=['en','ar','ur','hi'];
+var LANG='en';
+var LANG_ENABLED=['en','ar','ur','hi'];
 function langEnabled(){return LANG_ENABLED.filter(c=>LANGS[c])}
 const I18N={
  'Overview':{ar:'نظرة عامة',ur:'جائزہ',hi:'अवलोकन'},
@@ -130,26 +137,73 @@ function t(s){if(LANG==='en'||!s)return s;const e=I18N[s];return (e&&e[LANG])||s
    Also translates a text node whose content is "<key> · <rest>" or "<key>: <rest>" by
    localizing the leading segment, so compound labels with dynamic tails still translate.
    Safe: proper nouns / data that aren't in the dictionary are left untouched. */
+const schoolLocalizationOriginals=new WeakMap();
 function localizeView(root){
-  if(LANG==='en'||!root)return;
-  const tr=k=>{const e=I18N[k];return e&&e[LANG]?e[LANG]:null;};
-  try{
-    const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode(n){const p=n.parentNode;if(!p)return NodeFilter.FILTER_REJECT;const tag=p.nodeName;if(tag==='SCRIPT'||tag==='STYLE'||tag==='TEXTAREA'||tag==='OPTION')return NodeFilter.FILTER_REJECT;return NodeFilter.FILTER_ACCEPT;}});
-    const nodes=[];let nd;while(nd=walker.nextNode())nodes.push(nd);
-    nodes.forEach(n=>{
-      const raw=n.nodeValue;const key=raw.trim();if(!key||key.length>90)return;
-      let hit=tr(key);
-      if(!hit){ // compound: "<key> · tail" / "<key> — tail" / "<key>: tail"
-        const m=key.match(/^(.+?)\s*([·—:\/])\s*(.+)$/);
-        if(m){const lead=tr(m[1].trim());if(lead)hit=lead+' '+m[2]+' '+m[3];}
+  if(!root)return;
+  if(typeof STUDENTS!=='undefined')STUDENTS.forEach(person=>{schoolRegisterPerson(person);if(person.guardian)schoolRegisterPerson({name:person.guardian,translations:Object.fromEntries(['ar','ur','hi'].map(lang=>[lang,{name:person.translations?.[lang]?.guardianName}]))});});
+  if(typeof GUARDIANS!=='undefined'&&GUARDIANS)GUARDIANS.forEach(schoolRegisterPerson);
+  if(typeof SCHOOLOS_ADAPTER!=='undefined'&&SCHOOLOS_ADAPTER.user)schoolRegisterPerson(SCHOOLOS_ADAPTER.user);
+  const slots=selector=>[...(root.matches?.(selector)?[root]:[]),...root.querySelectorAll(selector)];
+  const personHeaders=['Name','Student','Teacher','Guardian','Parent','Employee','Assigned staff','Actor','Holder'];
+  slots('td').forEach(cell=>{
+    if(cell.children.length||!schoolPersonNames.has(cell.textContent.trim()))return;
+    const header=cell.closest('table')?.querySelectorAll('thead th')[cell.cellIndex]?.textContent.trim();
+    if(personHeaders.some(label=>header===label||header===t(label)))cell.setAttribute('data-school-person-display','');
+  });
+  slots('[data-school-person-display]').forEach(el=>{if(!el.hasAttribute('data-school-name'))el.setAttribute('data-school-name',el.textContent);el.setAttribute('data-i18n-skip','true');});
+  slots('[data-school-name]').forEach(el=>{
+    let translations={};try{translations=JSON.parse(el.getAttribute('data-school-name-translations')||'{}')}catch{}
+    const target=el.hasAttribute('data-school-name-container')?el.querySelector('.nm'):el;
+    if(target){target.setAttribute('data-i18n-skip','true');const prefix=el.getAttribute('data-school-name-prefix');const value=(prefix?prefix+' · ':'')+schoolNameForLocale(el.getAttribute('data-school-name'),translations);if(target.textContent!==value)target.textContent=value;}
+  });
+  slots('[data-school-default-value]').forEach(el=>{const raw=el.getAttribute('data-school-default-value'),last=el.getAttribute('data-school-default-last');if(el.value===raw||el.value===last){const value=typeof schoolTranslateText==='function'?schoolTranslateText(raw):t(raw);el.value=value;el.setAttribute('data-school-default-last',value);}});
+  slots('[data-school-phone]').forEach(el=>{const raw=el.getAttribute('data-school-phone');const value=typeof schoolArabicDigits==='function'?schoolArabicDigits(raw):raw;if(el.textContent!==value)el.textContent=value;});
+  const translate=s=>typeof schoolTranslateText==='function'?schoolTranslateText(s):t(s);
+  const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode(n){const p=n.parentElement;if(!p||p.closest('[data-i18n-skip]')||['SCRIPT','STYLE','TEXTAREA','CODE','PRE'].includes(p.tagName))return NodeFilter.FILTER_REJECT;return NodeFilter.FILTER_ACCEPT;}});
+  const nodes=[];let n;while(n=walker.nextNode())nodes.push(n);
+  nodes.forEach(n=>{
+    const p=n.parentElement;
+    if(p.tagName==='OPTION'&&!p.hasAttribute('value'))p.setAttribute('value',p.value);
+    let saved=schoolLocalizationOriginals.get(n);
+    if(!saved||n.nodeValue!==saved.lastApplied){
+      saved={original:n.nodeValue,lastApplied:n.nodeValue};
+      schoolLocalizationOriginals.set(n,saved);
+    }
+    const original=saved.original,key=original.trim();
+    if(key){
+      const label=p.getAttribute('aria-label')||'';
+      const attButtons={ar:{P:'ح',L:'ت',A:'غ',E:'ع'},ur:{P:'ح',L:'ت',A:'غ',E:'ر'},hi:{P:'उ',L:'दे',A:'अ',E:'छू'}};
+      let translated;
+      if(attButtons[LANG]&&p.tagName==='BUTTON'&&['P','L','A','E'].includes(key)&&/^(Present|Late|Absent|Excused) for /.test(label)){
+        translated=attButtons[LANG][key];
+      }else{
+        const named=schoolTranslateKnownNames(key);
+        translated=named!==key?named:translate(key);
       }
-      if(hit&&hit!==key)n.nodeValue=raw.replace(key,hit);
+      if(typeof schoolArabicDigits==='function'&&(LANG==='ar'||LANG==='ur'||LANG==='hi')){
+        translated=schoolArabicDigits(translated);
+      }
+      n.nodeValue=original.replace(key,translated);
+      saved.lastApplied=n.nodeValue;
+    }
+  });
+  const attrEls=root.querySelectorAll?((root.matches&&root.matches('[placeholder],[title],[aria-label]'))?[root,...root.querySelectorAll('[placeholder],[title],[aria-label]')]:root.querySelectorAll('[placeholder],[title],[aria-label]')):[];
+  attrEls.forEach(el=>{
+    if(el.closest&&el.closest('[data-i18n-skip]'))return;
+    let originals=schoolLocalizationOriginals.get(el);
+    if(!originals){originals={};schoolLocalizationOriginals.set(el,originals)}
+    ['placeholder','title','aria-label'].forEach(a=>{
+      if(!el.hasAttribute(a))return;
+      if(!(a in originals))originals[a]=el.getAttribute(a);
+      let translated=translate(originals[a]);
+      if(typeof schoolArabicDigits==='function'&&(LANG==='ar'||LANG==='ur'||LANG==='hi')){
+        translated=schoolArabicDigits(translated);
+      }
+      el.setAttribute(a,translated);
     });
-    root.querySelectorAll('[placeholder],[title],[aria-label]').forEach(el=>{
-      ['placeholder','title','aria-label'].forEach(a=>{if(!el.hasAttribute(a))return;const v=(el.getAttribute(a)||'').trim();const h=tr(v);if(h)el.setAttribute(a,h);});
-    });
-  }catch(e){}
+  });
 }
+
 Object.assign(I18N,{
  'Student':{ar:'الطالب',ur:'طالب علم',hi:'छात्र'},
  'Students':{ar:'الطلاب',ur:'طلبہ',hi:'छात्र'},
@@ -776,7 +830,7 @@ function setLanguage(code){
   LANG=code;const L=LANGS[code];CFG.language=L.native;CFG.dir=L.dir;
   document.documentElement.setAttribute('dir',L.dir);
   document.documentElement.lang=code;
-  saveTheme();renderNav();render();
+  saveTheme();renderNav();render();if(typeof botRender==='function')botRender();if(typeof schoolLocalizeShell==='function')schoolLocalizeShell();localizeView(document.getElementById('drawer'));localizeView(document.getElementById('toasts'));
   const it=(typeof flatItems==='function'?flatItems():[]).find(x=>x.id===state.module)||{label:'Dashboard',group:'Overview'};
   const cr=document.getElementById('crumb'),tb=document.getElementById('tbTitle');
   if(cr)cr.textContent=t(it.group);if(tb)tb.textContent=t(it.label);
@@ -792,3 +846,254 @@ function toggleLangEnabled(code){if(!LANGS[code])return;const i=LANG_ENABLED.ind
   setLanguage(LANG);}
 function setDefaultLang(code){if(!LANGS[code])return;if(LANG_ENABLED.indexOf(code)<0)LANG_ENABLED.push(code);setLanguage(code);}
 function toggleDir(){CFG.dir=CFG.dir==='rtl'?'ltr':'rtl';document.documentElement.setAttribute('dir',CFG.dir);render();toast('Layout · '+(CFG.dir==='rtl'?'Right-to-left':'Left-to-right'))}
+
+const STUDENT_NAME_DICTIONARY = {
+  adam: { ar: 'آدم', ur: 'آدم', hi: 'आदम' },
+  farouk: { ar: 'فاروق', ur: 'فاروق', hi: 'फारूक' },
+  farooq: { ar: 'فاروق', ur: 'فاروق', hi: 'फारूक' },
+  nabil: { ar: 'نبيل', ur: 'نبیل', hi: 'नबील' },
+  mensah: { ar: 'منساه', ur: 'منسا', hi: 'मेंसा' },
+  aisha: { ar: 'عائشة', ur: 'عائشہ', hi: 'आयशा' },
+  noor: { ar: 'نور', ur: 'نور', hi: 'नूर' },
+  salim: { ar: 'سالم', ur: 'سالم', hi: 'सलीम' },
+  saeed: { ar: 'سعيد', ur: 'سعید', hi: 'सईद' },
+  amara: { ar: 'عمارة', ur: 'عمارہ', hi: 'अमारा' },
+  rahman: { ar: 'رحمن', ur: 'رحمٰن', hi: 'रहमान' },
+  anaya: { ar: 'عناية', ur: 'عنایہ', hi: 'अनाया' },
+  chen: { ar: 'تشن', ur: 'چن', hi: 'चेन' },
+  aryan: { ar: 'آريان', ur: 'آریان', hi: 'आर्यन' },
+  khan: { ar: 'خان', ur: 'خان', hi: 'खान' },
+  bilal: { ar: 'بلال', ur: 'بلال', hi: 'बिलाल' },
+  daniel: { ar: 'دانيال', ur: 'ڈینیل', hi: 'डैनियल' },
+  george: { ar: 'جورج', ur: 'جارج', hi: 'जॉर्ज' },
+  diego: { ar: 'دييغو', ur: 'ڈیاگو', hi: 'डिएगो' },
+  reyes: { ar: 'رييس', ur: 'ریز', hi: 'रेयेस' },
+  dina: { ar: 'دينا', ur: 'دینا', hi: 'दीना' },
+  costa: { ar: 'كوستا', ur: 'کوسٹا', hi: 'कोस्टा' },
+  elena: { ar: 'إيلينا', ur: 'ایلینا', hi: 'ऐलेना' },
+  ethan: { ar: 'إيثان', ur: 'ایتھن', hi: 'एथन' },
+  pereira: { ar: 'بيريرا', ur: 'پریرا', hi: 'परेरा' },
+  petrov: { ar: 'بيتروف', ur: 'پیٹروو', hi: 'पेट्रोव' },
+  faisal: { ar: 'فيصل', ur: 'فیصل', hi: 'फ़ैसल' },
+  novak: { ar: 'نوفاك', ur: 'نوواک', hi: 'नोवाक' },
+  fatima: { ar: 'فاطمة', ur: 'فاطمہ', hi: 'फातिमा' },
+  ahmed: { ar: 'أحمد', ur: 'احمد', hi: 'अहमद' },
+  al: { ar: 'ال', ur: 'ال', hi: 'अल' },
+  hashimi: { ar: 'الهاشمي', ur: 'الہاشمی', hi: 'हाशमी' },
+  grace: { ar: 'غريس', ur: 'گریس', hi: 'ग्रेस' },
+  haddad: { ar: 'حداد', ur: 'حداد', hi: 'हद्दाद' },
+  hamza: { ar: 'حمزة', ur: 'حمزہ', hi: 'हमज़ा' },
+  ali: { ar: 'علي', ur: 'علی', hi: 'अली' },
+  hana: { ar: 'هناء', ur: 'ہنا', hi: 'हाना' },
+  yousef: { ar: 'يوسف', ur: 'یوسف', hi: 'यूसुफ़' },
+  yusuf: { ar: 'يوسف', ur: 'یوسف', hi: 'यूसुफ़' },
+  hassan: { ar: 'حسن', ur: 'حسن', hi: 'हसन' },
+  hind: { ar: 'هند', ur: 'ہند', hi: 'हिंद' },
+  osei: { ar: 'أوسي', ur: 'اوسی', hi: 'ओसेई' },
+  ibrahim: { ar: 'إبراهيم', ur: 'ابراہیم', hi: 'इब्राहिम' },
+  idris: { ar: 'إدريس', ur: 'ادریس', hi: 'इदरीस' },
+  ivan: { ar: 'إيفان', ur: 'ایوان', hi: 'इवान' },
+  patel: { ar: 'باتيل', ur: 'پٹیل', hi: 'पटेल' },
+  kabir: { ar: 'كبير', ur: 'کبیر', hi: 'कबीर' },
+  nair: { ar: 'ناير', ur: 'نائر', hi: 'नायर' },
+  khalid: { ar: 'خالد', ur: 'خالد', hi: 'खालिद' },
+  layla: { ar: 'ليلى', ur: 'لیلیٰ', hi: 'लैला' },
+  mansour: { ar: 'منصور', ur: 'منصور', hi: 'मंसूर' },
+  leon: { ar: 'ليون', ur: 'لیون', hi: 'लियोन' },
+  fernandes: { ar: 'فرنانديز', ur: 'فرنینڈس', hi: 'फर्नांडीस' },
+  lina: { ar: 'لينا', ur: 'لینا', hi: 'लीना' },
+  linda: { ar: 'ليندا', ur: 'لنڈا', hi: 'लिंडा' },
+  mariam: { ar: 'مريم', ur: 'مریم', hi: 'मरियम' },
+  mary: { ar: 'ماري', ur: 'میری', hi: 'मैरी' },
+  nadia: { ar: 'نادية', ur: 'نادیہ', hi: 'नादिया' },
+  roy: { ar: 'روي', ur: 'رائے', hi: 'रॉय' },
+  noah: { ar: 'نوح', ur: 'نوح', hi: 'नोआ' },
+  omar: { ar: 'عمر', ur: 'عمر', hi: 'उमर' },
+  siddiqui: { ar: 'صديقي', ur: 'صدیقی', hi: 'सिद्दीकी' },
+  priya: { ar: 'بريا', ur: 'پریا', hi: 'प्रिया' },
+  reema: { ar: 'ريما', ur: 'ریما', hi: 'रीमा' },
+  rohan: { ar: 'روهان', ur: 'روہن', hi: 'रोहन' },
+  mehta: { ar: 'مهتا', ur: 'مہتا', hi: 'मेहता' },
+  sami: { ar: 'سامي', ur: 'سامی', hi: 'सामी' },
+  sara: { ar: 'سارة', ur: 'سارہ', hi: 'सारा' },
+  tarek: { ar: 'طارق', ur: 'طارق', hi: 'तारिक' },
+  zara: { ar: 'زارا', ur: 'زارا', hi: 'ज़ारा' },
+  sheikh: { ar: 'الشيخ', ur: 'شیخ', hi: 'शेख' },
+  zaid: { ar: 'زيد', ur: 'زید', hi: 'ज़ैद' },
+  zayd: { ar: 'زيد', ur: 'زید', hi: 'ज़ैद' },
+  saleh: { ar: 'صالح', ur: 'صالح', hi: 'सालेह' },
+  fahad: { ar: 'فهد', ur: 'فہد', hi: 'फ़हद' },
+  nasser: { ar: 'ناصر', ur: 'ناصر', hi: 'नासर' },
+  qureshi: { ar: 'قريشي', ur: 'قریشی', hi: 'कुरैशी' },
+  karim: { ar: 'كريم', ur: 'کریم', hi: 'करीम' },
+  huda: { ar: 'هدى', ur: 'ہدیٰ', hi: 'हुदा' },
+  hanan: { ar: 'حنان', ur: 'حنان', hi: 'हनान' },
+  tariq: { ar: 'طارق', ur: 'طارق', hi: 'तारिक' },
+  wei: { ar: 'وي', ur: 'وی', hi: 'वेई' },
+  basheer: { ar: 'بشير', ur: 'بشیر', hi: 'बशीर' },
+  abdullah: { ar: 'عبد الله', ur: 'عبد اللہ', hi: 'अब्दुल्ला' },
+  adeel: { ar: 'عديل', ur: 'عدیل', hi: 'अदील' },
+  bakr: { ar: 'بكر', ur: 'بکر', hi: 'बक्र' },
+  haider: { ar: 'حيدر', ur: 'حیدر', hi: 'हैदर' },
+  anil: { ar: 'أنيل', ur: 'انیل', hi: 'अनिल' },
+  anna: { ar: 'آنا', ur: 'آنا', hi: 'अन्ना' },
+  petrova: { ar: 'بيتروفا', ur: 'پیٹرووا', hi: 'पेट्रोवा' },
+  suhail: { ar: 'سهيل', ur: 'سہیل', hi: 'सुहेल' },
+  rana: { ar: 'رانا', ur: 'رانا', hi: 'राणा' },
+  hala: { ar: 'هالة', ur: 'ہالہ', hi: 'हाला' },
+  aziz: { ar: 'عزيز', ur: 'عزیز', hi: 'अज़ीज़' },
+  joan: { ar: 'جوان', ur: 'جوآن', hi: 'जोन' },
+  mathew: { ar: 'ماثيو', ur: 'میتھیو', hi: 'मैथ्यू' },
+  reem: { ar: 'ريم', ur: 'ریم', hi: 'रीम' },
+  adel: { ar: 'عادل', ur: 'عادل', hi: 'आदिल' },
+  noura: { ar: 'نورة', ur: 'نورہ', hi: 'नूरा' },
+  saif: { ar: 'سيف', ur: 'سیف', hi: 'सैफ़' },
+  khalil: { ar: 'خليل', ur: 'خلیل', hi: 'खलील' },
+  sharif: { ar: 'شريف', ur: 'شریف', hi: 'शरीफ' },
+  rania: { ar: 'رانيا', ur: 'رانیا', hi: 'रानिया' },
+  rami: { ar: 'رامي', ur: 'رامی', hi: 'रामी' },
+  marri: { ar: 'المري', ur: 'المری', hi: 'अल मर्री' },
+  suwaidi: { ar: 'السويدي', ur: 'السویدی', hi: 'अल सुवैदी' },
+  rakesh: { ar: 'راكيش', ur: 'راکیش', hi: 'राकेश' },
+  sunil: { ar: 'سونيل', ur: 'سنیل', hi: 'सुनील' },
+  sana: { ar: 'سناء', ur: 'ثناء', hi: 'सना' },
+  iqbal: { ar: 'إقبال', ur: 'اقبال', hi: 'इकबाल' },
+  noori: { ar: 'نوري', ur: 'نوری', hi: 'नूरी' },
+  kwame: { ar: 'كوامي', ur: 'کوامے', hi: 'क्वामे' },
+  marcus: { ar: 'ماركوس', ur: 'مارکوس', hi: 'मार्कस' },
+  reed: { ar: 'ريد', ur: 'ریڈ', hi: 'रीड' },
+  emily: { ar: 'إيميلي', ur: 'ایملی', hi: 'एमिली' },
+  watson: { ar: 'واتسون', ur: 'واٹسن', hi: 'वाटसन' },
+  karen: { ar: 'كارين', ur: 'کارن', hi: 'करेन' },
+  bradley: { ar: 'برادلي', ur: 'بریڈلی', hi: 'ब्रैडली' },
+  tom: { ar: 'توم', ur: 'ٹام', hi: 'टॉम' },
+  musa: { ar: 'موسى', ur: 'موسیٰ', hi: 'मूसा' },
+  diallo: { ar: 'ديالو', ur: 'ڈیالو', hi: 'डियालो' },
+  yara: { ar: 'يارا', ur: 'یارا', hi: 'यारा' },
+  khalifa: { ar: 'خليفة', ur: 'خلیفہ', hi: 'खलीफा' },
+  qadir: { ar: 'قادر', ur: 'قادر', hi: 'कादिर' },
+  imran: { ar: 'عمران', ur: 'عمران', hi: 'इमरान' },
+  harper: { ar: 'هاربر', ur: 'ہارپر', hi: 'हार्पर' },
+  lee: { ar: 'لي', ur: 'لی', hi: 'ली' },
+  stephen: { ar: 'ستيفن', ur: 'سٹیفن', hi: 'स्टीफन' },
+  hawking: { ar: 'هوكينغ', ur: 'ہاکنگ', hi: 'हॉकिंग' },
+  paulo: { ar: 'باولو', ur: 'پاؤلو', hi: 'पाउलो' },
+  coelho: { ar: 'كويلهو', ur: 'کوئلہو', hi: 'कोएल्हो' },
+  tolkien: { ar: 'تولكين', ur: 'ٹولکین', hi: 'टोल्किन' },
+  cormen: { ar: 'كورمن', ur: 'کورمین', hi: 'कॉरमेन' },
+  harari: { ar: 'هراري', ur: 'ہراری', hi: 'हरारी' },
+  sophia: { ar: 'صوفيا', ur: 'صوفیہ', hi: 'सोफिया' },
+  lin: { ar: 'لين', ur: 'لن', hi: 'लिन' },
+  maktoum: { ar: 'مكتوم', ur: 'مکتوم', hi: 'मकतूम' },
+  salma: { ar: 'سلمى', ur: 'سلمیٰ', hi: 'सलमा' },
+  rashid: { ar: 'راشد', ur: 'راشد', hi: 'राशिद' },
+  joseph: { ar: 'جوزيف', ur: 'جوزف', hi: 'जोसेफ' },
+  thomas: { ar: 'توماس', ur: 'تھامس', hi: 'थॉमस' },
+  father: { ar: 'الأب', ur: 'والد', hi: 'पिता' },
+  mother: { ar: 'الأم', ur: 'والدہ', hi: 'माता' },
+  guardian: { ar: 'ولي الأمر', ur: 'سرپرست', hi: 'अभिभावक' },
+  other: { ar: 'آخر', ur: 'دیگر', hi: 'अन्य' }
+};
+
+function transliterateStudentWord(word, targetLang){
+  if(!word) return '';
+  const lower = word.toLowerCase().replace(/[^a-z]/g, '');
+  if(STUDENT_NAME_DICTIONARY[lower] && STUDENT_NAME_DICTIONARY[lower][targetLang]){
+    return STUDENT_NAME_DICTIONARY[lower][targetLang];
+  }
+  let clean = word.toLowerCase();
+  if(targetLang === 'ar'){
+    return clean
+      .replace(/th/gi, 'ث').replace(/kh/gi, 'خ').replace(/sh/gi, 'ش').replace(/ch/gi, 'تش')
+      .replace(/ph/gi, 'ف').replace(/gh/gi, 'غ').replace(/dh/gi, 'ذ')
+      .replace(/b/gi, 'ب').replace(/c/gi, 'ك').replace(/d/gi, 'د').replace(/f/gi, 'ف')
+      .replace(/g/gi, 'ج').replace(/h/gi, 'ه').replace(/j/gi, 'ج').replace(/k/gi, 'ك')
+      .replace(/l/gi, 'ل').replace(/m/gi, 'م').replace(/n/gi, 'ن').replace(/p/gi, 'ب')
+      .replace(/q/gi, 'ق').replace(/r/gi, 'ر').replace(/s/gi, 'س').replace(/t/gi, 'ت')
+      .replace(/v/gi, 'ف').replace(/w/gi, 'و').replace(/x/gi, 'كس').replace(/y/gi, 'ي')
+      .replace(/z/gi, 'ز').replace(/a/gi, 'ا').replace(/e/gi, 'ي').replace(/i/gi, 'ي')
+      .replace(/o/gi, 'و').replace(/u/gi, 'و');
+  }
+  if(targetLang === 'ur'){
+    return clean
+      .replace(/th/gi, 'تھ').replace(/kh/gi, 'کھ').replace(/sh/gi, 'ش').replace(/ch/gi, 'چ')
+      .replace(/ph/gi, 'پھ').replace(/gh/gi, 'غ').replace(/dh/gi, 'دھ')
+      .replace(/b/gi, 'ب').replace(/c/gi, 'ک').replace(/d/gi, 'ڈ').replace(/f/gi, 'ف')
+      .replace(/g/gi, 'گ').replace(/h/gi, 'ہ').replace(/j/gi, 'ج').replace(/k/gi, 'ک')
+      .replace(/l/gi, 'ل').replace(/m/gi, 'م').replace(/n/gi, 'ن').replace(/p/gi, 'پ')
+      .replace(/q/gi, 'ق').replace(/r/gi, 'ر').replace(/s/gi, 'س').replace(/t/gi, 'ٹ')
+      .replace(/v/gi, 'و').replace(/w/gi, 'و').replace(/x/gi, 'کس').replace(/y/gi, 'ی')
+      .replace(/z/gi, 'ز').replace(/a/gi, 'ا').replace(/e/gi, 'ے').replace(/i/gi, 'ی')
+      .replace(/o/gi, 'و').replace(/u/gi, 'و');
+  }
+  return clean
+    .replace(/th/gi, 'थ').replace(/kh/gi, 'ख').replace(/sh/gi, 'श').replace(/ch/gi, 'च')
+    .replace(/ph/gi, 'फ').replace(/gh/gi, 'घ').replace(/dh/gi, 'ध')
+    .replace(/b/gi, 'ब').replace(/c/gi, 'क').replace(/d/gi, 'द').replace(/f/gi, 'फ़')
+    .replace(/g/gi, 'ग').replace(/h/gi, 'ह').replace(/j/gi, 'ज').replace(/k/gi, 'क')
+    .replace(/l/gi, 'ल').replace(/m/gi, 'म').replace(/n/gi, 'न').replace(/p/gi, 'प')
+    .replace(/q/gi, 'क').replace(/r/gi, 'र').replace(/s/gi, 'स').replace(/t/gi, 'त')
+    .replace(/v/gi, 'व').replace(/w/gi, 'व').replace(/x/gi, 'क्स').replace(/y/gi, 'य')
+    .replace(/z/gi, 'ज़').replace(/a/gi, 'ा').replace(/e/gi, 'े').replace(/i/gi, 'ि')
+    .replace(/o/gi, 'ो').replace(/u/gi, 'ु');
+}
+
+function translateStudentFullName(fullName, targetLang){
+  if(!fullName) return '';
+  const words=fullName.trim().split(/\s+/),result=[];
+  for(let i=0;i<words.length;i++){
+    if(['ar','ur'].includes(targetLang)&&/^al$/i.test(words[i])&&words[i+1]){
+      const next=transliterateStudentWord(words[++i],targetLang);result.push(next.startsWith('ال')?next:'ال'+next);
+    }else result.push(transliterateStudentWord(words[i],targetLang));
+  }
+  return result.join(' ');
+}
+
+function generateStudentTranslations(name, guardianName){
+  const cleanName = (name || '').trim();
+  const cleanGuardian = (guardianName || '').trim();
+  return {
+    en: { name: cleanName, guardianName: cleanGuardian || undefined },
+    ar: { name: translateStudentFullName(cleanName, 'ar'), guardianName: cleanGuardian ? translateStudentFullName(cleanGuardian, 'ar') : undefined },
+    ur: { name: translateStudentFullName(cleanName, 'ur'), guardianName: cleanGuardian ? translateStudentFullName(cleanGuardian, 'ur') : undefined },
+    hi: { name: translateStudentFullName(cleanName, 'hi'), guardianName: cleanGuardian ? translateStudentFullName(cleanGuardian, 'hi') : undefined }
+  };
+}
+
+function schoolNameForLocale(raw,translations={}){
+  if(LANG==='en')return raw||'';
+  const saved=translations[LANG]||schoolPersonNames.get(raw)?.[LANG];
+  return (typeof saved==='string'?saved:saved?.name)||translateStudentFullName(raw||'',LANG);
+}
+
+// Personal names are registered from authenticated entity data, never arbitrary prose.
+const schoolPersonNames=new Map();
+function schoolRegisterPerson(person){
+  if(!person||typeof person.name!=='string'||!person.name.trim())return;
+  const raw=person.name.trim(),translations={};
+  ['ar','ur','hi'].forEach(lang=>{const entry=person.translations?.[lang];const value=typeof entry==='string'?entry:entry?.name;if(value)translations[lang]=value;});
+  schoolPersonNames.set(raw,Object.assign({},schoolPersonNames.get(raw),translations));
+}
+function schoolRegisterResponseNames(path,body){
+  const personRoute=/^\/(students|staff|guardians|users|auth|crm)(?:[/?]|$)/.test(path);
+  const relations=new Set(['student','students','guardian','guardians','teacher','staff','user','users','parent','employee','actor','bookedGuardian','bookedBy','bookedForStudent','requestedBy','assignedTo','raisedBy','subject','employeeSnapshot','studentIds']);
+  function walk(value,personal=false){
+    if(!value||typeof value!=='object')return;
+    if(Array.isArray(value)){value.forEach(v=>walk(v,personal));return;}
+    if(personal)schoolRegisterPerson(value);
+    Object.entries(value).forEach(([key,child])=>{
+      if(['studentName','guardianName','teacherName','employeeName','staffName','parentName','actorName'].includes(key)&&typeof child==='string')schoolRegisterPerson({name:child,translations:Object.fromEntries(['ar','ur','hi'].map(lang=>[lang,{name:value.translations?.[lang]?.[key]}]))});
+      if(child&&typeof child==='object')walk(child,relations.has(key)||((key==='data'||key==='items')&&personal));
+    });
+  }
+  walk(body,personRoute);
+}
+function schoolTranslateKnownNames(text){
+  if(LANG==='en')return text;
+  return text.split(/( · | — | \| | → )/).map(part=>{
+    const raw=part.trim();
+    // Single-word labels such as Active must not become person-name translations.
+    if(!/\s/.test(raw)||!schoolPersonNames.has(raw))return part;
+    return part.replace(raw,schoolNameForLocale(raw,schoolPersonNames.get(raw)));
+  }).join('');
+}

@@ -6,15 +6,19 @@ import { ListAssignmentsQuery, CreateAssignmentInput, SubmitInput, GradeInput } 
 
 export async function findManyAssignments(
   query: ListAssignmentsQuery,
+  extra: FilterQuery<IAssignment> = {},
 ): Promise<{ items: IAssignment[]; total: number }> {
   const filter: FilterQuery<IAssignment> = {};
+  if (query.academicYear) filter.academicYear = query.academicYear;
+  if (query.course) filter.course = query.course;
   if (query.subject) filter.subject = query.subject;
   if (query.grade) filter.grade = query.grade;
 
+  const scoped: FilterQuery<IAssignment> = { $and: [extra, filter] };
   const skip = (query.page - 1) * query.limit;
   const [items, total] = await Promise.all([
-    Assignment.find(filter).sort({ dueDate: 1 }).skip(skip).limit(query.limit),
-    Assignment.countDocuments(filter),
+    Assignment.find(scoped).sort({ dueDate: 1 }).skip(skip).limit(query.limit),
+    Assignment.countDocuments(scoped),
   ]);
   return { items, total };
 }

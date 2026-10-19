@@ -1,3 +1,8 @@
+import { ExpenseClaim } from '../../models/ExpenseClaim';
+import { schoolToday } from '../attendance/attendance.dates';
+import { logAudit } from '../audit/audit.service';
+import { z } from 'zod';
+import { payClaimSchema, cancelClaimSchema } from './expenses.validation';
 import { ApiError } from '../../utils/ApiError';
 import { IExpenseClaim } from '../../models/ExpenseClaim';
 import * as repo from './expenses.repository';
@@ -25,7 +30,10 @@ export async function submitClaim(input: SubmitClaimInput, requester: Authentica
     throw ApiError.badRequest(
       'No staff record is linked to your account - an expense claim must be tied to a staff record',
     );
-  return repo.create(ownStaffId.toString(), input);
+  if (input.expenseDate > (await schoolToday())) throw ApiError.badRequest('Expense date cannot be in the future');
+  const saved = await repo.create(ownStaffId.toString(), input, requester.id);
+  await logAudit('Submitted expense claim ' + saved._id, 'Expenses', requester.id);
+  return saved;
 }
 
 /**
@@ -48,11 +56,72 @@ export async function reviewClaim(
   if (claim.status !== 'Pending') throw ApiError.conflict('This claim has already been reviewed');
 
   const ownStaffId = await repo.findOwnStaffId(requester.id);
-  if (ownStaffId && claim.staff.toString() === ownStaffId.toString()) {
+  if (
+    claim.submittedBy?.toString() === requester.id ||
+    (ownStaffId && claim.staff.toString() === ownStaffId.toString())
+  ) {
     throw ApiError.forbidden('You cannot review your own expense claim');
   }
 
-  const updated = await repo.review(id, input.status, requester.id, input.reviewNotes);
-  if (!updated) throw ApiError.notFound('Expense claim not found');
+  const updated = await ExpenseClaim.findOneAndUpdate(
+    { _id: id, status: 'Pending', updatedAt: new Date(input.expectedUpdatedAt) },
+    {
+      $set: { status: input.status, reviewedBy: requester.id, reviewNotes: input.reviewNotes },
+      $push: { history: { at: new Date(), by: requester.id, action: input.status, reason: input.reviewNotes } },
+    },
+    { new: true, runValidators: true },
+  );
+  if (!updated) throw ApiError.conflict('Claim changed; reload before reviewing');
+  await logAudit(input.status + ' expense claim ' + id, 'Expenses', requester.id);
   return updated;
+}
+
+export async function payClaim(
+  id: string,
+  input: z.infer<typeof payClaimSchema>['body'],
+  requester: AuthenticatedUser,
+) {
+  if (!canReviewClaim(requester.role)) throw ApiError.forbidden('Finance role required');
+  if (input.paidDate > (await schoolToday())) throw ApiError.badRequest('Payment date cannot be in the future');
+  const saved = await ExpenseClaim.findOneAndUpdate(
+    { _id: id, status: 'Approved', updatedAt: new Date(input.expectedUpdatedAt) },
+    {
+      $set: {
+        status: 'Paid',
+        paidDate: new Date(input.paidDate),
+        paymentMethod: input.paymentMethod,
+        paymentReference: input.paymentReference,
+      },
+      $push: { history: { at: new Date(), by: requester.id, action: 'Paid', reason: input.reason } },
+    },
+    { new: true, runValidators: true },
+  );
+  if (!saved) throw ApiError.conflict('Only the current approved claim can be marked paid');
+  await logAudit('Recorded reimbursement for claim ' + id, 'Expenses', requester.id);
+  return saved;
+}
+export async function cancelClaim(
+  id: string,
+  input: z.infer<typeof cancelClaimSchema>['body'],
+  requester: AuthenticatedUser,
+) {
+  const current = await repo.findById(id);
+  if (!current) throw ApiError.notFound('Expense claim not found');
+  const ownStaff = await repo.findOwnStaffId(requester.id);
+  if (
+    !canSubmitClaim(requester.role) ||
+    !(current.submittedBy?.toString() === requester.id || current.staff.toString() === ownStaff?.toString())
+  )
+    throw ApiError.forbidden('Only the submitter can cancel a pending claim');
+  const saved = await ExpenseClaim.findOneAndUpdate(
+    { _id: id, status: 'Pending', updatedAt: new Date(input.expectedUpdatedAt) },
+    {
+      $set: { status: 'Cancelled' },
+      $push: { history: { at: new Date(), by: requester.id, action: 'Cancelled', reason: input.reason } },
+    },
+    { new: true },
+  );
+  if (!saved) throw ApiError.conflict('Claim changed or was already reviewed');
+  await logAudit('Cancelled expense claim ' + id, 'Expenses', requester.id);
+  return saved;
 }

@@ -26,7 +26,7 @@ export function scopeAttendanceFilter(
   if (UNRESTRICTED_READ_ROLES.includes(requester.role)) {
     return base;
   }
-  return { ...base, student: { $in: authorizedStudentIds } };
+  return { $and: [base, { student: { $in: authorizedStudentIds } }] };
 }
 
 export function canMarkAttendance(role: Role): boolean {

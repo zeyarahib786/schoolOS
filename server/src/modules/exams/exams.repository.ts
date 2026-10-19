@@ -48,7 +48,7 @@ export function findResultWithStudent(examId: string, studentId: string) {
 }
 
 export function findResultRecipients(examId: string) {
-  return ExamResult.find({ exam: examId }).populate('student', 'name guardianUserId');
+  return ExamResult.find({ exam: examId }).populate('student', 'name guardianUserId grade');
 }
 
 export async function findManyResults(
@@ -124,9 +124,12 @@ export async function computeExamAggregate(examId: string, maxMarks: number, pas
 }
 
 export function findAuthorizedStudentIds(userId: string, role: Role) {
-  const filter = role === 'Parent' ? { guardianUserId: userId }
-    : role === 'Student' ? { studentUserId: userId }
-    : { _id: { $in: [] } };
+  const filter =
+    role === 'Parent'
+      ? { guardianUserId: userId }
+      : role === 'Student'
+        ? { studentUserId: userId }
+        : { _id: { $in: [] } };
   return Student.find(filter)
     .select('_id')
     .then((students) => students.map((s) => s._id));

@@ -100,7 +100,11 @@ describe('Staff API', () => {
     const res = await request(app)
       .patch(`/api/v1/staff/${created.body.data._id}`)
       .set('Authorization', `Bearer ${principal.token}`)
-      .send({ status: 'On Leave' });
+      .send({
+        status: 'On Leave',
+        expectedUpdatedAt: created.body.data.updatedAt,
+        changeReason: 'Recorded employment status change',
+      });
     expect(res.status).toBe(200);
     expect(res.body.data.status).toBe('On Leave');
   });
@@ -108,7 +112,10 @@ describe('Staff API', () => {
   it('links an existing portal account to a matching staff email, enabling self-service access', async () => {
     const admin = await registerAndLogin('Administrator', 'admin8@alnoor.ae');
     const teacher = await registerAndLogin('Teacher', 'rohan.mehta@alnoor.ae');
-    const created = await request(app).post('/api/v1/staff').set('Authorization', `Bearer ${admin.token}`).send(validStaff);
+    const created = await request(app)
+      .post('/api/v1/staff')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send(validStaff);
     expect(created.status).toBe(201);
     expect(created.body.data.userId).toBe(teacher.userId);
     const ownRecord = await request(app).get('/api/v1/staff').set('Authorization', `Bearer ${teacher.token}`);
@@ -118,20 +125,41 @@ describe('Staff API', () => {
 
   it('does not delete staff that have operational leave history', async () => {
     const admin = await registerAndLogin('Administrator', 'admin9@alnoor.ae');
-    const created = await request(app).post('/api/v1/staff').set('Authorization', `Bearer ${admin.token}`).send(validStaff);
+    const created = await request(app)
+      .post('/api/v1/staff')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send(validStaff);
     const { LeaveRequest } = await import('../src/models/LeaveRequest');
-    await LeaveRequest.create({ staff: created.body.data._id, fromDate: new Date('2026-07-06'), toDate: new Date('2026-07-06'), days: 1, reason: 'History' });
-    const removed = await request(app).delete(`/api/v1/staff/${created.body.data._id}`).set('Authorization', `Bearer ${admin.token}`);
+    await LeaveRequest.create({
+      staff: created.body.data._id,
+      fromDate: new Date('2026-07-06'),
+      toDate: new Date('2026-07-06'),
+      days: 1,
+      reason: 'History',
+    });
+    const removed = await request(app)
+      .delete(`/api/v1/staff/${created.body.data._id}`)
+      .set('Authorization', `Bearer ${admin.token}`);
     expect(removed.status).toBe(409);
   });
 
   it('persists required onboarding documents and checklist changes through the Staff API', async () => {
     const admin = await registerAndLogin('Administrator', 'admin10@alnoor.ae');
-    const created = await request(app).post('/api/v1/staff').set('Authorization', `Bearer ${admin.token}`).send({ ...validStaff, status: 'Onboarding' });
+    const created = await request(app)
+      .post('/api/v1/staff')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({ ...validStaff, status: 'Onboarding' });
     const id = created.body.data._id;
-    const uploaded = await request(app).put(`/api/v1/staff/${id}/documents/id`).set('Authorization', `Bearer ${admin.token}`).set('Content-Type', 'application/pdf').set('X-File-Name', 'passport.pdf').send(Buffer.from('%PDF-test'));
+    const uploaded = await request(app)
+      .put(`/api/v1/staff/${id}/documents/id`)
+      .set('Authorization', `Bearer ${admin.token}`)
+      .set('Content-Type', 'application/pdf')
+      .set('X-File-Name', 'passport.pdf')
+      .send(Buffer.from('%PDF-test'));
     expect(uploaded.status).toBe(201);
-    const task = await request(app).post(`/api/v1/staff/${id}/onboarding/offer/toggle`).set('Authorization', `Bearer ${admin.token}`);
+    const task = await request(app)
+      .post(`/api/v1/staff/${id}/onboarding/offer/toggle`)
+      .set('Authorization', `Bearer ${admin.token}`);
     expect(task.status).toBe(200);
     const staff = await request(app).get(`/api/v1/staff/${id}`).set('Authorization', `Bearer ${admin.token}`);
     expect(staff.body.data.documents[0].filename).toBe('passport.pdf');

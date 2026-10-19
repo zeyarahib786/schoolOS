@@ -28,24 +28,44 @@ export interface IAdmissionApplication extends Document {
     uploadedAt?: Date;
     verifiedAt?: Date;
   }>;
-  history: Array<{ from?: string; to: string; reason?: string; outcome?: string; performedBy: Types.ObjectId; at: Date }>;
+  history: Array<{
+    from?: string;
+    to: string;
+    reason?: string;
+    outcome?: string;
+    performedBy: Types.ObjectId;
+    at: Date;
+  }>;
   enrolledStudent?: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
 
-const admissionDocumentSchema = new Schema({
-  key: { type: String, enum: ['id', 'birth', 'photo', 'report', 'immun', 'tc'], required: true },
-  label: { type: String, required: true },
-  fileId: { type: Schema.Types.ObjectId }, filename: { type: String }, contentType: { type: String }, size: { type: Number },
-  uploadedAt: { type: Date }, verifiedAt: { type: Date },
-}, { _id: false });
+const admissionDocumentSchema = new Schema(
+  {
+    key: { type: String, enum: ['id', 'birth', 'photo', 'report', 'immun', 'tc'], required: true },
+    label: { type: String, required: true },
+    fileId: { type: Schema.Types.ObjectId },
+    filename: { type: String },
+    contentType: { type: String },
+    size: { type: Number },
+    uploadedAt: { type: Date },
+    verifiedAt: { type: Date },
+  },
+  { _id: false },
+);
 
-const historySchema = new Schema({
-  from: { type: String }, to: { type: String, required: true }, reason: { type: String, maxlength: 400 },
-  outcome: { type: String, enum: ['Rejected', 'Withdrawn', 'Deferred to next intake'] },
-  performedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true }, at: { type: Date, required: true },
-}, { _id: false });
+const historySchema = new Schema(
+  {
+    from: { type: String },
+    to: { type: String, required: true },
+    reason: { type: String, maxlength: 400 },
+    outcome: { type: String, enum: ['Rejected', 'Withdrawn', 'Deferred to next intake'] },
+    performedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    at: { type: Date, required: true },
+  },
+  { _id: false },
+);
 
 const admissionApplicationSchema = new Schema<IAdmissionApplication>(
   {

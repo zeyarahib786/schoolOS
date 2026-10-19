@@ -22,7 +22,11 @@ const parentBroadcastSchema = new Schema<IParentBroadcast>(
   {
     subject: { type: String, required: true, trim: true, maxlength: 160 },
     message: { type: String, required: true, trim: true, maxlength: 600 },
-    audience: { type: String, enum: ['All parents', 'By grade', 'Single class', 'Individual guardian'], required: true },
+    audience: {
+      type: String,
+      enum: ['All parents', 'By grade', 'Single class', 'Individual guardian'],
+      required: true,
+    },
     audienceLabel: { type: String, required: true, trim: true, maxlength: 240 },
     grade: { type: String, trim: true, maxlength: 60 },
     className: { type: String, trim: true, maxlength: 60 },

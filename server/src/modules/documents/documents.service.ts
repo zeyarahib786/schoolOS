@@ -1,3 +1,4 @@
+import { Counter } from '../../models/Counter';
 import { ApiError } from '../../utils/ApiError';
 import { ISchoolDocument, SchoolDocument } from '../../models/SchoolDocument';
 import * as repo from './documents.repository';
@@ -27,41 +28,58 @@ export async function listDocuments(query: ListDocumentsQuery) {
   };
 }
 
-/**
- * Publishing a code that already exists supersedes the current version and creates version N+1.
- * The "at most one current per code" invariant is NOT maintained by this read-then-write flow
- * alone - it's guaranteed by the partial unique index on the model: if two publishes race, both
- * may supersede the old version, but only ONE new "current" insert can land; the loser gets a
- * real 11000 -> 409. On a failed insert we attempt a compensating restore of the previously
- * current version so a lone transient failure doesn't leave the code with no current version at
- * all - best-effort by design (documented), since the index already protects the invariant that
- * actually matters (never TWO currents), and a restore race with a competing successful publish
- * is prevented by that same index.
- */
+/** Current pointer and new immutable version commit together, serialized by code. */
 export async function publishDocument(
   input: PublishDocumentInput,
   requester: AuthenticatedUser,
   file?: { fileId: string; filename: string; contentType: string; size: number },
 ): Promise<ISchoolDocument> {
-  if (!canPublish(requester.role))
-    throw ApiError.forbidden('Only Administrator, Principal, or Teacher may publish a document');
-
-  const previous = await repo.findCurrentByCode(input.code);
-  if (previous) await repo.supersede(previous._id.toString());
-  const nextVersion = (previous?.version ?? 0) + 1;
-
-  let document: ISchoolDocument;
+  if (!canPublish(requester.role)) throw ApiError.forbidden('Only teaching staff may publish school documents');
+  const session = await mongoose.startSession();
+  let document: ISchoolDocument | null = null;
   try {
-    document = await repo.createVersion(input, nextVersion, requester.id, file);
-  } catch (err) {
-    if (previous) await repo.markCurrent(previous._id.toString()).catch(() => undefined);
-    if (err instanceof Error && (err as Error & { code?: number }).code === 11000) {
-      throw ApiError.conflict('A concurrent publish for this document code just landed - please retry');
-    }
-    throw err;
+    await session.withTransaction(async () => {
+      const code = input.code.toUpperCase();
+      await Counter.findOneAndUpdate(
+        { _id: 'document-publication-' + code },
+        { $inc: { seq: 1 } },
+        { upsert: true, session },
+      );
+      const previous = await SchoolDocument.findOne({ code, isCurrent: true }).session(session);
+      if (input.expectedVersion !== undefined && input.expectedVersion !== (previous?.version || 0))
+        throw ApiError.conflict('Current document changed; open its current version before republishing');
+      const latest = await SchoolDocument.findOne({ code }).sort({ version: -1 }).session(session);
+      if (previous) await SchoolDocument.updateOne({ _id: previous._id }, { $set: { isCurrent: false } }, { session });
+      document = (
+        await SchoolDocument.create(
+          [
+            {
+              code,
+              title: input.title,
+              category: input.category,
+              description: input.description,
+              publicationReason: input.publicationReason,
+              version: (latest?.version || 0) + 1,
+              isCurrent: true,
+              publishedBy: requester.id,
+              ...file,
+            },
+          ],
+          { session },
+        )
+      )[0];
+    });
+    if (!document) throw new Error('Document transaction produced no record');
+    const saved: ISchoolDocument = document;
+    await logAudit(`Published document ${saved.code} v${saved.version}`, 'Documents', requester.id);
+    return saved;
+  } catch (error) {
+    if ((error as { code?: number }).code === 11000)
+      throw ApiError.conflict('A publication for this code was recorded concurrently; reload');
+    throw error;
+  } finally {
+    await session.endSession();
   }
-  await logAudit(`Published document ${document.code} v${document.version}`, 'Documents', requester.id);
-  return document;
 }
 
 export async function publishPdf(
@@ -73,15 +91,21 @@ export async function publishPdf(
   if (!canPublish(requester.role)) throw ApiError.forbidden('You cannot publish documents');
   if (!Buffer.isBuffer(content) || content.length < 8 || content.length > MAX_PDF_SIZE)
     throw ApiError.badRequest('PDF must be between 8 bytes and 8 MB');
-  if (content.subarray(0, 5).toString() !== '%PDF-' ||
-      !content.subarray(Math.max(0, content.length - 1024)).toString().includes('%%EOF'))
+  if (
+    content.subarray(0, 5).toString() !== '%PDF-' ||
+    !content
+      .subarray(Math.max(0, content.length - 1024))
+      .toString()
+      .includes('%%EOF')
+  )
     throw ApiError.badRequest('The uploaded file is not a PDF');
   const safeName = filename.replace(/[\\/\0\r\n]/g, '_').slice(0, 180);
   if (!safeName.toLowerCase().endsWith('.pdf')) throw ApiError.badRequest('Filename must end in .pdf');
   const fileId = new mongoose.mongo.ObjectId();
   await new Promise<void>((resolve, reject) => {
     const stream = bucket().openUploadStreamWithId(fileId, safeName, {
-      contentType: 'application/pdf', metadata: { code: input.code.toUpperCase() },
+      contentType: 'application/pdf',
+      metadata: { code: input.code.toUpperCase() },
     });
     stream.on('finish', resolve);
     stream.on('error', reject);
@@ -89,12 +113,18 @@ export async function publishPdf(
   });
   try {
     return await publishDocument(input, requester, {
-      fileId: fileId.toString(), filename: safeName, contentType: 'application/pdf', size: content.length,
+      fileId: fileId.toString(),
+      filename: safeName,
+      contentType: 'application/pdf',
+      size: content.length,
     });
   } catch (error) {
     // An audit failure can occur after the document insert; do not orphan that version.
     const saved = await SchoolDocument.exists({ fileId }).catch(() => null);
-    if (!saved) await bucket().delete(fileId).catch(() => undefined);
+    if (!saved)
+      await bucket()
+        .delete(fileId)
+        .catch(() => undefined);
     throw error;
   }
 }

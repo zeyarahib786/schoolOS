@@ -52,7 +52,12 @@ describe('gradeSchema', () => {
   it('accepts a valid score', () => {
     const result = gradeSchema.safeParse({
       params: { id: '64b7f9c9a1b2c3d4e5f60789' },
-      body: { score: 85, feedback: 'Well done' },
+      body: {
+        score: 85,
+        feedback: 'Well done',
+        expectedUpdatedAt: '2026-10-11T12:00:00.000Z',
+        reason: 'Reviewed coursework',
+      },
       query: {},
     });
     expect(result.success).toBe(true);

@@ -54,17 +54,24 @@ describe('Settings API', () => {
     expect(res.status).toBe(200);
     expect(res.body.data.currency).toBe('AED');
     expect(res.body.data.academicYear).toBe('2027-2028');
-    expect(res.body.data).toMatchObject({ license: 'KHDA-TEST-001', principal: 'Dr. Salma Haddad', address: 'Al Barsha, Dubai' });
+    expect(res.body.data).toMatchObject({
+      license: 'KHDA-TEST-001',
+      principal: 'Dr. Salma Haddad',
+      address: 'Al Barsha, Dubai',
+    });
     expect(res.body.data.disabledModules).toEqual(['hostel', 'visitors']);
   });
 
   it('THE SINGLETON, PROVEN: two saves leave exactly ONE settings document with the LATEST values, and GET reflects it', async () => {
     const admin = await registerAndLogin('Administrator', 'admin2@alnoor.ae');
     await request(app).put('/api/v1/settings').set('Authorization', `Bearer ${admin.token}`).send(validSettings);
-    await request(app)
-      .put('/api/v1/settings')
-      .set('Authorization', `Bearer ${admin.token}`)
-      .send({ schoolName: validSettings.schoolName, academicYear: '2028-2029', timezone: validSettings.timezone, currency: validSettings.currency, defaultAnnualLeave: 25 });
+    await request(app).put('/api/v1/settings').set('Authorization', `Bearer ${admin.token}`).send({
+      schoolName: validSettings.schoolName,
+      academicYear: '2028-2029',
+      timezone: validSettings.timezone,
+      currency: validSettings.currency,
+      defaultAnnualLeave: 25,
+    });
 
     const { SchoolSettings } = await import('../src/models/SchoolSettings');
     expect(await SchoolSettings.countDocuments({})).toBe(1);
@@ -97,10 +104,13 @@ describe('Settings API', () => {
   it('rejects an invalid payload with 400 (malformed academic year)', async () => {
     const admin = await registerAndLogin('Administrator', 'admin4@alnoor.ae');
     for (const changed of [
-      { academicYear: 'next year' }, { academicYear: '2027-2030' },
-      { timezone: 'Not/A_Real_Zone' }, { currency: 'ZZZ' },
+      { academicYear: 'next year' },
+      { academicYear: '2027-2030' },
+      { timezone: 'Not/A_Real_Zone' },
+      { currency: 'ZZZ' },
     ]) {
-      const res = await request(app).put('/api/v1/settings')
+      const res = await request(app)
+        .put('/api/v1/settings')
         .set('Authorization', `Bearer ${admin.token}`)
         .send({ ...validSettings, ...changed });
       expect(res.status).toBe(400);
@@ -110,7 +120,8 @@ describe('Settings API', () => {
   it('rejects core modules and duplicate IDs in disabledModules', async () => {
     const admin = await registerAndLogin('Administrator', 'admin5@alnoor.ae');
     for (const disabledModules of [['students'], ['hostel', 'hostel']]) {
-      const res = await request(app).put('/api/v1/settings')
+      const res = await request(app)
+        .put('/api/v1/settings')
         .set('Authorization', `Bearer ${admin.token}`)
         .send({ ...validSettings, disabledModules });
       expect(res.status).toBe(400);
@@ -119,15 +130,26 @@ describe('Settings API', () => {
 
   it('does not let a currency change relabel existing invoices', async () => {
     const admin = await registerAndLogin('Administrator', 'admin-currency@alnoor.ae');
-    const student = await request(app).post('/api/v1/students')
-      .set('Authorization', `Bearer ${admin.token}`)
-      .send({ refId: 'ANS-SET-1', name: 'Settings Test Student', grade: 'Grade 1 · A', gender: 'Female', roll: '1', guardianName: 'Parent', phone: '+971501234567' });
+    const student = await request(app).post('/api/v1/students').set('Authorization', `Bearer ${admin.token}`).send({
+      refId: 'ANS-SET-1',
+      name: 'Settings Test Student',
+      grade: 'Grade 1 · A',
+      gender: 'Female',
+      roll: '1',
+      guardianName: 'Parent',
+      phone: '+971501234567',
+    });
     expect(student.status).toBe(201);
-    const invoice = await request(app).post('/api/v1/fees')
-      .set('Authorization', `Bearer ${admin.token}`)
-      .send({ refId: 'INV-SET-1', studentId: student.body.data._id, term: 'Term 1', amount: 100, dueDate: '2027-12-01' });
+    const invoice = await request(app).post('/api/v1/fees').set('Authorization', `Bearer ${admin.token}`).send({
+      refId: 'INV-SET-1',
+      studentId: student.body.data._id,
+      term: 'Term 1',
+      amount: 100,
+      dueDate: '2027-12-01',
+    });
     expect(invoice.status).toBe(201);
-    const changed = await request(app).put('/api/v1/settings')
+    const changed = await request(app)
+      .put('/api/v1/settings')
       .set('Authorization', `Bearer ${admin.token}`)
       .send({ ...validSettings, currency: 'USD' });
     expect(changed.status).toBe(409);
@@ -136,8 +158,16 @@ describe('Settings API', () => {
   it('does not let a currency change relabel non-invoice financial records', async () => {
     const admin = await registerAndLogin('Administrator', 'admin-inventory-currency@alnoor.ae');
     const { InventoryItem } = await import('../src/models/InventoryItem');
-    await InventoryItem.create({ name: 'Test Stock', sku: 'SET-CUR-1', category: 'Supplies', quantityOnHand: 1, reorderLevel: 1, unitCost: 50 });
-    const changed = await request(app).put('/api/v1/settings')
+    await InventoryItem.create({
+      name: 'Test Stock',
+      sku: 'SET-CUR-1',
+      category: 'Supplies',
+      quantityOnHand: 1,
+      reorderLevel: 1,
+      unitCost: 50,
+    });
+    const changed = await request(app)
+      .put('/api/v1/settings')
       .set('Authorization', `Bearer ${admin.token}`)
       .send({ ...validSettings, currency: 'USD' });
     expect(changed.status).toBe(409);

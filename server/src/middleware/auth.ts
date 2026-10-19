@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { ApiError } from '../utils/ApiError';
-import { verifyAccessToken } from '../modules/auth/auth.service';
+import { verifyAccessToken, validateAccessSession } from '../modules/auth/auth.service';
+import { assertGuardianPortalAccess } from '../modules/guardians/guardians.access';
 import { Role } from '../types/roles';
 
 export interface AuthenticatedUser {
@@ -18,7 +19,7 @@ declare global {
 }
 
 /** Requires a valid, non-expired access token before a request can reach protected data. */
-export function requireAuth(req: Request, _res: Response, next: NextFunction): void {
+export async function requireAuth(req: Request, _res: Response, next: NextFunction): Promise<void> {
   const header = req.header('authorization');
   if (!header?.startsWith('Bearer ')) {
     next(ApiError.unauthorized('Missing or malformed Authorization header'));
@@ -27,9 +28,15 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction): v
   const token = header.slice('Bearer '.length);
   try {
     const payload = verifyAccessToken(token);
+    await validateAccessSession(payload);
+    await assertGuardianPortalAccess(payload.sub, payload.role);
     req.user = { id: payload.sub, role: payload.role };
     next();
-  } catch {
+  } catch (error) {
+    if (error instanceof ApiError) {
+      next(error);
+      return;
+    }
     next(ApiError.unauthorized('Invalid or expired access token'));
   }
 }

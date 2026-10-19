@@ -8,12 +8,14 @@ export interface IAccessRole extends Document {
   basedOn?: string | null;
   isSystem: boolean;
   permissions: Map<AccessModule, boolean>;
+  history: { at: Date; by: string; module: string; enabled: boolean; reason: string }[];
   createdAt: Date;
   updatedAt: Date;
 }
 
 const accessRoleSchema = new Schema<IAccessRole>(
   {
+    history: [{ at: Date, by: String, module: String, enabled: Boolean, reason: String }],
     key: { type: String, required: true, unique: true, trim: true, lowercase: true, maxlength: 80 },
     name: { type: String, required: true, trim: true, maxlength: 60 },
     description: { type: String, trim: true, maxlength: 300, default: '' },

@@ -29,9 +29,13 @@ export async function updateSettings(input: UpdateSettingsInput, requester: Auth
     const [invoiceCurrencies, financialCounts] = await Promise.all([
       Invoice.distinct('currency'),
       Promise.all([
-        InvoicePayment.countDocuments(), Payslip.countDocuments(), ExpenseClaim.countDocuments(),
-        PurchaseOrder.countDocuments(), InventoryItem.countDocuments({ unitCost: { $gt: 0 } }),
-        CafeteriaWallet.countDocuments({ balance: { $gt: 0 } }), CafeteriaTransaction.countDocuments(),
+        InvoicePayment.countDocuments(),
+        Payslip.countDocuments(),
+        ExpenseClaim.countDocuments(),
+        PurchaseOrder.countDocuments(),
+        InventoryItem.countDocuments({ unitCost: { $gt: 0 } }),
+        CafeteriaWallet.countDocuments({ balance: { $gt: 0 } }),
+        CafeteriaTransaction.countDocuments(),
       ]),
     ]);
     if (invoiceCurrencies.length || financialCounts.some((count) => count > 0)) {
@@ -43,6 +47,11 @@ export async function updateSettings(input: UpdateSettingsInput, requester: Auth
     .filter(([field, value]) => JSON.stringify(previous[field]) !== JSON.stringify(value))
     .map(([field]) => field);
   const saved = await repo.saveSettings(input);
-  await logAudit(`School settings updated (academic year ${input.academicYear}; changed: ${changedFields.join(', ') || 'none'})`, 'Settings', requester.id, 'Warning');
+  await logAudit(
+    `School settings updated (academic year ${input.academicYear}; changed: ${changedFields.join(', ') || 'none'})`,
+    'Settings',
+    requester.id,
+    'Warning',
+  );
   return saved;
 }

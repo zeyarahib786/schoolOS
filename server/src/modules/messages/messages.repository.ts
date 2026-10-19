@@ -1,4 +1,4 @@
-import { FilterQuery } from 'mongoose';
+import { FilterQuery, Types } from 'mongoose';
 import { Message, IMessage } from '../../models/Message';
 import { User } from '../../models/User';
 import { ListMessagesQuery, SendMessageInput } from './messages.validation';
@@ -6,8 +6,13 @@ import { ListMessagesQuery, SendMessageInput } from './messages.validation';
 export async function findMany(
   query: ListMessagesQuery,
   applyOwnershipScope: (base: FilterQuery<IMessage>) => FilterQuery<IMessage>,
+  requesterId?: string,
 ): Promise<{ items: IMessage[]; total: number }> {
-  const filter = applyOwnershipScope({});
+  const filter = applyOwnershipScope(
+    requesterId
+      ? { archivedBy: query.archived ? new Types.ObjectId(requesterId) : { $ne: new Types.ObjectId(requesterId) } }
+      : {},
+  );
   const skip = (query.page - 1) * query.limit;
   const [items, total] = await Promise.all([
     Message.find(filter)
@@ -22,11 +27,17 @@ export async function findMany(
 }
 
 export function findUserByEmail(email: string) {
-  return User.findOne({ email: email.toLowerCase() }).select('_id');
+  return User.findOne({ email: email.toLowerCase() }).select('_id role isActive');
 }
 
 export function create(senderId: string, recipientId: string, input: SendMessageInput): Promise<IMessage> {
-  return Message.create({ sender: senderId, recipient: recipientId, subject: input.subject, body: input.body });
+  return Message.create({
+    sender: senderId,
+    recipient: recipientId,
+    subject: input.subject,
+    body: input.body,
+    replyTo: input.replyTo,
+  });
 }
 
 export function findById(id: string): Promise<IMessage | null> {
@@ -34,5 +45,5 @@ export function findById(id: string): Promise<IMessage | null> {
 }
 
 export function markRead(id: string): Promise<IMessage | null> {
-  return Message.findByIdAndUpdate(id, { readAt: new Date() }, { new: true });
+  return Message.findOneAndUpdate({ _id: id, readAt: null }, { readAt: new Date() }, { new: true });
 }

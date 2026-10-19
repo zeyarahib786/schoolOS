@@ -1,4 +1,5 @@
-export type ApplicationStatus = 'Applied' | 'Shortlisted' | 'Interviewed' | 'Accepted' | 'Enrolled' | 'Rejected' | 'Waitlisted';
+export type ApplicationStatus =
+  'Applied' | 'Shortlisted' | 'Interviewed' | 'Accepted' | 'Enrolled' | 'Rejected' | 'Waitlisted';
 
 /** The first BRANCHING state machine in this codebase - Helpdesk's is linear-with-reopen and
  * Inventory's is strictly linear, but here `Rejected` is reachable from THREE different states

@@ -11,7 +11,7 @@ export async function findManyRooms(
   query: ListRoomsQuery,
   applyOwnershipScope: (base: FilterQuery<IHostelRoom>) => FilterQuery<IHostelRoom>,
 ): Promise<{ items: IHostelRoom[]; total: number }> {
-  let filter: FilterQuery<IHostelRoom> = {};
+  let filter: FilterQuery<IHostelRoom> = { archived: query.archived ? true : { $ne: true } };
   if (query.block) filter.block = query.block;
   filter = applyOwnershipScope(filter);
 
@@ -48,8 +48,14 @@ export function allocateIfCapacityAvailable(
   );
 }
 
-export function findAuthorizedStudentIds(guardianUserId: string) {
-  return Student.find({ guardianUserId })
+export function findAuthorizedStudentIds(userId: string, role: string) {
+  return Student.find(
+    role === 'Student'
+      ? { studentUserId: userId }
+      : role === 'Parent'
+        ? { guardianUserId: userId }
+        : { _id: { $in: [] } },
+  )
     .select('_id')
     .then((students) => students.map((s) => s._id));
 }

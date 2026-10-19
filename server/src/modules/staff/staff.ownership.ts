@@ -19,11 +19,11 @@ export function scopeStaffFilter(base: FilterQuery<IStaff>, requester: Authentic
   if (UNRESTRICTED_READ_ROLES.includes(requester.role)) {
     return base;
   }
-  return { ...base, userId: requester.id };
+  return requester.role === 'Teacher' ? { ...base, userId: requester.id } : { ...base, _id: { $in: [] } };
 }
 
 export function assertCanReadStaff(staff: IStaff, requester: AuthenticatedUser): void {
   if (UNRESTRICTED_READ_ROLES.includes(requester.role)) return;
-  if (staff.userId?.toString() === requester.id) return;
+  if (requester.role === 'Teacher' && staff.userId?.toString() === requester.id) return;
   throw ApiError.notFound('Staff record not found');
 }

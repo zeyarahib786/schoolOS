@@ -1,10 +1,20 @@
+import { CrmLead } from '../../models/CrmLead';
+import { EditCrmLeadInput } from './crm.validation';
+import { User } from '../../models/User';
+import { notifyCrm } from '../notifications/notifications.inbox.service';
 import { AdmissionApplication } from '../../models/AdmissionApplication';
 import { CRM_STAGES, ICrmLead } from '../../models/CrmLead';
 import { AuthenticatedUser } from '../../middleware/auth';
 import { ApiError } from '../../utils/ApiError';
 import { logAudit } from '../audit/audit.service';
 import * as repo from './crm.repository';
-import { ArchiveCrmLeadInput, CreateCrmLeadInput, ListCrmLeadsQuery, LogCrmActivityInput, ScheduleFollowUpInput } from './crm.validation';
+import {
+  ArchiveCrmLeadInput,
+  CreateCrmLeadInput,
+  ListCrmLeadsQuery,
+  LogCrmActivityInput,
+  ScheduleFollowUpInput,
+} from './crm.validation';
 
 async function required(id: string): Promise<ICrmLead> {
   const lead = await repo.findById(id);
@@ -18,13 +28,17 @@ function activity(lead: ICrmLead, action: string) {
 }
 export async function listLeads(query: ListCrmLeadsQuery) {
   const { items, total } = await repo.findMany(query);
-  return { items, pagination: { page: query.page, limit: query.limit, total, totalPages: Math.ceil(total / query.limit) } };
+  return {
+    items,
+    pagination: { page: query.page, limit: query.limit, total, totalPages: Math.ceil(total / query.limit) },
+  };
 }
 export async function createLead(input: CreateCrmLeadInput, user: AuthenticatedUser) {
   if (await repo.findDuplicate(input.name, input.phone)) throw ApiError.conflict('This lead already exists');
   try {
     const lead = await repo.create(input);
     await logAudit(`Created CRM lead ${lead.name}`, 'CRM', user.id);
+    await notifyCrm(lead, 'New CRM enquiry', 'crm:new:' + lead._id);
     return lead;
   } catch (error) {
     if ((error as { code?: number }).code === 11000) throw ApiError.conflict('This lead already exists');
@@ -36,9 +50,12 @@ export async function advanceLead(id: string, user: AuthenticatedUser) {
   if (lead.archived) throw ApiError.conflict('Restore the lead before advancing it');
   const index = CRM_STAGES.indexOf(lead.stage);
   if (index >= CRM_STAGES.length - 1) throw ApiError.conflict('Lead is already at the final stage');
+  if (CRM_STAGES[index + 1] === 'Won')
+    throw ApiError.conflict('Convert the lead to an admission application to mark it Won');
   lead.stage = CRM_STAGES[index + 1];
   activity(lead, `Advanced to ${lead.stage}`);
   await lead.save();
+  await notifyCrm(lead, 'CRM stage updated', 'crm:stage:' + lead._id + ':' + lead.stage);
   await logAudit(`Advanced CRM lead ${lead.name} to ${lead.stage}`, 'CRM', user.id);
   return lead;
 }
@@ -55,8 +72,12 @@ export async function scheduleFollowUp(id: string, input: ScheduleFollowUpInput,
 export async function logActivity(id: string, input: LogCrmActivityInput, user: AuthenticatedUser) {
   const lead = await required(id);
   if (lead.archived) throw ApiError.conflict('Restore the lead before logging activity');
-  const initiated = ['Called', 'WhatsApp', 'Email'].includes(input.type) && !input.outcome && !input.notes ? ' initiated' : '';
-  activity(lead, `${input.type}${input.outcome ? ` · ${input.outcome}` : ''}${input.notes ? ` — ${input.notes}` : ''}${initiated}`);
+  const initiated =
+    ['Called', 'WhatsApp', 'Email'].includes(input.type) && !input.outcome && !input.notes ? ' initiated' : '';
+  activity(
+    lead,
+    `${input.type}${input.outcome ? ` · ${input.outcome}` : ''}${input.notes ? ` — ${input.notes}` : ''}${initiated}`,
+  );
   if (input.temperature) lead.temperature = input.temperature;
   await lead.save();
   await logAudit(`Logged CRM activity for ${lead.name}`, 'CRM', user.id);
@@ -94,13 +115,21 @@ export async function convertLead(id: string, user: AuthenticatedUser) {
   if (await AdmissionApplication.findOne({ applicantName: lead.name, phone }))
     throw ApiError.conflict('An admission application already exists for this lead');
   const application = await AdmissionApplication.create({
-    applicantName: lead.name, gradeAppliedFor: lead.grade, guardianName: lead.guardian || 'Not provided',
-    phone, guardianEmail: lead.guardianEmail,
+    applicantName: lead.name,
+    gradeAppliedFor: lead.grade,
+    guardianName: lead.guardian || 'Not provided',
+    phone,
+    guardianEmail: lead.guardianEmail,
     source: ['Website', 'Walk-in', 'Referral', 'Agent', 'Event'].includes(lead.source) ? lead.source : undefined,
-    status: 'Applied', notes: `Converted from CRM (${lead.source})`, documents: [], history: [],
+    status: 'Applied',
+    notes: `Converted from CRM (${lead.source})`,
+    documents: [],
+    history: [],
   });
   try {
     lead.stage = 'Won';
+    lead.applicationId = application._id;
+    lead.followUpDate = undefined;
     activity(lead, 'Converted to application');
     await lead.save();
   } catch (error) {
@@ -108,6 +137,7 @@ export async function convertLead(id: string, user: AuthenticatedUser) {
     throw error;
   }
   await logAudit(`Converted CRM lead ${lead.name} to Admissions`, 'CRM', user.id);
+  await notifyCrm(lead, 'CRM application created', 'crm:converted:' + lead._id);
   return { lead, applicationId: application._id };
 }
 export async function deleteLead(id: string, user: AuthenticatedUser) {
@@ -116,4 +146,66 @@ export async function deleteLead(id: string, user: AuthenticatedUser) {
   await lead.deleteOne();
   await logAudit(`Permanently deleted CRM lead ${lead.name}`, 'CRM', user.id, 'Critical');
   return { deleted: true };
+}
+
+export async function listAssignees() {
+  return User.find({ isActive: true, role: { $in: ['Administrator', 'Principal'] } }).select('_id name email');
+}
+export async function assignLead(id: string, ownerId: string, user: AuthenticatedUser) {
+  const lead = await required(id);
+  if (lead.archived || lead.stage === 'Won') throw ApiError.conflict('Only active pipeline leads can be assigned');
+  const owner = await User.findOne({ _id: ownerId, isActive: true, role: { $in: ['Administrator', 'Principal'] } });
+  if (!owner) throw ApiError.badRequest('Select an active CRM staff account');
+  lead.ownerUserId = owner._id;
+  lead.owner = owner.name;
+  lead.followUpNotifiedFor = undefined;
+  activity(lead, 'Assigned to ' + owner.name);
+  await lead.save();
+  await notifyCrm(
+    lead,
+    'CRM lead assigned',
+    'crm:assigned:' + lead._id + ':' + owner._id + ':' + lead.updatedAt.toISOString(),
+  );
+  await logAudit('Assigned CRM lead ' + lead.name, 'CRM', user.id);
+  return lead;
+}
+export async function completeFollowUp(id: string, note: string, user: AuthenticatedUser) {
+  const lead = await required(id);
+  if (lead.archived || !lead.followUpDate) throw ApiError.conflict('No active follow-up to complete');
+  lead.followUpDate = undefined;
+  lead.followUpType = undefined;
+  activity(lead, 'Follow-up completed — ' + note);
+  await lead.save();
+  await logAudit('Completed CRM follow-up ' + lead.name, 'CRM', user.id);
+  return lead;
+}
+
+export async function editLead(id: string, input: EditCrmLeadInput, user: AuthenticatedUser) {
+  const lead = await required(id);
+  if (lead.archived || lead.stage === 'Won')
+    throw ApiError.conflict('Only active, unconverted enquiries can be edited');
+  const duplicate = await repo.findDuplicate(input.name, input.phone);
+  if (duplicate && String(duplicate._id) !== id) throw ApiError.conflict('This lead already exists');
+  const { updatedAt, ...fields } = input;
+  try {
+    const saved = await CrmLead.findOneAndUpdate(
+      { _id: id, updatedAt: new Date(updatedAt), archived: false, stage: { $ne: 'Won' } },
+      {
+        $set: { ...fields, lastActivityAt: new Date() },
+        $push: {
+          activityLog: {
+            $each: [{ action: 'Enquiry details updated', occurredAt: new Date() }],
+            $position: 0,
+          },
+        },
+      },
+      { new: true, runValidators: true },
+    );
+    if (!saved) throw ApiError.conflict('This enquiry changed. Refresh and review it before saving again');
+    await logAudit('Updated CRM enquiry ' + saved.name, 'CRM', user.id);
+    return saved;
+  } catch (error) {
+    if ((error as { code?: number }).code === 11000) throw ApiError.conflict('This lead already exists');
+    throw error;
+  }
 }

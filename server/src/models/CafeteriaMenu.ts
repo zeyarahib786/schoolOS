@@ -12,6 +12,7 @@ export interface ICafeteriaMenu extends Document {
   breakfast?: IMenuDish;
   lunch?: IMenuDish;
   snack?: IMenuDish;
+  history: { at: Date; by: string; meal: string; reason: string; previous?: IMenuDish }[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -28,6 +29,15 @@ const dishSchema = new Schema<IMenuDish>(
 
 const cafeteriaMenuSchema = new Schema<ICafeteriaMenu>(
   {
+    history: [
+      {
+        at: Date,
+        by: { type: Schema.Types.ObjectId, ref: 'User' },
+        meal: String,
+        reason: String,
+        previous: dishSchema,
+      },
+    ],
     day: { type: String, enum: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'], required: true, unique: true },
     breakfast: dishSchema,
     lunch: dishSchema,

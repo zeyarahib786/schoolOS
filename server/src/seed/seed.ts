@@ -19,6 +19,7 @@ import { seedParents } from './parentsSeed';
 import { seedAccessRoles } from './rolesSeed';
 import { ensureDemoStudentAccount } from './studentAccountSeed';
 import { logger } from '../utils/logger';
+import { env } from '../config/env';
 
 /**
  * Idempotent seed script - safe to run repeatedly against the same database (skips existing
@@ -107,6 +108,7 @@ const seedStaff = [
 ];
 
 async function run(): Promise<void> {
+  if (env.NODE_ENV === 'production') throw new Error('Fictional demo seeding is disabled in production');
   await connectDb();
 
   const passwordHash = await bcrypt.hash(SEED_PASSWORD, 12);
@@ -154,18 +156,36 @@ async function run(): Promise<void> {
 
   const rohan = await Staff.findOne({ refId: 'EMP-209' });
   const classSeeds = [
-    ['KG 1', 'A', 'Foundation', 22], ['KG 2', 'B', 'Foundation', 24],
-    ['Grade 1', 'A', 'Primary', 26], ['Grade 3', 'B', 'Primary', 28], ['Grade 5', 'A', 'Primary', 28],
-    ['Grade 8', 'A', 'General', 28], ['Grade 8', 'B', 'General', 28], ['Grade 9', 'B', 'General', 28],
-    ['Grade 10', 'A', 'General', 30], ['Grade 10', 'B', 'General', 30],
-    ['Grade 11', 'C', 'Commerce', 30], ['Grade 12', 'A', 'Science', 30],
+    ['KG 1', 'A', 'Foundation', 22],
+    ['KG 2', 'B', 'Foundation', 24],
+    ['Grade 1', 'A', 'Primary', 26],
+    ['Grade 3', 'B', 'Primary', 28],
+    ['Grade 5', 'A', 'Primary', 28],
+    ['Grade 8', 'A', 'General', 28],
+    ['Grade 8', 'B', 'General', 28],
+    ['Grade 9', 'B', 'General', 28],
+    ['Grade 10', 'A', 'General', 30],
+    ['Grade 10', 'B', 'General', 30],
+    ['Grade 11', 'C', 'Commerce', 30],
+    ['Grade 12', 'A', 'Science', 30],
   ] as const;
   for (const [grade, section, stream, capacity] of classSeeds) {
     const teacherStaffId = grade === 'Grade 10' && section === 'A' ? rohan?._id : undefined;
-    const representative = await Student.findOne({ grade: `${grade} · ${section}`, status: 'Active' }).sort({ roll: 1 });
+    const representative = await Student.findOne({ grade: `${grade} · ${section}`, status: 'Active' }).sort({
+      roll: 1,
+    });
     await ClassSection.updateOne(
       { grade, section },
-      { $setOnInsert: { grade, section, stream, capacity, teacherStaffId, representativeStudentId: representative?._id } },
+      {
+        $setOnInsert: {
+          grade,
+          section,
+          stream,
+          capacity,
+          teacherStaffId,
+          representativeStudentId: representative?._id,
+        },
+      },
       { upsert: true, collation: { locale: 'en', strength: 2 } },
     );
   }
@@ -362,9 +382,7 @@ async function run(): Promise<void> {
     logger.info('Seeded helpdesk tickets: 1');
   }
 
-  logger.info(
-    `Seed complete. All seeded users share the password: ${SEED_PASSWORD} (demo only - rotate before any shared/staging use).`,
-  );
+  logger.info('Fictional development seed complete. Use the local setup guide for demo access.');
   await disconnectDb();
 }
 

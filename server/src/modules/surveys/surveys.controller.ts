@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { asyncHandler } from '../../middleware/errorHandler';
 import { sendSuccess } from '../../utils/apiResponse';
 import { ApiError } from '../../utils/ApiError';
+import { listSurveysSchema } from './surveys.validation';
 import * as service from './surveys.service';
 
 function requireUser(req: Request) {
@@ -10,7 +11,7 @@ function requireUser(req: Request) {
 }
 
 export const list = asyncHandler(async (req: Request, res: Response) => {
-  const result = await service.listSurveys(req.query as unknown as Parameters<typeof service.listSurveys>[0]);
+  const result = await service.listSurveys(listSurveysSchema.shape.query.parse(req.query), requireUser(req));
   sendSuccess(res, 200, result.items, { pagination: result.pagination });
 });
 
@@ -39,6 +40,6 @@ export const respond = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const results = asyncHandler(async (req: Request, res: Response) => {
-  const summary = await service.getResults(req.params.id);
+  const summary = await service.getResults(req.params.id, requireUser(req));
   sendSuccess(res, 200, summary);
 });

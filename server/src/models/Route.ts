@@ -6,6 +6,16 @@ import { Schema, model, Document, Types } from 'mongoose';
  * relationship of this size (a route has dozens of students, not thousands). */
 export interface IRoute extends Document {
   _id: Types.ObjectId;
+  archived: boolean;
+  studentStops: Array<{ student: Types.ObjectId; stopName: string }>;
+  history: Array<{
+    at: Date;
+    actor: Types.ObjectId;
+    action: string;
+    reason?: string;
+    student?: Types.ObjectId;
+    status?: string;
+  }>;
   name: string;
   vehicle: Types.ObjectId;
   stops: Array<{ name: string; address?: string; pincode?: string; time?: string; lat?: number; lng?: number }>;
@@ -19,10 +29,35 @@ export interface IRoute extends Document {
 
 const routeSchema = new Schema<IRoute>(
   {
+    archived: { type: Boolean, default: false, index: true },
+    studentStops: [{ _id: false, student: { type: Schema.Types.ObjectId, ref: 'Student' }, stopName: String }],
+    history: [
+      {
+        _id: false,
+        at: Date,
+        actor: { type: Schema.Types.ObjectId, ref: 'User' },
+        action: String,
+        reason: String,
+        student: { type: Schema.Types.ObjectId, ref: 'Student' },
+        status: String,
+      },
+    ],
     name: { type: String, required: true, trim: true, unique: true },
     vehicle: { type: Schema.Types.ObjectId, ref: 'Vehicle', required: true },
     stops: {
-      type: [new Schema({ name: { type: String, required: true, trim: true }, address: { type: String, trim: true }, pincode: { type: String, trim: true }, time: { type: String, trim: true }, lat: { type: Number }, lng: { type: Number } }, { _id: false })],
+      type: [
+        new Schema(
+          {
+            name: { type: String, required: true, trim: true },
+            address: { type: String, trim: true },
+            pincode: { type: String, trim: true },
+            time: { type: String, trim: true },
+            lat: { type: Number },
+            lng: { type: Number },
+          },
+          { _id: false },
+        ),
+      ],
       required: true,
       validate: { validator: (v: string[]) => v.length > 0, message: 'A route needs at least one stop' },
     },

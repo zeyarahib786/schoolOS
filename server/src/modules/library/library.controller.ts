@@ -3,6 +3,7 @@ import { asyncHandler } from '../../middleware/errorHandler';
 import { sendSuccess } from '../../utils/apiResponse';
 import { ApiError } from '../../utils/ApiError';
 import * as service from './library.service';
+import { listBooksSchema, listLoansSchema, listBookRequestsSchema } from './library.validation';
 
 function requireUser(req: Request) {
   if (!req.user) throw ApiError.unauthorized();
@@ -10,7 +11,7 @@ function requireUser(req: Request) {
 }
 
 export const listBooks = asyncHandler(async (req: Request, res: Response) => {
-  const result = await service.listBooks(req.query as unknown as Parameters<typeof service.listBooks>[0]);
+  const result = await service.listBooks(listBooksSchema.shape.query.parse(req.query));
   sendSuccess(res, 200, result.items, { pagination: result.pagination });
 });
 
@@ -34,7 +35,7 @@ export const returnBook = asyncHandler(async (req: Request, res: Response) => {
 
 export const listLoans = asyncHandler(async (req: Request, res: Response) => {
   const requester = requireUser(req);
-  const result = await service.listLoans(req.query as unknown as Parameters<typeof service.listLoans>[0], requester);
+  const result = await service.listLoans(listLoansSchema.shape.query.parse(req.query), requester);
   sendSuccess(res, 200, result.items, { pagination: result.pagination });
 });
 
@@ -44,16 +45,26 @@ export const createRequest = asyncHandler(async (req: Request, res: Response) =>
 });
 
 export const listRequests = asyncHandler(async (req: Request, res: Response) => {
-  const result = await service.listBookRequests(req.query as never, requireUser(req));
+  const result = await service.listBookRequests(listBookRequestsSchema.shape.query.parse(req.query), requireUser(req));
   sendSuccess(res, 200, result.items, { pagination: result.pagination });
 });
 
 export const fulfillRequest = asyncHandler(async (req: Request, res: Response) => {
-  const bookRequest = await service.fulfillRequest(req.params.id, requireUser(req));
+  const bookRequest = await service.fulfillRequest(req.params.id, requireUser(req), req.body.dueDate);
   sendSuccess(res, 200, bookRequest);
 });
 
 export const sendReminders = asyncHandler(async (req: Request, res: Response) => {
   const result = await service.sendOverdueReminders(req.body, requireUser(req));
   sendSuccess(res, 200, result);
+});
+
+export const reviewBook = asyncHandler(async (req: Request, res: Response) => {
+  sendSuccess(res, 200, await service.reviewBook(req.params.id, req.body, requireUser(req)));
+});
+export const renewLoan = asyncHandler(async (req: Request, res: Response) => {
+  sendSuccess(res, 200, await service.renewLoan(req.params.id, req.body, requireUser(req)));
+});
+export const decideRequest = asyncHandler(async (req: Request, res: Response) => {
+  sendSuccess(res, 200, await service.decideRequest(req.params.id, req.body, requireUser(req)));
 });

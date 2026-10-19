@@ -1,6 +1,7 @@
 
 /* ============ ICONS ============ */
 const I = {
+  close:'<path d="M18 6L6 18M6 6l12 12"/>',
   dash:'<path d="M3 13h8V3H3zM13 21h8V3h-8zM3 21h8v-6H3z"/>',
   admiss:'<path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/>',
   crm:'<path d="M3 4h18l-7 8v6l-4 2v-8z"/>',
@@ -57,7 +58,7 @@ const NAV = [
    {id:'crm',label:'Enrolment CRM',icon:'crm',roles:['Administrator','Principal']},
    {id:'students',label:'Students',icon:'students'},
    {id:'staff',label:'Staff & HR',icon:'staff',roles:['Administrator','Principal','Accountant']},
-   {id:'parents',label:'Parents',icon:'parents',roles:['Administrator','Principal']},
+   {id:'parents',label:'Parents',icon:'parents',roles:['Administrator','Principal','Parent']},
    {id:'certificates',label:'Certificates',icon:'cert',roles:['Administrator','Principal']},
    {id:'idcards',label:'ID Cards',icon:'idcard',roles:['Administrator','Principal','Teacher']},
    {id:'alumni',label:'Alumni',icon:'alumni',roles:['Administrator','Principal']},
@@ -66,7 +67,7 @@ const NAV = [
    {id:'classes',label:'Classes & Sections',icon:'classes',roles:['Administrator','Principal','Teacher']},
    {id:'timetable',label:'Timetable',icon:'tt'},
    {id:'attendance',label:'Attendance',icon:'att'},
-   {id:'exams',label:'Exams & Gradebook',icon:'exam'},
+   {id:'exams',label:'Exams & Gradebook',icon:'exam',roles:['Administrator','Principal','Teacher','Parent','Student']},
    {id:'curriculum',label:'Curriculum',icon:'curric',roles:['Administrator','Principal','Teacher']},
    {id:'lms',label:'Learning (LMS)',icon:'lms'},
    {id:'behaviour',label:'Behaviour',icon:'behaviour',roles:['Administrator','Principal','Teacher']},
@@ -76,7 +77,7 @@ const NAV = [
    {id:'cafeteria',label:'Cafeteria',icon:'cafeteria',roles:['Administrator','Principal','Parent']},
  ]},
  {group:'Finance', items:[
-   {id:'fees',label:'Fees & Invoicing',icon:'fees',roles:['Administrator','Principal','Accountant','Parent']},
+   {id:'fees',label:'Fees & Invoicing',icon:'fees',roles:['Administrator','Principal','Accountant','Parent','Student']},
    {id:'payroll',label:'Payroll',icon:'payroll',roles:['Administrator','Accountant']},
    {id:'expenses',label:'Expenses',icon:'expense',roles:['Administrator','Accountant']},
  ]},

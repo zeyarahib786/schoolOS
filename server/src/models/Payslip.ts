@@ -8,6 +8,7 @@ import { Schema, model, Document, Types } from 'mongoose';
 export interface IPayslip extends Document {
   _id: Types.ObjectId;
   staff: Types.ObjectId;
+  currency: string;
   month: string; // e.g. "2026-06"
   basicSalary: number;
   allowances: number;
@@ -15,6 +16,11 @@ export interface IPayslip extends Document {
   netPay: number;
   status: 'Draft' | 'Processed' | 'Paid';
   paidDate?: Date;
+  paymentReference?: string;
+  paymentMethod?: string;
+  paidBy?: Types.ObjectId;
+  employeeSnapshot?: { name: string; refId: string; designation: string };
+  corrections: Array<{ at: Date; actor: Types.ObjectId; reason: string; previousNet: number; net: number }>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -22,6 +28,7 @@ export interface IPayslip extends Document {
 const payslipSchema = new Schema<IPayslip>(
   {
     staff: { type: Schema.Types.ObjectId, ref: 'Staff', required: true, index: true },
+    currency: { type: String, default: 'AED' },
     month: { type: String, required: true, match: [/^\d{4}-\d{2}$/, 'month must be in YYYY-MM format'] },
     basicSalary: { type: Number, required: true, min: 0 },
     allowances: { type: Number, required: true, min: 0, default: 0 },
@@ -29,6 +36,20 @@ const payslipSchema = new Schema<IPayslip>(
     netPay: { type: Number, required: true, min: 0 },
     status: { type: String, enum: ['Draft', 'Processed', 'Paid'], default: 'Draft', index: true },
     paidDate: { type: Date },
+    paymentReference: { type: String, maxlength: 120 },
+    paymentMethod: String,
+    paidBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    employeeSnapshot: { name: String, refId: String, designation: String },
+    corrections: [
+      {
+        _id: false,
+        at: Date,
+        actor: { type: Schema.Types.ObjectId, ref: 'User' },
+        reason: { type: String, maxlength: 500 },
+        previousNet: Number,
+        net: Number,
+      },
+    ],
   },
   { timestamps: true },
 );

@@ -1,3 +1,4 @@
+import { SurveyResponse } from '../../models/SurveyResponse';
 import { ApiError } from '../../utils/ApiError';
 import { ISurvey } from '../../models/Survey';
 import { ISurveyResponse } from '../../models/SurveyResponse';
@@ -11,10 +12,29 @@ function canManageSurveys(role: Role): boolean {
   return WRITE_ROLES.includes(role);
 }
 
-export async function listSurveys(query: ListSurveysQuery) {
-  const { items, total } = await repo.findMany(query);
+function allowedAudience(requester: AuthenticatedUser) {
+  return ['All', requester.role === 'Parent' ? 'Parents' : requester.role === 'Student' ? 'Students' : 'Staff'];
+}
+function canRespond(survey: ISurvey, requester: AuthenticatedUser) {
+  return allowedAudience(requester).includes(survey.audience || 'All');
+}
+export async function listSurveys(query: ListSurveysQuery, requester: AuthenticatedUser) {
+  const scope = canManageSurveys(requester.role)
+    ? {}
+    : {
+        $and: [
+          { status: { $in: ['Active', 'Closed'] } },
+          { $or: [{ audience: { $in: allowedAudience(requester) } }, { audience: { $exists: false } }] },
+        ],
+      };
+  const { items, total } = await repo.findMany(query, scope);
+  const responses = await SurveyResponse.find({
+    respondent: requester.id,
+    survey: { $in: items.map((r) => r._id) },
+  }).distinct('survey');
+  const own = new Set(responses.map(String));
   return {
-    items,
+    items: items.map((r) => ({ ...r.toObject(), hasResponded: own.has(String(r._id)) })),
     pagination: { page: query.page, limit: query.limit, total, totalPages: Math.ceil(total / query.limit) },
   };
 }
@@ -36,7 +56,7 @@ export async function activateSurvey(id: string, requester: AuthenticatedUser): 
     throw ApiError.forbidden('Only Administrator, Principal, or Teacher may activate a survey');
   await getSurveyOrThrow(id);
   const updated = await repo.activate(id);
-  if (!updated) throw ApiError.notFound('Survey not found');
+  if (!updated) throw ApiError.conflict('Survey lifecycle changed; reload before review');
   return updated;
 }
 
@@ -45,7 +65,7 @@ export async function closeSurvey(id: string, requester: AuthenticatedUser): Pro
     throw ApiError.forbidden('Only Administrator, Principal, or Teacher may close a survey');
   await getSurveyOrThrow(id);
   const updated = await repo.close(id);
-  if (!updated) throw ApiError.notFound('Survey not found');
+  if (!updated) throw ApiError.conflict('Survey lifecycle changed; reload before review');
   return updated;
 }
 
@@ -62,6 +82,12 @@ export async function submitResponse(
   if (survey.status !== 'Active')
     throw ApiError.forbidden(`This survey is ${survey.status.toLowerCase()} and is not currently accepting responses`);
 
+  if (!canRespond(survey, requester)) throw ApiError.forbidden('This survey is for another audience');
+  if (
+    input.answers.length !== survey.questions.length ||
+    new Set(input.answers.map((a) => a.questionIndex)).size !== survey.questions.length
+  )
+    throw ApiError.badRequest('Answer every question exactly once');
   const existing = await repo.hasResponded(surveyId, requester.id);
   if (existing) throw ApiError.conflict('You have already responded to this survey');
 
@@ -75,7 +101,9 @@ export async function submitResponse(
   return repo.submitResponse(surveyId, requester.id, input);
 }
 
-export async function getResults(surveyId: string) {
+export async function getResults(surveyId: string, requester: AuthenticatedUser) {
+  if (!canManageSurveys(requester.role))
+    throw ApiError.forbidden('Survey results are restricted to school survey staff');
   const survey = await getSurveyOrThrow(surveyId);
   const { totalRespondents, tally } = await repo.computeResults(surveyId);
   const questions = survey.questions.map((q, questionIndex) => ({

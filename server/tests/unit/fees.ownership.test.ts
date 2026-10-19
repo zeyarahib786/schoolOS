@@ -18,12 +18,12 @@ describe('scopeInvoiceFilter', () => {
 
   it('scopes Teacher to their (empty, since Teachers have no linked children) authorized student list - Teacher has NO business reason to see fee data, unlike Attendance/Students where Teacher is unrestricted', () => {
     const filter = scopeInvoiceFilter({}, makeUser('teacher-id', 'Teacher'), []);
-    expect(filter).toEqual({ student: { $in: [] } });
+    expect(filter).toEqual({ $and: [{}, { student: { $in: [] } }] });
   });
 
   it("scopes a Parent to only their linked children's invoices", () => {
     const filter = scopeInvoiceFilter({}, makeUser('parent-id', 'Parent'), [childId]);
-    expect(filter).toEqual({ student: { $in: [childId] } });
+    expect(filter).toEqual({ $and: [{}, { student: { $in: [childId] } }] });
   });
 });
 

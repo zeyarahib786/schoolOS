@@ -9,12 +9,27 @@ import {
   studentPaymentSchema,
   listPaymentsSchema,
   sendFeeRemindersSchema,
+  createFeeHeadSchema,
+  updateFeeHeadSchema,
 } from './fees.validation';
 
 const router = Router();
 
 router.use(requireAuth);
 
+router.get('/heads', requireRole('Administrator', 'Principal', 'Accountant'), controller.listHeads);
+router.post(
+  '/heads',
+  requireRole('Administrator', 'Principal', 'Accountant'),
+  validate(createFeeHeadSchema),
+  controller.createHead,
+);
+router.patch(
+  '/heads/:id',
+  requireRole('Administrator', 'Principal', 'Accountant'),
+  validate(updateFeeHeadSchema),
+  controller.updateHead,
+);
 router.get('/', validate(listInvoicesSchema), controller.list);
 router.get('/payments', validate(listPaymentsSchema), controller.listPayments);
 router.post(

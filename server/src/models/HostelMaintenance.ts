@@ -8,6 +8,8 @@ export interface IHostelMaintenance extends Document {
   priority: 'High' | 'Medium' | 'Low';
   status: 'Open' | 'In progress' | 'Resolved';
   reportedBy: Types.ObjectId;
+  resolution?: string;
+  history: Array<{ at: Date; actor: Types.ObjectId; reason: string; status: string }>;
   resolvedBy?: Types.ObjectId;
   resolvedAt?: Date;
   createdAt: Date;
@@ -23,6 +25,10 @@ const hostelMaintenanceSchema = new Schema<IHostelMaintenance>(
     priority: { type: String, enum: ['High', 'Medium', 'Low'], required: true },
     status: { type: String, enum: ['Open', 'In progress', 'Resolved'], default: 'Open', index: true },
     reportedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    resolution: String,
+    history: [
+      { _id: false, at: Date, actor: { type: Schema.Types.ObjectId, ref: 'User' }, reason: String, status: String },
+    ],
     resolvedBy: { type: Schema.Types.ObjectId, ref: 'User' },
     resolvedAt: Date,
   },

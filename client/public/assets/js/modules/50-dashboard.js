@@ -71,77 +71,77 @@ M.dashboard=()=>{
   const modsTot=(typeof OPTIONAL!=='undefined')?OPTIONAL.length:0;
   const coreMods=flatItems().length-modsOn;
   const visibleAlerts=(fees.loaded?INVOICES.filter(i=>i.status==='Overdue').length:0)
-    +(att.loaded?STUDENTS.filter(s=>s.status==='Active'&&s.attendanceRecords>0&&s.att<85).length:0)
+    +(att.loaded?STUDENTS.filter(s=>s.status==='Active'&&(s.attendanceEligibleRecords??s.attendanceRecords)>0&&s.att<85).length:0)
     +approvals.length;
   return `
   <div class="page-head">
-    <div class="ph-l"><h2>Welcome, ${escHtml(api?.user?.name||r)} 👋</h2>
-      <p>Operational view · ${escHtml(state.schoolProfile?.legalName||'SchoolOS')} · ${dashboardLocalDate()}. Figures below use available server records.</p></div>
+    <div class="ph-l"><h2>${t('Welcome')}, <span data-i18n-skip="true">${escHtml(api?.user?.name||r)}</span> 👋</h2>
+      <p>${t('Operational view')} · <span data-i18n-skip="true">${escHtml(state.schoolProfile?.legalName||'SchoolOS')}</span> · ${dashboardLocalDate()}. ${t('Figures below use available server records.')}</p></div>
     <div class="ph-r">
-      ${(state.role==='Principal')?`<button class="btn" onclick="openDrawer(myLeaveView())">${ic('roles',16)} My leave</button>`:''}
-      ${(state.role==='Administrator'||state.role==='Principal')?`<button class="btn" onclick="openDrawer(officeAttendanceOverview())">${ic('att',16)} Office attendance</button>`:''}
-      <button class="btn" onclick="exportDashboardSummary()">${ic('download',16)} Export</button>
+      ${(state.role==='Principal')?`<button class="btn" onclick="openDrawer(myLeaveView())">${ic('roles',16)} ${t('My leave')}</button>`:''}
+      ${(state.role==='Administrator'||state.role==='Principal')?`<button class="btn" onclick="openDrawer(officeAttendanceOverview())">${ic('att',16)} ${t('Office attendance')}</button>`:''}
+      <button class="btn" onclick="exportDashboardSummary()">${ic('download',16)} ${t('Export')}</button>
       <button class="btn primary" onclick="openCmd()">${ic('plus',16)} ${t('Quick action')}</button>
     </div>
   </div>
   <div class="grid cols-4">
-    ${kpi('students','#17A24A','Students · roster',api?.live?.students?String(N):'—',null,"go('students')")}
-    ${kpi('att','#2563EB',"Today's AM attendance",attRate===null?'Not marked':attRate+'%',att.loaded?{dir:'flat',v:String(attP+attL)+' marked present/late',note:attU+' unmarked'}:null,"go('attendance')")}
-    ${kpi('fees','#0E7C39','Fees collected',fees.loaded?aed(paid):'—',fees.loaded?{dir:'flat',v:collRate===null?'No invoices':collRate+'%',note:'of '+aed(billed)+' billed'}:null,"go('fees')")}
-    ${kpi('admiss','#E11D2A','Open admissions',admissionsLoaded?String(openAdm):'—',admissionsLoaded?{dir:'flat',v:String(offers),note:'at offer stage'}:null,"go('admissions')")}
+    ${kpi('students','#17A24A',t('Students · roster'),api?.live?.students?String(N):'—',null,"go('students')")}
+    ${kpi('att','#2563EB',t("Today's AM attendance"),attRate===null?t('Not marked'):attRate+'%',att.loaded?{dir:'flat',v:String(attP+attL)+' '+t('marked present/late'),note:attU+' '+t('unmarked')}:null,"go('attendance')")}
+    ${kpi('fees','#0E7C39',t('Fees collected'),fees.loaded?aed(paid):'—',fees.loaded?{dir:'flat',v:collRate===null?t('No invoices'):collRate+'%',note:t('of')+' '+aed(billed)+' '+t('billed')}:null,"go('fees')")}
+    ${kpi('admiss','#E11D2A',t('Open admissions'),admissionsLoaded?String(openAdm):'—',admissionsLoaded?{dir:'flat',v:String(offers),note:t('at offer stage')}:null,"go('admissions')")}
   </div>
-  <div class="muted" style="font-size:11.5px;margin-top:8px">Data: available Students, Attendance, Fees & Admissions records · school timezone: ${escHtml(api?.settings?.timezone||'UTC')}</div>
+  <div class="muted" style="font-size:11.5px;margin-top:8px">${t('Data: available Students, Attendance, Fees & Admissions records · school timezone:')} ${escHtml(t(api?.settings?.timezone||'UTC'))}</div>
 
   <div class="grid cols-3 mt">
     <div class="card pad span-2">
-      <div class="sec-head"><h3>Recent AM attendance</h3><span class="link" onclick="go('attendance')">Open attendance →</span></div>
-      ${att.history.length?vbars(att.history):'<div class="muted" style="padding:22px 0">No AM attendance records available yet.</div>'}
+      <div class="sec-head"><h3>${t('Recent AM attendance')}</h3><span class="link" onclick="go('attendance')">${t('Open attendance')} →</span></div>
+      ${att.history.length?vbars(att.history):`<div class="muted" style="padding:22px 0">${t('No AM attendance records available yet.')}</div>`}
       <div class="flex gap wrap mt-s" style="font-size:12px;color:var(--slate-500)">
-        <span class="flex ac" style="gap:6px"><span style="width:10px;height:10px;border-radius:3px;background:var(--brand);display:inline-block"></span> 90% and above</span>
-        <span class="flex ac" style="gap:6px"><span style="width:10px;height:10px;border-radius:3px;background:#A6DEBC;display:inline-block"></span> Below 90% — review</span>
-        <span style="margin-left:auto">Today: ${att.loaded?attP+' present · '+attL+' late · '+attA+' absent · '+attU+' unmarked':'attendance unavailable'}</span>
+        <span class="flex ac" style="gap:6px"><span style="width:10px;height:10px;border-radius:3px;background:var(--brand);display:inline-block"></span> ${t('90% and above')}</span>
+        <span class="flex ac" style="gap:6px"><span style="width:10px;height:10px;border-radius:3px;background:#A6DEBC;display:inline-block"></span> ${t('Below 90% — review')}</span>
+        <span style="margin-left:auto">${t('Today')}: ${att.loaded?attP+' '+t('present')+' · '+attL+' '+t('late')+' · '+attA+' '+t('absent')+' · '+attU+' '+t('unmarked'):t('attendance unavailable')}</span>
       </div>
     </div>
     <div class="card pad">
-      <div class="sec-head"><h3>Fee collection</h3><span class="link" onclick="go('fees')">Open →</span></div>
+      <div class="sec-head"><h3>${t('Fee collection')}</h3><span class="link" onclick="go('fees')">${t('Open')} →</span></div>
       <div class="flex ac" style="gap:18px">
-        <div class="donut" style="--p:${collRate||0}"><div class="in"><b>${collRate===null?'—':collRate+'%'}</b><span>of ${fees.loaded?aedC(billed):'unavailable'}</span></div></div>
+        <div class="donut" style="--p:${collRate||0}"><div class="in"><b>${collRate===null?'—':collRate+'%'}</b><span>${t('of')} ${fees.loaded?aedC(billed):t('unavailable')}</span></div></div>
         <div style="flex:1">
-          <div class="lrow" style="border:0;padding:7px 0"><span class="badge b-green"><span class="bd"></span>Collected</span><b class="num" style="margin-left:auto;color:var(--slate-900)">${aed(paid)}</b></div>
-          <div class="lrow" style="border:0;padding:7px 0"><span class="badge b-amber"><span class="bd"></span>Due</span><b class="num" style="margin-left:auto;color:var(--slate-900)">${aed(due)}</b></div>
-          <div class="lrow" style="border:0;padding:7px 0"><span class="badge b-red"><span class="bd"></span>Overdue</span><b class="num" style="margin-left:auto;color:var(--slate-900)">${aed(over)}</b></div>
+          <div class="lrow" style="border:0;padding:7px 0"><span class="badge b-green"><span class="bd"></span>${t('Collected')}</span><b class="num" style="margin-left:auto;color:var(--slate-900)">${aed(paid)}</b></div>
+          <div class="lrow" style="border:0;padding:7px 0"><span class="badge b-amber"><span class="bd"></span>${t('Due')}</span><b class="num" style="margin-left:auto;color:var(--slate-900)">${aed(due)}</b></div>
+          <div class="lrow" style="border:0;padding:7px 0"><span class="badge b-red"><span class="bd"></span>${t('Overdue')}</span><b class="num" style="margin-left:auto;color:var(--slate-900)">${aed(over)}</b></div>
         </div>
       </div>
-      <div class="muted" style="font-size:11px;margin-top:10px">${fees.loaded?'Billed '+aed(billed)+' · collected is sum of payments; due/overdue are outstanding balances':'Fee ledger unavailable'}</div>
+      <div class="muted" style="font-size:11px;margin-top:10px">${fees.loaded?t('Billed')+' '+aed(billed)+' · '+t('collected is sum of payments; due/overdue are outstanding balances'):t('Fee ledger unavailable')}</div>
     </div>
   </div>
 
   <div class="grid cols-3 mt">
     <div class="card pad span-2">
-      <div class="sec-head"><h3>Admissions pipeline</h3><span class="link" onclick="go('admissions')">Manage →</span></div>
+      <div class="sec-head"><h3>${t('Admissions pipeline')}</h3><span class="link" onclick="go('admissions')">${t('Manage')} →</span></div>
       <div class="grid cols-4" style="gap:10px;grid-template-columns:repeat(5,1fr)">
         ${STAGES.map(st=>{const n=admissionsLoaded?ADMISSIONS.filter(a=>a.stage===st).length:null;return `<div role="button" tabindex="0" onclick="admFocus('${st}');go('admissions')" onkeydown="if(event.key==='Enter'){admFocus('${st}');go('admissions')}" style="text-align:center;padding:14px 8px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2);cursor:pointer">
           <div class="num" style="font-family:var(--ff-display);font-weight:700;font-size:26px;color:var(--slate-900)">${n===null?'—':n}</div>
-          <div style="font-size:11.5px;color:var(--slate-500);font-weight:600;margin-top:2px">${st}</div></div>`}).join('')}
+          <div style="font-size:11.5px;color:var(--slate-500);font-weight:600;margin-top:2px">${t(st)}</div></div>`}).join('')}
       </div>
-      <div class="mt-s">${admissionsLoaded?ADMISSIONS.slice(0,3).map(a=>`<div class="lrow" style="cursor:pointer" onclick="go('admissions')">${avatar(escHtml(a.name))}<div><div style="font-weight:600;color:var(--slate-900)">${escHtml(a.name)}</div><div class="muted" style="font-size:12px">${escHtml(a.grade)} · via ${escHtml(a.src)}</div></div><span class="badge b-blue" style="margin-left:auto"><span class="bd"></span>${escHtml(a.stage)}</span><span class="muted" style="font-size:12px">${escHtml(a.date)}</span></div>`).join(''):'<div class="muted">Admissions data unavailable.</div>'}</div>
+      <div class="mt-s">${admissionsLoaded?ADMISSIONS.slice(0,3).map(a=>`<div class="lrow" style="cursor:pointer" onclick="go('admissions')">${avatar(escHtml(t(a.name)))}<div><div style="font-weight:600;color:var(--slate-900)">${escHtml(t(a.name))}</div><div class="muted" style="font-size:12px">${escHtml(t(a.grade))} · ${t('via')} ${escHtml(t(a.src))}</div></div><span class="badge b-blue" style="margin-left:auto"><span class="bd"></span>${escHtml(t(a.stage))}</span><span class="muted" style="font-size:12px">${escHtml(a.date)}</span></div>`).join(''):`<div class="muted">${t('Admissions data unavailable.')}</div>`}</div>
     </div>
     <div class="card pad">
-      <div class="sec-head"><h3>Action centre</h3><span class="badge ${approvals.length?'b-red':'b-green'}"><span class="bd"></span>${approvals.length} visible</span></div>
-      ${approvals.length?approvals.slice(0,5).map(a=>`<div class="lrow"><div style="flex:1;min-width:0"><div style="font-weight:600;color:var(--slate-900);font-size:13.5px">${escHtml(a.title)}</div><div class="muted" style="font-size:12px">${escHtml(a.sub)}</div></div><button class="btn sm" onclick="openDrawer(approvalDetail('${a.kind}','${a.ref}'))">Review</button></div>`).join(''):`<div class="empty" style="padding:22px 8px"><div class="ei">${ic('roles',24)}</div><h3 style="font-size:14px">No visible actions</h3><p style="font-size:12px">Nothing pending in the modules currently loaded.</p></div>`}
-      ${approvals.length?`<div class="muted" style="font-size:11px;margin-top:8px">Each request opens for full review — details, policy checks and audit-logged decisions.</div>`:''}
+      <div class="sec-head"><h3>${t('Action centre')}</h3><span class="badge ${approvals.length?'b-red':'b-green'}"><span class="bd"></span>${approvals.length} ${t('visible')}</span></div>
+      ${approvals.length?approvals.slice(0,5).map(a=>`<div class="lrow"><div style="flex:1;min-width:0"><div style="font-weight:600;color:var(--slate-900);font-size:13.5px">${escHtml(t(a.title))}</div><div class="muted" style="font-size:12px">${escHtml(t(a.sub))}</div></div><button class="btn sm" onclick="openDrawer(approvalDetail('${a.kind}','${a.ref}'))">${t('Review')}</button></div>`).join(''):`<div class="empty" style="padding:22px 8px"><div class="ei">${ic('roles',24)}</div><h3 style="font-size:14px">${t('No visible actions')}</h3><p style="font-size:12px">${t('Nothing pending in the modules currently loaded.')}</p></div>`}
+      ${approvals.length?`<div class="muted" style="font-size:11px;margin-top:8px">${t('Each request opens for full review — details, policy checks and audit-logged decisions.')}</div>`:''}
     </div>
   </div>
 
   <div class="grid cols-3 mt">
     <div class="card pad span-2">
-      <div class="sec-head"><h3>Announcements</h3><span class="link" onclick="go('comm')">All updates →</span></div>
-      ${api?.live?.ANN?(ANN.filter(a=>a.status==='Published').slice(0,5).map(annRow).join('')||'<div class="muted">No published announcements.</div>'):'<div class="muted">Announcements unavailable.</div>'}
+      <div class="sec-head"><h3>${t('Announcements')}</h3><span class="link" onclick="go('comm')">${t('All updates')} →</span></div>
+      ${api?.live?.ANN?(ANN.filter(a=>a.status==='Published').slice(0,5).map(annRow).join('')||`<div class="muted">${t('No published announcements.')}</div>`):`<div class="muted">${t('Announcements unavailable.')}</div>`}
     </div>
     <div class="card pad">
-      <div class="sec-head"><h3>System health</h3><span class="link" onclick="go('settings')">Modules →</span></div>
-      ${[['Modules active',(coreMods+modsOn)+' / '+(coreMods+modsTot),'green'],['Visible alerts',String(visibleAlerts),visibleAlerts?'amber':'green'],['Audit events',api?.live?.audit?String(AUDIT.length):'Unavailable','blue'],['Backup status','Not verified','amber'],['Languages enabled',String(langEnabled().length)+' / 4','blue']].map(x=>`<div class="lrow" style="padding:10px 0"><span style="font-size:13px;color:var(--slate-600)">${x[0]}</span><span class="badge b-${x[2]}" style="margin-left:auto"><span class="bd"></span>${x[1]}</span></div>`).join('')}
-      <div class="muted" style="font-size:11px;margin-top:8px">Module count reflects Settings toggles. Backup verification needs an external process.</div>
+      <div class="sec-head"><h3>${t('System health')}</h3><span class="link" onclick="go('settings')">${t('Modules')} →</span></div>
+      ${[['Modules active',(coreMods+modsOn)+' / '+(coreMods+modsTot),'green'],['Visible alerts',String(visibleAlerts),visibleAlerts?'amber':'green'],['Audit events',api?.live?.audit?String(AUDIT.length):t('Unavailable'),'blue'],['Backup status',t('Not verified'),'amber'],['Languages enabled',String(langEnabled().length)+' / 4','blue']].map(x=>`<div class="lrow" style="padding:10px 0"><span style="font-size:13px;color:var(--slate-600)">${t(x[0])}</span><span class="badge b-${x[2]}" style="margin-left:auto"><span class="bd"></span>${t(x[1])}</span></div>`).join('')}
+      <div class="muted" style="font-size:11px;margin-top:8px">${t('Module count reflects Settings toggles. Backup verification needs an external process.')}</div>
     </div>
   </div>`;
 };
@@ -181,7 +181,7 @@ function dashboardRecordHtml(title,student,content){
 function dashboardDownloadAssessment(studentId){
  const student=STUDENTS.find(s=>s.id===studentId),grades=dashboardGrades(student);
  if(!student||!grades.length){toast('No published assessment marks available for download');return}
- const rows=grades.map(row=>'<tr><td>'+escHtml(row.subject)+'</td><td>'+row.score+'</td><td>'+row.max+'</td></tr>').join('');
+ const rows=grades.map(row=>'<tr><td data-i18n-skip="true">'+escHtml(row.subject)+'</td><td>'+row.score+'</td><td>'+row.max+'</td></tr>').join('');
  downloadDoc('Assessment_'+student.id.replace(/[^A-Za-z0-9-]/g,'_')+'.html',
   dashboardRecordHtml('Published assessment summary',student,'<p>'+escHtml(window.SCHOOLOS_ADAPTER.exam.name)+'</p><table><tr><th>Subject</th><th>Marks</th><th>Maximum</th></tr>'+rows+'</table>'));
 }
@@ -239,7 +239,7 @@ function studentExcusedToday(studentId){const today=new Date().toISOString().sli
 /* ---- Staff (incl. office roles) daily attendance self-mark ---- */
 let STAFF_ATTENDANCE={};
 function myStaffAttendanceToday(){const me=myIdentity();return STAFF_ATTENDANCE[me]||null}
-window.markMyAttendance=function(status){const me=myIdentity();STAFF_ATTENDANCE[me]={status,time:new Date().toLocaleTimeString('en-AE',{hour:'2-digit',minute:'2-digit'})};
+window.markMyAttendance=function(status){const me=myIdentity();STAFF_ATTENDANCE[me]={status,time:new Date().toLocaleTimeString((typeof schoolLocale==='function'?schoolLocale():'en-GB'),{hour:'2-digit',minute:'2-digit'})};
  logAudit('Marked own attendance - '+status,'Attendance');render();toast('Attendance marked - '+status)};
 function staffAttendanceWidget(){const mine=myStaffAttendanceToday();
  return `<div class="card pad" style="box-shadow:none"><div class="flex ac jb" style="margin-bottom:8px"><span style="font-size:12.5px;font-weight:600;color:var(--slate-600)">My attendance today</span>${mine?chip(mine.status+' · '+mine.time,mine.status==='Present'?'green':mine.status==='Remote'?'blue':'amber'):chip('Not marked','gray')}</div>
@@ -296,7 +296,7 @@ function teacherHome(){
  const grading=api?.live?.lmsSubmissions?(api.lmsSubmissions||[]).filter(row=>row.status!=='Graded').length:null;
  return `
   <div class="page-head"><div class="ph-l"><h2>Welcome, ${escHtml(myIdentity())}</h2><p>${api?.live?.timetable?'Published timetable for '+day:'Timetable unavailable'} · school records only.</p></div>
-  <div class="ph-r"><button class="btn" onclick="openDrawer(myLeaveView())">${ic('roles',16)} My leave</button><button class="btn primary" onclick="go('attendance')">${ic('att',16)} Take attendance</button></div></div>
+  <div class="ph-r"><button class="btn" onclick="lmsAiLaunch()">Teacher AI Studio</button><button class="btn" onclick="openDrawer(myLeaveView())">${ic('roles',16)} My leave</button><button class="btn primary" onclick="go('attendance')">${ic('att',16)} Take attendance</button></div></div>
   <div class="grid cols-4">
     ${kpi('classes','#2563EB','My classes today',api?.live?.timetable?String(slots.length):'—',null,"go('timetable')")}
     ${kpi('students','#17A24A','Students in today\'s classes',students===null?'—':String(students),null,"go('students')")}
@@ -315,7 +315,7 @@ function parentHome(){const s=dashboardLinkedStudent();if(!s)return '<div class=
   <div class="page-head"><div class="ph-l"><h2>Hello, ${escHtml(window.SCHOOLOS_ADAPTER?.user?.name||s.guardian)}</h2><p>A summary for ${escHtml(s.name)} — ${escHtml(s.grade)}.</p></div>
   <div class="ph-r"><button class="btn" onclick="openDrawer(myAbsenceView())">${ic('att',16)} Leave / absence</button><button class="btn" onclick="dashboardDownloadFeeStatement(dashboardLinkedStudent()?.id)">${ic('download',16)} Fee statement</button><button class="btn primary" onclick="dashboardDownloadAssessment(dashboardLinkedStudent()?.id)">${ic('download',16)} Assessment summary</button></div></div>
   <div class="grid cols-4">
-    ${kpi('att','#17A24A','Attendance',s.attendanceRecords?s.att+'%':'No records',null,"go('attendance')")}
+    ${kpi('att','#17A24A','Attendance',studentAttendanceLabel(s),null,"go('attendance')")}
     ${kpi('exam','#2563EB','Assessment GPA',s.assessmentResults?String(s.gpa):'No results',null,"go('exams')")}
     ${kpi('fees','#0E7C39','Fee status',s.invoiceRecords?s.fee:'No invoices',null,"go('fees')")}
     ${kpi('comm','#B45309','Messages','View',null,"go('comm')")}
@@ -323,7 +323,7 @@ function parentHome(){const s=dashboardLinkedStudent();if(!s)return '<div class=
   <div class="grid cols-3 mt">
     <div class="card pad span-2"><div class="sec-head"><h3>Latest assessment marks</h3><span class="link" onclick="dashboardDownloadAssessment(dashboardLinkedStudent()?.id)">Download data copy →</span></div>
       <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Subject</th><th>Assessment</th><th class="right">Score</th><th>Maximum</th></tr></thead><tbody>
-      ${grades.length?grades.map(x=>`<tr><td style="font-weight:600;color:var(--slate-900)">${escHtml(x.subject)}</td><td>${escHtml(window.SCHOOLOS_ADAPTER?.exam?.name||'Latest assessment')}</td><td class="right num">${x.score}</td><td>${x.max}</td></tr>`).join(''):'<tr><td colspan="4" class="muted">No published assessment marks available.</td></tr>'}
+      ${grades.length?grades.map(x=>`<tr><td data-i18n-skip="true" style="font-weight:600;color:var(--slate-900)">${escHtml(x.subject)}</td><td data-i18n-skip="true">${escHtml(window.SCHOOLOS_ADAPTER?.exam?.name||'Latest assessment')}</td><td class="right num">${x.score}</td><td>${x.max}</td></tr>`).join(''):'<tr><td colspan="4" class="muted">No published assessment marks available.</td></tr>'}
       </tbody></table></div>
     </div>
     <div class="card pad"><div class="sec-head"><h3>Documents</h3></div>
@@ -339,7 +339,7 @@ function studentHome(){const me=dashboardLinkedStudent();if(!me)return '<div cla
   <div class="ph-r"><button class="btn" onclick="openDrawer(myAbsenceView())">${ic('att',16)} Leave / absence</button><button class="btn primary" onclick="dashboardDownloadAssessment(dashboardLinkedStudent()?.id)">${ic('download',16)} My assessment summary</button></div></div>
   <div class="grid cols-4">
     ${kpi('exam','#17A24A','My GPA',me.assessmentResults?String(me.gpa):'No results',null,"go('exams')")}
-    ${kpi('att','#2563EB','Attendance',me.attendanceRecords?me.att+'%':'No records',null,"go('attendance')")}
+    ${kpi('att','#2563EB','Attendance',studentAttendanceLabel(me),null,"go('attendance')")}
     ${kpi('lms','#B45309','Assignments due',api?.live?.lmsAssignments&&api.live.lmsSubmissions?String(dueList.length):'—',null,"go('lms')")}
     ${kpi('lib','#7C3AED','Library',api?.live?.LIBLOANS?loans.length+' on loan':'—',null,"go('library')")}
   </div>
@@ -357,7 +357,7 @@ function dashboardPaymentBars(){
   const date=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth()-5+i,1));
   const month=date.toISOString().slice(0,7);
   const amount=(api.feePayments||[]).filter(p=>String(p.paidAt||'').slice(0,7)===month).reduce((sum,p)=>sum+(Number(p.amount)||0),0);
-  return {lb:date.toLocaleString('en-GB',{month:'short'}),val:aed(amount),pct:0,amount};
+  return {lb:date.toLocaleString((typeof schoolLocale==='function'?schoolLocale():'en-GB'),{month:'short'}),val:aed(amount),pct:0,amount};
  }).map((row,_,rows)=>({...row,pct:rows.some(r=>r.amount)?Math.round(row.amount/Math.max(...rows.map(r=>r.amount))*100):0}));
 }
 function exportAccountantSummary(){

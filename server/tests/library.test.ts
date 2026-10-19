@@ -13,6 +13,8 @@ async function registerAndLogin(role: 'Administrator' | 'Teacher' | 'Parent', em
 }
 
 async function createStudent(token: string, refId: string, guardianUserId?: string) {
+  if (guardianUserId)
+    token = (await registerAndLogin('Administrator', 'library-link-' + refId.toLowerCase() + '@example.invalid')).token;
   const res = await request(app).post('/api/v1/students').set('Authorization', `Bearer ${token}`).send({
     refId,
     name: 'Fatima Al Hashimi',
@@ -231,9 +233,14 @@ describe('Library API', () => {
     const teacher = await registerAndLogin('Teacher', 'teacher-library-request@alnoor.ae');
     const parent = await registerAndLogin('Parent', 'parent-library-request@alnoor.ae');
     const stranger = await registerAndLogin('Parent', 'parent-library-stranger@alnoor.ae');
-    const book = await request(app).post('/api/v1/library/books').set('Authorization', `Bearer ${teacher.token}`).send(validBook);
+    const book = await request(app)
+      .post('/api/v1/library/books')
+      .set('Authorization', `Bearer ${teacher.token}`)
+      .send(validBook);
     await createStudent(teacher.token, 'ANS-6011', parent.userId);
-    const created = await request(app).post('/api/v1/library/requests').set('Authorization', `Bearer ${parent.token}`)
+    const created = await request(app)
+      .post('/api/v1/library/requests')
+      .set('Authorization', `Bearer ${parent.token}`)
       .send({ bookId: book.body.data._id, note: 'Needed for a reading project' });
     expect(created.status).toBe(201);
 
@@ -242,20 +249,33 @@ describe('Library API', () => {
     expect(mine.body.data).toHaveLength(1);
     expect(hidden.body.data).toHaveLength(0);
 
-    const fulfilled = await request(app).post(`/api/v1/library/requests/${created.body.data._id}/fulfill`).set('Authorization', `Bearer ${teacher.token}`);
+    const fulfilled = await request(app)
+      .post(`/api/v1/library/requests/${created.body.data._id}/fulfill`)
+      .set('Authorization', `Bearer ${teacher.token}`);
     expect(fulfilled.status).toBe(200);
     expect(fulfilled.body.data.status).toBe('Fulfilled');
-    const repeated = await request(app).post(`/api/v1/library/requests/${created.body.data._id}/fulfill`).set('Authorization', `Bearer ${teacher.token}`);
+    const repeated = await request(app)
+      .post(`/api/v1/library/requests/${created.body.data._id}/fulfill`)
+      .set('Authorization', `Bearer ${teacher.token}`);
     expect(repeated.status).toBe(409);
   });
 
   it('blocks duplicate pending requests for the same child and title', async () => {
     const teacher = await registerAndLogin('Teacher', 'teacher-library-duplicate-request@alnoor.ae');
     const parent = await registerAndLogin('Parent', 'parent-library-duplicate-request@alnoor.ae');
-    const book = await request(app).post('/api/v1/library/books').set('Authorization', `Bearer ${teacher.token}`).send(validBook);
+    const book = await request(app)
+      .post('/api/v1/library/books')
+      .set('Authorization', `Bearer ${teacher.token}`)
+      .send(validBook);
     await createStudent(teacher.token, 'ANS-6012', parent.userId);
-    const first = await request(app).post('/api/v1/library/requests').set('Authorization', `Bearer ${parent.token}`).send({ bookId: book.body.data._id });
-    const duplicate = await request(app).post('/api/v1/library/requests').set('Authorization', `Bearer ${parent.token}`).send({ bookId: book.body.data._id });
+    const first = await request(app)
+      .post('/api/v1/library/requests')
+      .set('Authorization', `Bearer ${parent.token}`)
+      .send({ bookId: book.body.data._id });
+    const duplicate = await request(app)
+      .post('/api/v1/library/requests')
+      .set('Authorization', `Bearer ${parent.token}`)
+      .send({ bookId: book.body.data._id });
     expect(first.status).toBe(201);
     expect(duplicate.status).toBe(409);
   });
@@ -263,13 +283,20 @@ describe('Library API', () => {
   it('sends an overdue portal reminder to the linked guardian and records it', async () => {
     const teacher = await registerAndLogin('Teacher', 'teacher-library-reminder@alnoor.ae');
     const parent = await registerAndLogin('Parent', 'parent-library-reminder@alnoor.ae');
-    const book = await request(app).post('/api/v1/library/books').set('Authorization', `Bearer ${teacher.token}`).send(validBook);
+    const book = await request(app)
+      .post('/api/v1/library/books')
+      .set('Authorization', `Bearer ${teacher.token}`)
+      .send(validBook);
     const studentId = await createStudent(teacher.token, 'ANS-6013', parent.userId);
-    const issued = await request(app).post('/api/v1/library/loans').set('Authorization', `Bearer ${teacher.token}`)
+    const issued = await request(app)
+      .post('/api/v1/library/loans')
+      .set('Authorization', `Bearer ${teacher.token}`)
       .send({ bookId: book.body.data._id, studentId, dueDate: '2027-07-01' });
     await Loan.findByIdAndUpdate(issued.body.data._id, { dueDate: new Date('2020-01-01') });
     await request(app).get('/api/v1/library/loans').set('Authorization', `Bearer ${teacher.token}`);
-    const reminder = await request(app).post('/api/v1/library/reminders').set('Authorization', `Bearer ${teacher.token}`)
+    const reminder = await request(app)
+      .post('/api/v1/library/reminders')
+      .set('Authorization', `Bearer ${teacher.token}`)
       .send({ loanIds: [issued.body.data._id] });
     expect(reminder.status).toBe(200);
     expect(reminder.body.data).toEqual({ sent: 1, skipped: 0 });

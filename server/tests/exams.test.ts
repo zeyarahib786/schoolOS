@@ -11,6 +11,8 @@ async function registerAndLogin(role: 'Administrator' | 'Teacher' | 'Accountant'
 }
 
 async function createStudent(token: string, refId: string, guardianUserId?: string) {
+  if (guardianUserId)
+    token = (await registerAndLogin('Administrator', refId.toLowerCase() + '-owner@example.invalid')).token;
   const res = await request(app).post('/api/v1/students').set('Authorization', `Bearer ${token}`).send({
     refId,
     name: 'Fatima Al Hashimi',
@@ -134,14 +136,14 @@ describe('Exams API', () => {
     expect(res.status).toBe(400);
   });
 
-  it('re-recording a result for the same (exam, student) UPDATES rather than duplicates', async () => {
+  it('versioned correction updates one result rather than duplicating it', async () => {
     const teacher = await registerAndLogin('Teacher', 'teacher7@alnoor.ae');
     const exam = await request(app)
       .post('/api/v1/exams')
       .set('Authorization', `Bearer ${teacher.token}`)
       .send(validExam);
     const studentId = await createStudent(teacher.token, 'ANS-7003');
-    await request(app)
+    const original = await request(app)
       .post('/api/v1/exams/results')
       .set('Authorization', `Bearer ${teacher.token}`)
       .send({
@@ -153,24 +155,29 @@ describe('Exams API', () => {
         ],
       });
     const corrected = await request(app)
-      .post('/api/v1/exams/results')
+      .put('/api/v1/exams/' + exam.body.data._id + '/register')
       .set('Authorization', `Bearer ${teacher.token}`)
       .send({
-        examId: exam.body.data._id,
-        studentId,
-        scores: [
-          { subject: 'Mathematics', marks: 95 },
-          { subject: 'Science', marks: 95 },
+        correctionReason: 'Script moderation',
+        entries: [
+          {
+            studentId,
+            expectedUpdatedAt: original.body.data.updatedAt,
+            scores: [
+              { subject: 'Mathematics', marks: 95 },
+              { subject: 'Science', marks: 95 },
+            ],
+          },
         ],
       });
-    expect(corrected.status).toBe(201);
-    expect(corrected.body.data.averagePercent).toBe(95);
-
+    expect(corrected.status).toBe(200);
     const list = await request(app)
       .get('/api/v1/exams/results')
       .set('Authorization', `Bearer ${teacher.token}`)
       .query({ examId: exam.body.data._id, studentId });
-    expect(list.body.data.length).toBe(1); // exactly one record, not two
+    expect(list.body.data).toHaveLength(1);
+    expect(list.body.data[0].averagePercent).toBe(95);
+    expect(list.body.data[0].corrections[0].reason).toBe('Script moderation');
   });
 
   it('a Parent sees results only for their linked child', async () => {
@@ -206,8 +213,12 @@ describe('Exams API', () => {
       });
 
     // Guardians must not see marks until the school formally publishes the exam.
-    expect((await request(app).get('/api/v1/exams/results').set('Authorization', `Bearer ${parent.token}`)).body.data).toHaveLength(0);
-    await request(app).post(`/api/v1/exams/${exam.body.data._id}/publish`).set('Authorization', `Bearer ${teacher.token}`);
+    expect(
+      (await request(app).get('/api/v1/exams/results').set('Authorization', `Bearer ${parent.token}`)).body.data,
+    ).toHaveLength(0);
+    await request(app)
+      .post(`/api/v1/exams/${exam.body.data._id}/publish`)
+      .set('Authorization', `Bearer ${teacher.token}`);
     const res = await request(app).get('/api/v1/exams/results').set('Authorization', `Bearer ${parent.token}`);
     expect(res.status).toBe(200);
     expect(res.body.data.length).toBe(1);
@@ -279,57 +290,121 @@ describe('Exams API', () => {
 
   it('requires every scheme subject exactly once and rejects marks above the scheme maximum', async () => {
     const teacher = await registerAndLogin('Teacher', 'teacher12@alnoor.ae');
-    const exam = await request(app).post('/api/v1/exams').set('Authorization', `Bearer ${teacher.token}`).send(validExam);
+    const exam = await request(app)
+      .post('/api/v1/exams')
+      .set('Authorization', `Bearer ${teacher.token}`)
+      .send(validExam);
     const studentId = await createStudent(teacher.token, 'ANS-7009');
-    const incomplete = await request(app).post('/api/v1/exams/results').set('Authorization', `Bearer ${teacher.token}`).send({
-      examId: exam.body.data._id, studentId, scores: [{ subject: 'Mathematics', marks: 80 }],
-    });
+    const incomplete = await request(app)
+      .post('/api/v1/exams/results')
+      .set('Authorization', `Bearer ${teacher.token}`)
+      .send({
+        examId: exam.body.data._id,
+        studentId,
+        scores: [{ subject: 'Mathematics', marks: 80 }],
+      });
     expect(incomplete.status).toBe(400);
-    const tooHigh = await request(app).post('/api/v1/exams/results').set('Authorization', `Bearer ${teacher.token}`).send({
-      examId: exam.body.data._id, studentId,
-      scores: [{ subject: 'Mathematics', marks: 101 }, { subject: 'Science', marks: 75 }],
-    });
+    const tooHigh = await request(app)
+      .post('/api/v1/exams/results')
+      .set('Authorization', `Bearer ${teacher.token}`)
+      .send({
+        examId: exam.body.data._id,
+        studentId,
+        scores: [
+          { subject: 'Mathematics', marks: 101 },
+          { subject: 'Science', marks: 75 },
+        ],
+      });
     expect(tooHigh.status).toBe(400);
   });
 
   it('publishes, notifies linked guardians, locks marks, and can be reopened for moderation', async () => {
     const teacher = await registerAndLogin('Teacher', 'teacher13@alnoor.ae');
     const parent = await registerAndLogin('Parent', 'parent13@alnoor.ae');
-    const exam = await request(app).post('/api/v1/exams').set('Authorization', `Bearer ${teacher.token}`).send(validExam);
+    const exam = await request(app)
+      .post('/api/v1/exams')
+      .set('Authorization', `Bearer ${teacher.token}`)
+      .send(validExam);
     const studentId = await createStudent(teacher.token, 'ANS-7010', parent.userId);
-    await request(app).post('/api/v1/exams/results').set('Authorization', `Bearer ${teacher.token}`).send({
-      examId: exam.body.data._id, studentId,
-      scores: [{ subject: 'Mathematics', marks: 80 }, { subject: 'Science', marks: 90 }],
-    });
-    const published = await request(app).post(`/api/v1/exams/${exam.body.data._id}/publish`).set('Authorization', `Bearer ${teacher.token}`);
+    await request(app)
+      .post('/api/v1/exams/results')
+      .set('Authorization', `Bearer ${teacher.token}`)
+      .send({
+        examId: exam.body.data._id,
+        studentId,
+        scores: [
+          { subject: 'Mathematics', marks: 80 },
+          { subject: 'Science', marks: 90 },
+        ],
+      });
+    const published = await request(app)
+      .post(`/api/v1/exams/${exam.body.data._id}/publish`)
+      .set('Authorization', `Bearer ${teacher.token}`);
     expect(published.status).toBe(200);
     expect(published.body.data.exam.locked).toBe(true);
     expect(published.body.data.notified).toBe(1);
     const { Message } = await import('../src/models/Message');
     expect(await Message.countDocuments({ recipient: parent.userId })).toBeGreaterThan(0);
-    expect((await request(app).post('/api/v1/exams/results').set('Authorization', `Bearer ${teacher.token}`).send({
-      examId: exam.body.data._id, studentId,
-      scores: [{ subject: 'Mathematics', marks: 81 }, { subject: 'Science', marks: 90 }],
-    })).status).toBe(403);
-    const reopened = await request(app).post(`/api/v1/exams/${exam.body.data._id}/reopen`).set('Authorization', `Bearer ${teacher.token}`);
+    expect(
+      (
+        await request(app)
+          .post('/api/v1/exams/results')
+          .set('Authorization', `Bearer ${teacher.token}`)
+          .send({
+            examId: exam.body.data._id,
+            studentId,
+            scores: [
+              { subject: 'Mathematics', marks: 81 },
+              { subject: 'Science', marks: 90 },
+            ],
+          })
+      ).status,
+    ).toBe(403);
+    const reopened = await request(app)
+      .post(`/api/v1/exams/${exam.body.data._id}/reopen`)
+      .set('Authorization', `Bearer ${teacher.token}`);
     expect(reopened.status).toBe(200);
     expect(reopened.body.data.exam.locked).toBe(false);
   });
 
   it('generates persistent report cards once per published exam and student', async () => {
     const teacher = await registerAndLogin('Teacher', 'teacher14@alnoor.ae');
-    const exam = await request(app).post('/api/v1/exams').set('Authorization', `Bearer ${teacher.token}`).send(validExam);
+    const exam = await request(app)
+      .post('/api/v1/exams')
+      .set('Authorization', `Bearer ${teacher.token}`)
+      .send(validExam);
     const studentId = await createStudent(teacher.token, 'ANS-7011');
-    await request(app).post('/api/v1/exams/results').set('Authorization', `Bearer ${teacher.token}`).send({
-      examId: exam.body.data._id, studentId,
-      scores: [{ subject: 'Mathematics', marks: 75 }, { subject: 'Science', marks: 75 }],
-    });
-    await request(app).post(`/api/v1/exams/${exam.body.data._id}/publish`).set('Authorization', `Bearer ${teacher.token}`);
-    const first = await request(app).post(`/api/v1/exams/${exam.body.data._id}/report-cards`).set('Authorization', `Bearer ${teacher.token}`).send({});
-    expect(first.status).toBe(200); expect(first.body.data.generated).toBe(1);
-    const second = await request(app).post(`/api/v1/exams/${exam.body.data._id}/report-cards`).set('Authorization', `Bearer ${teacher.token}`).send({});
-    expect(second.status).toBe(200); expect(second.body.data.generated).toBe(0); expect(second.body.data.alreadyExisted).toBe(1);
-    const cards = await request(app).get('/api/v1/certificates').set('Authorization', `Bearer ${teacher.token}`).query({ type: 'ReportCard' });
+    await request(app)
+      .post('/api/v1/exams/results')
+      .set('Authorization', `Bearer ${teacher.token}`)
+      .send({
+        examId: exam.body.data._id,
+        studentId,
+        scores: [
+          { subject: 'Mathematics', marks: 75 },
+          { subject: 'Science', marks: 75 },
+        ],
+      });
+    await request(app)
+      .post(`/api/v1/exams/${exam.body.data._id}/publish`)
+      .set('Authorization', `Bearer ${teacher.token}`);
+    const first = await request(app)
+      .post(`/api/v1/exams/${exam.body.data._id}/report-cards`)
+      .set('Authorization', `Bearer ${teacher.token}`)
+      .send({});
+    expect(first.status).toBe(200);
+    expect(first.body.data.generated).toBe(1);
+    const second = await request(app)
+      .post(`/api/v1/exams/${exam.body.data._id}/report-cards`)
+      .set('Authorization', `Bearer ${teacher.token}`)
+      .send({});
+    expect(second.status).toBe(200);
+    expect(second.body.data.generated).toBe(0);
+    expect(second.body.data.alreadyExisted).toBe(1);
+    const cards = await request(app)
+      .get('/api/v1/certificates')
+      .set('Authorization', `Bearer ${teacher.token}`)
+      .query({ type: 'ReportCard' });
     expect(cards.body.data.some((card: { student: { _id: string } }) => card.student._id === studentId)).toBe(true);
   });
 });

@@ -6,13 +6,15 @@ export interface GuardianProfile {
   name: string;
   relation: 'Parent' | 'Father' | 'Mother' | 'Guardian' | 'Other';
   phone: string;
-  email: string;
+  email?: string;
+  userId?: string | null;
+  updatedAt: string;
   studentIds: Array<{ _id: string; refId: string; name: string; grade: string; feeStatus: string }>;
   portalStatus: 'Active' | 'Invited' | 'Suspended';
   custody: string;
   pickupAuthorized: boolean;
   financialResponsible: boolean;
-  consents: { media: boolean; trips: boolean; medical: boolean };
+  consents: { media: boolean | null; trips: boolean | null; medical: boolean | null };
 }
 
 export interface ParentBroadcastInput {

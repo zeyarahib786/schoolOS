@@ -4,9 +4,21 @@ export interface ISubmission extends Document {
   _id: Types.ObjectId;
   assignment: Types.ObjectId;
   student: Types.ObjectId;
+  answers: Array<{ questionId: string; value: string }>;
+  objectiveScore?: number;
   content: string;
   submittedAt: Date;
   isLate: boolean;
+  gradedBy?: Types.ObjectId;
+  gradedAt?: Date;
+  gradeHistory: Array<{
+    at: Date;
+    actor: Types.ObjectId;
+    reason: string;
+    previousScore?: number;
+    score: number;
+    feedback?: string;
+  }>;
   score?: number;
   feedback?: string;
   status: 'Submitted' | 'Graded';
@@ -18,9 +30,24 @@ const submissionSchema = new Schema<ISubmission>(
   {
     assignment: { type: Schema.Types.ObjectId, ref: 'Assignment', required: true, index: true },
     student: { type: Schema.Types.ObjectId, ref: 'Student', required: true, index: true },
-    content: { type: String, required: true, trim: true, maxlength: 5000 },
+    answers: { type: [{ _id: false, questionId: String, value: String }], default: [] },
+    objectiveScore: Number,
+    content: { type: String, required: true, trim: true, maxlength: 40000 },
     submittedAt: { type: Date, required: true, default: Date.now },
     isLate: { type: Boolean, required: true, default: false },
+    gradedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    gradedAt: Date,
+    gradeHistory: [
+      {
+        _id: false,
+        at: Date,
+        actor: { type: Schema.Types.ObjectId, ref: 'User' },
+        reason: String,
+        previousScore: Number,
+        score: Number,
+        feedback: String,
+      },
+    ],
     score: { type: Number, min: 0 },
     feedback: { type: String, trim: true, maxlength: 2000 },
     status: { type: String, enum: ['Submitted', 'Graded'], default: 'Submitted', index: true },

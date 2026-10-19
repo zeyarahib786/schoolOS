@@ -139,12 +139,20 @@ describe('Inventory API', () => {
   it('CONCURRENT receipt attempts add stock only once', async () => {
     const teacher = await registerAndLogin('Teacher', 'teacher-concurrent-receive@alnoor.ae');
     const itemId = await createItem(teacher.token, 'SKU-CONCURRENT-RECEIVE', 2);
-    const po = await request(app).post('/api/v1/inventory/purchase-orders').set('Authorization', `Bearer ${teacher.token}`)
+    const po = await request(app)
+      .post('/api/v1/inventory/purchase-orders')
+      .set('Authorization', `Bearer ${teacher.token}`)
       .send({ refId: 'PO-CONCURRENT-RECEIVE', supplier: 'X', lines: [{ itemId, quantity: 4, unitCost: 5 }] });
-    await request(app).post(`/api/v1/inventory/purchase-orders/${po.body.data._id}/send`).set('Authorization', `Bearer ${teacher.token}`);
+    await request(app)
+      .post(`/api/v1/inventory/purchase-orders/${po.body.data._id}/send`)
+      .set('Authorization', `Bearer ${teacher.token}`);
     const [first, second] = await Promise.all([
-      request(app).post(`/api/v1/inventory/purchase-orders/${po.body.data._id}/receive`).set('Authorization', `Bearer ${teacher.token}`),
-      request(app).post(`/api/v1/inventory/purchase-orders/${po.body.data._id}/receive`).set('Authorization', `Bearer ${teacher.token}`),
+      request(app)
+        .post(`/api/v1/inventory/purchase-orders/${po.body.data._id}/receive`)
+        .set('Authorization', `Bearer ${teacher.token}`),
+      request(app)
+        .post(`/api/v1/inventory/purchase-orders/${po.body.data._id}/receive`)
+        .set('Authorization', `Bearer ${teacher.token}`),
     ]);
     expect([first.status, second.status].sort()).toEqual([200, 409]);
     const items = await request(app).get('/api/v1/inventory/items').set('Authorization', `Bearer ${teacher.token}`);
@@ -167,13 +175,21 @@ describe('Inventory API', () => {
   it('persists stock adjustments with their movement history and never permits negative stock', async () => {
     const teacher = await registerAndLogin('Teacher', 'teacher-stock-adjustment@alnoor.ae');
     const itemId = await createItem(teacher.token, 'SKU-ADJUST', 8);
-    const adjusted = await request(app).post(`/api/v1/inventory/items/${itemId}/adjust`).set('Authorization', `Bearer ${teacher.token}`)
+    const adjusted = await request(app)
+      .post(`/api/v1/inventory/items/${itemId}/adjust`)
+      .set('Authorization', `Bearer ${teacher.token}`)
       .send({ quantityDelta: -3, type: 'Issued to classroom', note: 'Grade 5 art lesson' });
     expect(adjusted.status).toBe(200);
     expect(adjusted.body.data.quantityOnHand).toBe(5);
-    expect(adjusted.body.data.movements[0]).toMatchObject({ type: 'Issued to classroom', quantityDelta: -3, note: 'Grade 5 art lesson' });
+    expect(adjusted.body.data.movements[0]).toMatchObject({
+      type: 'Issued to classroom',
+      quantityDelta: -3,
+      note: 'Grade 5 art lesson',
+    });
 
-    const rejected = await request(app).post(`/api/v1/inventory/items/${itemId}/adjust`).set('Authorization', `Bearer ${teacher.token}`)
+    const rejected = await request(app)
+      .post(`/api/v1/inventory/items/${itemId}/adjust`)
+      .set('Authorization', `Bearer ${teacher.token}`)
       .send({ quantityDelta: -6, type: 'Stock count correction' });
     expect(rejected.status).toBe(409);
   });
@@ -181,11 +197,115 @@ describe('Inventory API', () => {
   it('persists the expected delivery date and notes shown in the existing PO detail UI', async () => {
     const teacher = await registerAndLogin('Teacher', 'teacher-po-details@alnoor.ae');
     const itemId = await createItem(teacher.token, 'SKU-PO-DETAIL');
-    const po = await request(app).post('/api/v1/inventory/purchase-orders').set('Authorization', `Bearer ${teacher.token}`)
-      .send({ refId: 'PO-DETAILS', supplier: 'Stationery Co', expectedDelivery: '2027-07-15', notes: 'Deliver to the main store', lines: [{ itemId, quantity: 5, unitCost: 5 }] });
+    const po = await request(app)
+      .post('/api/v1/inventory/purchase-orders')
+      .set('Authorization', `Bearer ${teacher.token}`)
+      .send({
+        refId: 'PO-DETAILS',
+        supplier: 'Stationery Co',
+        expectedDelivery: '2027-07-15',
+        notes: 'Deliver to the main store',
+        lines: [{ itemId, quantity: 5, unitCost: 5 }],
+      });
     expect(po.status).toBe(201);
-    const listed = await request(app).get('/api/v1/inventory/purchase-orders').set('Authorization', `Bearer ${teacher.token}`);
+    const listed = await request(app)
+      .get('/api/v1/inventory/purchase-orders')
+      .set('Authorization', `Bearer ${teacher.token}`);
     expect(listed.body.data[0]).toMatchObject({ refId: 'PO-DETAILS', notes: 'Deliver to the main store' });
     expect(String(listed.body.data[0].expectedDelivery)).toContain('2027-07-15');
+  });
+  it('rolls back every receipt line when one referenced inventory item is missing', async () => {
+    const office = await registerAndLogin('Administrator', 'qa-rollback@example.invalid');
+    const a = await createItem(office.token, 'QA-A', 1),
+      b = await createItem(office.token, 'QA-B', 2);
+    const order = await request(app)
+      .post('/api/v1/inventory/purchase-orders')
+      .set('Authorization', `Bearer ${office.token}`)
+      .send({
+        refId: 'QA-ROLLBACK',
+        supplier: 'Fictional supplier',
+        lines: [
+          { itemId: a, quantity: 5, unitCost: 1 },
+          { itemId: b, quantity: 3, unitCost: 1 },
+        ],
+      });
+    await request(app)
+      .post(`/api/v1/inventory/purchase-orders/${order.body.data._id}/send`)
+      .set('Authorization', `Bearer ${office.token}`);
+    const { InventoryItem } = await import('../src/models/InventoryItem');
+    await InventoryItem.findByIdAndDelete(b);
+    const receipt = await request(app)
+      .post(`/api/v1/inventory/purchase-orders/${order.body.data._id}/receive`)
+      .set('Authorization', `Bearer ${office.token}`);
+    expect(receipt.status).toBe(409);
+    expect((await InventoryItem.findById(a))?.quantityOnHand).toBe(1);
+    expect((await InventoryItem.findById(a))?.movements).toHaveLength(0);
+  });
+  it('concurrent cancellation and receipt preserve consistent order/stock history', async () => {
+    const office = await registerAndLogin('Administrator', 'qa-race@example.invalid');
+    const item = await createItem(office.token, 'QA-RACE', 1);
+    const order = await request(app)
+      .post('/api/v1/inventory/purchase-orders')
+      .set('Authorization', `Bearer ${office.token}`)
+      .send({ refId: 'QA-RACE', supplier: 'Fictional supplier', lines: [{ itemId: item, quantity: 5, unitCost: 1 }] });
+    const sent = await request(app)
+      .post(`/api/v1/inventory/purchase-orders/${order.body.data._id}/send`)
+      .set('Authorization', `Bearer ${office.token}`);
+    const body = { expectedUpdatedAt: sent.body.data.updatedAt, reason: 'Fictional confirmation' };
+    const results = await Promise.all(
+      ['receive', 'cancel'].map((action) =>
+        request(app)
+          .post(`/api/v1/inventory/purchase-orders/${order.body.data._id}/${action}`)
+          .set('Authorization', `Bearer ${office.token}`)
+          .send(body),
+      ),
+    );
+    expect(results.filter((r) => r.status === 200)).toHaveLength(1);
+    const { InventoryItem } = await import('../src/models/InventoryItem');
+    const { PurchaseOrder } = await import('../src/models/PurchaseOrder');
+    const saved = await PurchaseOrder.findById(order.body.data._id);
+    expect((await InventoryItem.findById(item))?.quantityOnHand).toBe(saved?.status === 'Received' ? 6 : 1);
+    expect(saved?.history).toHaveLength(2);
+  });
+  it('metadata corrections preserve stock and reject stale versions; family cannot browse procurement', async () => {
+    const office = await registerAndLogin('Administrator', 'qa-review@example.invalid');
+    const item = await createItem(office.token, 'QA-REVIEW', 3);
+    const { InventoryItem } = await import('../src/models/InventoryItem');
+    const current = await InventoryItem.findById(item);
+    const body = {
+      expectedUpdatedAt: current!.updatedAt.toISOString(),
+      reason: 'Fictional item inspection',
+      name: 'QA reviewed item',
+      category: 'Stationery',
+      reorderLevel: 5,
+      unitCost: 1.25,
+      supplier: 'Fictional supplier',
+      location: 'QA Store',
+      condition: 'Worn',
+    };
+    const saved = await request(app)
+      .patch('/api/v1/inventory/items/' + item)
+      .set('Authorization', `Bearer ${office.token}`)
+      .send(body);
+    expect(saved.status).toBe(200);
+    expect(saved.body.data.quantityOnHand).toBe(3);
+    expect(saved.body.data.history).toHaveLength(1);
+    expect(
+      (
+        await request(app)
+          .patch('/api/v1/inventory/items/' + item)
+          .set('Authorization', `Bearer ${office.token}`)
+          .send(body)
+      ).status,
+    ).toBe(409);
+    const parent = await registerAndLogin('Parent', 'qa-family@example.invalid');
+    for (const path of ['items', 'purchase-orders'])
+      expect(
+        (
+          await request(app)
+            .get('/api/v1/inventory/' + path)
+            .set('Authorization', `Bearer ${parent.token}`)
+        ).status,
+      ).toBe(403);
   });
 });

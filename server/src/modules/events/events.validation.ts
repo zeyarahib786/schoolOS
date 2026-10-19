@@ -1,7 +1,8 @@
 import { z } from 'zod';
 
 const objectId = z.string().regex(/^[a-f0-9]{24}$/i, 'Invalid id');
-const dateFormat = z.string().refine((v) => !Number.isNaN(Date.parse(v)), 'Invalid date');
+import { calendarDateSchema } from '../../utils/calendarDate';
+const dateFormat = calendarDateSchema;
 const timeFormat = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Time must be in HH:MM 24h format');
 
 export const listEventsSchema = z.object({
@@ -11,6 +12,9 @@ export const listEventsSchema = z.object({
     page: z.coerce.number().int().min(1).default(1),
     limit: z.coerce.number().int().min(1).max(100).default(20),
     audience: z.enum(['All', 'Students', 'Staff', 'Parents']).optional(),
+    status: z.enum(['Scheduled', 'Cancelled']).optional(),
+    dateFrom: dateFormat.optional(),
+    dateTo: dateFormat.optional(),
   }),
 });
 
@@ -39,3 +43,21 @@ export const createEventSchema = z.object({
 
 export type ListEventsQuery = z.infer<typeof listEventsSchema>['query'];
 export type CreateEventInput = z.infer<typeof createEventSchema>['body'];
+
+export const updateEventSchema = z.object({
+  params: z.object({ id: objectId }),
+  query: z.object({}).optional(),
+  body: z.object({
+    title: z.string().trim().min(2).max(160),
+    description: z.string().trim().min(1).max(2000),
+    date: dateFormat,
+    audience: z.enum(['All', 'Students', 'Staff', 'Parents']),
+    expectedUpdatedAt: z.string().datetime(),
+    reason: z.string().trim().min(3).max(500),
+  }),
+});
+export const cancelEventSchema = z.object({
+  params: z.object({ id: objectId }),
+  query: z.object({}).optional(),
+  body: z.object({ expectedUpdatedAt: z.string().datetime(), reason: z.string().trim().min(3).max(500) }),
+});

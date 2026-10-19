@@ -14,12 +14,14 @@ export interface IIdCard extends Document {
   expiryDate: Date;
   status: 'Active' | 'Lost' | 'Revoked';
   replaces?: Types.ObjectId | null;
+  history: { at: Date; by: Types.ObjectId; action: string; reason: string }[];
   createdAt: Date;
   updatedAt: Date;
 }
 
 const idCardSchema = new Schema<IIdCard>(
   {
+    history: [{ at: Date, by: { type: Schema.Types.ObjectId, ref: 'User' }, action: String, reason: String }],
     serial: { type: String, required: true, unique: true },
     subjectType: { type: String, enum: ['Student', 'Staff'], required: true },
     subject: { type: Schema.Types.ObjectId, required: true, refPath: 'subjectType', index: true },

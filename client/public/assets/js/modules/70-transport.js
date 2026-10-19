@@ -1,56 +1,801 @@
-/* ---- Transport ---- */
-let TRANS_INCIDENTS=[];
-function routeDetail(routeName){const r=ROUTES.find(x=>x.r===routeName);if(!r)return '';const riderList=r.studentRefs?r.studentRefs.map(ref=>STUDENTS.find(s=>s.id===ref.id||s.name===ref.name)).filter(Boolean).slice(0,6):STUDENTS.filter((s,i)=>ROUTES[i%ROUTES.length]===r).slice(0,6);const live=routeLiveProgress(r);const onRoad=r.status!=='Depot';
- return detailDrawer({title:r.r,sub:r.bus+' - '+r.driver,color:r.status==='Delayed'?'#E11D2A':r.status==='Depot'?'#64748B':'#17A24A',badge:ic('trans',18),
-  stats:[['Status',r.status,r.status==='Delayed'?'red':r.status==='Depot'?'gray':'green'],['Occupancy',r.riders+'/'+r.cap,r.riders/r.cap>=0.95?'amber':'green'],['On-time',r.onTime+'%',r.onTime<95?'red':'green'],['Riders shown',String(riderList.length),'blue']],
-  sections:[{h:'Route',rows:[['Bus',r.bus],['Driver',r.driver],['Driver phone',r.driverPhone||'-'],['GPS device',r.gpsId||'-'],['Capacity',String(r.cap)],['Current riders',String(r.riders)]]},
-   {h:'Stops',html:(r.stops&&r.stops.length)?('<div class="card pad" style="box-shadow:none">'+r.stops.map((st,i)=>'<div class="lrow" style="border-bottom:1px solid var(--line-soft)"><div style="flex:1"><div style="font-weight:600;color:var(--slate-900);font-size:12.5px">'+(i+1)+'. '+st.name+'</div><div class="muted" style="font-size:11px">'+(st.address&&st.address!=='-'?st.address+(st.pincode&&st.pincode!=='-'?' - '+st.pincode:'')+' - ':'')+'Scheduled '+st.time+'</div></div></div>').join('')+(onRoad?'<div style="padding-top:8px"><a class="btn sm" target="_blank" href="https://www.google.com/maps?q='+live.lat.toFixed(5)+','+live.lng.toFixed(5)+'" onclick="logAudit(\'Viewed live location - '+r.r.replace(/'/g,"\\'")+'\',\'Transport\')">'+ic('trans',12)+' View live location - next: '+(live.nextStop||'Arriving')+'</a></div>':'')+'</div>'):'<div class="muted" style="font-size:12.5px">No stops on file - edit the route to add its stop list.</div>'},
-   {h:'Sample riders on this route',html:riderList.length?'<div class="card pad" style="box-shadow:none">'+riderList.map(s=>'<div class="lrow" style="cursor:pointer;border-bottom:1px solid var(--line-soft)" onclick="closeDrawer();openDrawer(studentProfile(\''+s.id+'\'))">'+avatar(s.name)+'<div style="flex:1"><div style="font-weight:600;color:var(--slate-900);font-size:12.5px">'+s.name+'</div><div class="muted" style="font-size:11px">'+s.grade+'</div></div></div>').join('')+'</div>':'<div class="muted" style="font-size:12.5px">No riders linked in demo data.</div>'}],
-  footer:canWrite()?[['Report incident',"reportTransportIncident('"+r.r.replace(/'/g,"\'")+"')"],[r.status==='Delayed'?'Mark on-time':'Mark delayed',"toggleRouteDelay('"+r.r.replace(/'/g,"\'")+"')",true]]:[['Close','closeDrawer()',true]]})}
-window.toggleRouteDelay=function(routeName){const r=ROUTES.find(x=>x.r===routeName);if(!r)return;r.status=r.status==='Delayed'?'On road':'Delayed';logAudit((r.status==='Delayed'?'Marked delayed - ':'Marked on-time - ')+routeName,'Transport');closeDrawer();render();openDrawer(routeDetail(routeName));toast(routeName+' - '+r.status)};
-function reportTransportIncident(routeName){state._transRoute=routeName;formDrawer('Report transport incident',routeName,[
- {label:'Type',key:'type',opts:['Mechanical issue','Traffic delay','Accident (minor)','Student behaviour','Route deviation'],req:true},
- {label:'Severity',key:'severity',opts:['Minor','Moderate','Serious'],half:true},{label:'Location',key:'location',half:true},
- {label:'Description',key:'desc',area:true,req:true}],'Log incident','','saveTransportIncident')}
-window.saveTransportIncident=function(v){const route=state._transRoute;TRANS_INCIDENTS.unshift({route,type:v.type,severity:v.severity||'Minor',location:v.location||'-',desc:v.desc,time:'Just now',status:'Open'});
- logAudit('Reported transport incident - '+route+' - '+v.type,'Transport');closeDrawer();render();toast('Incident logged - '+route);return false};
-function vehicleDetail(plate){const r=ROUTES.find(x=>x.bus===plate);const fa=FLEETADD.find(x=>x.plate===plate);
- const cap=r?r.cap:(fa?fa.cap:0);const driver=r?r.driver:(fa?fa.driver:'Unassigned');const route=r?r.r:'Unassigned';
- return detailDrawer({title:plate,sub:driver+' - '+route,color:'#2563EB',badge:ic('trans',18),
-  stats:[['Capacity',String(cap),'blue'],['Route',route,'blue'],['Status',r?(r.status==='Delayed'?'On road (delayed)':r.status):'At depot','green']],
-  sections:[{h:'Vehicle',rows:[['Driver',driver],['Assigned route',route],['Capacity',cap+' seats']]}],
-  footer:canWrite()?[['Schedule maintenance',"scheduleMaintenance('"+plate.replace(/'/g,"\'")+"')",true]]:[['Close','closeDrawer()',true]]})}
-window.scheduleMaintenance=function(plate){if(!canWrite())return;const r=ROUTES.find(x=>x.bus===plate);if(r)r.status='Depot';logAudit('Scheduled maintenance - '+plate,'Transport');closeDrawer();render();toast('Maintenance scheduled - '+plate+' taken off route')};
-M.transport=()=>{const tab=getSubTab('trans-v','routes');const totRiders=ROUTES.reduce((a,r)=>a+r.riders,0);const delayed=ROUTES.filter(r=>r.status==='Delayed');
- const avgOnTime=ROUTES.length?Math.round(ROUTES.reduce((a,r)=>a+r.onTime,0)/ROUTES.length):100;
- return `
-  <div class="page-head"><div class="ph-l"><h2>Transport</h2><p>Routes, vehicles, drivers and live boarding — ${ROUTES.length} routes shown.</p></div>
-  <div class="ph-r"><button class="btn" onclick="openDrawer(transportLiveMap())">${ic('trans',16)} Live map</button><button class="btn primary" onclick="addRouteForm()">${ic('plus',16)} Add route</button></div></div>
-  <div class="grid cols-4" style="margin-bottom:18px">
-    ${kpi('trans','#17A24A','Active routes',String(ROUTES.length),null,"setSubTab('trans-v','routes')")}${kpi('students','#2563EB','Riders',String(totRiders),null,"setSubTab('trans-v','riders')")}
-    ${kpi('comm','#E2920C','Alerts',String(delayed.length),delayed.length?{dir:'flat',v:delayed[0].r,note:'delayed'}:null,"openDrawer(transportAlertsDrawer())")}${kpi('reports','#0E7C39','On-time',avgOnTime+'%',{dir:avgOnTime>=95?'up':'down',v:'avg',note:'across routes'})}</div>
-  ${subTabs('trans-v',[['routes','Routes','trans'],['fleet','Fleet & drivers','settings'],['riders','Riders','students']])}
-  ${tab==='fleet'?transFleet():tab==='riders'?transRiders():transRoutes()}`};
-function transportAlertsDrawer(){const delayed=ROUTES.filter(r=>r.status==='Delayed');
- return detailDrawer({title:'Transport alerts',sub:delayed.length+' route(s) currently delayed',color:'#E11D2A',badge:ic('comm',18),
-  sections:[{h:'Delayed routes',html:delayed.length?'<div class="card pad" style="box-shadow:none">'+delayed.map(r=>'<div class="lrow" style="cursor:pointer;border-bottom:1px solid var(--line-soft)" onclick="closeDrawer();openDrawer(routeDetail(\''+r.r.replace(/\x27/g,"\\\x27")+'\'))"><div style="flex:1;font-size:12.5px;font-weight:600">'+r.r+'</div><span class="muted" style="font-size:11px">'+r.driver+'</span></div>').join('')+'</div>':'<div class="muted" style="font-size:12.5px">No delays right now.</div>'},
-   {h:'Recent incidents',html:TRANS_INCIDENTS.length?'<div class="card pad" style="box-shadow:none">'+TRANS_INCIDENTS.slice(0,5).map(t=>'<div class="lrow" style="border-bottom:1px solid var(--line-soft)"><div style="flex:1"><div style="font-size:12.5px;font-weight:600">'+t.type+' - '+t.route+'</div><div class="muted" style="font-size:11px">'+t.desc+'</div></div>'+chip(t.severity,t.severity==='Serious'?'red':t.severity==='Moderate'?'amber':'gray')+'</div>').join('')+'</div>':'<div class="muted" style="font-size:12.5px">No incidents logged.</div>'}],
-  footer:[['Close','closeDrawer()',true]]})}
-function transRoutes(){return `<div class="grid cols-2">
-  ${ROUTES.map(r=>{const pct=Math.round(r.riders/r.cap*100);const st=r.status==='Delayed'?'red':r.status==='Depot'?'gray':'green';
-    return `<div class="card pad" style="cursor:pointer" onclick="openDrawer(routeDetail('${r.r.replace(/'/g,"\'")}'))"><div class="flex ac jb"><div style="font-weight:600;color:var(--slate-900);font-size:14.5px">${r.r}</div>${chip(r.status,st)}</div>
-    <div class="muted" style="font-size:12.5px;margin:6px 0 14px">${r.bus} · ${r.driver}</div>
-    <div class="flex ac jb" style="margin-bottom:6px"><span class="muted" style="font-size:12px">Occupancy</span><span class="num" style="font-weight:600;color:var(--slate-900);font-size:12.5px">${r.riders}/${r.cap}</span></div>
-    ${cbar(pct,pct>=95?'amber':'green')}
-    <div class="flex ac jb mt-s"><span class="muted" style="font-size:12px">On-time rate</span><span class="num" style="font-weight:600;color:${r.onTime<95?'var(--red)':'var(--brand-deep)'};font-size:12.5px">${r.onTime}%</span></div></div>`}).join('')}
-  </div>`}
-function transFleet(){const totalVehicles=ROUTES.length+FLEETADD.length;const dueService=Math.max(1,Math.round(totalVehicles*0.11));return `<div class="card pad"><div class="flex ac jb" style="margin-bottom:6px"><h3 style="font-size:15px">Fleet & drivers</h3><button class="btn sm" onclick="formDrawer('Add vehicle','Fleet',[{label:'Plate number',key:'plate_number',req:true},{label:'Capacity',key:'capacity',type:'number'},{label:'Driver',key:'driver'},{label:'Type',key:'type',opts:['Bus 40-seat','Bus 30-seat','Van 14-seat']}],'Add vehicle','','addVehicle')">${ic('plus',14)} Add vehicle</button></div>
-  <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Vehicle</th><th>Route</th><th>Driver</th><th>Capacity</th><th>Last service</th><th>Status</th></tr></thead><tbody>
-  ${ROUTES.map((r,i)=>`<tr style="cursor:pointer" onclick="openDrawer(vehicleDetail('${r.bus}'))"><td class="num" style="font-weight:600;color:var(--slate-900)">${r.bus}</td><td>${r.r}</td><td>${r.driver}</td><td class="num">${r.cap} seats</td><td class="num muted">${['02 Jun','28 May','10 Jun','15 May','05 Jun','20 May'][i%6]}</td><td>${chip(r.status==='Delayed'?'On road':r.status==='Depot'?'At depot':'On road',r.status==='Delayed'?'amber':'green')}</td></tr>`).join('')}
-  ${FLEETADD.map(v=>`<tr style="cursor:pointer" onclick="openDrawer(vehicleDetail('${v.plate}'))"><td class="num" style="font-weight:600;color:var(--slate-900)">${v.plate}</td><td class="muted">Unassigned</td><td>${v.driver}</td><td class="num">${v.cap} seats</td><td class="num muted">New</td><td>${chip('At depot','green')}</td></tr>`).join('')}
-  </tbody></table></div>
-  <div class="grid cols-3" style="margin-top:16px">${miniStat('Fleet size',totalVehicles+' vehicles','blue')}${miniStat('Licensed drivers',String(new Set(ROUTES.map(r=>r.driver).concat(FLEETADD.map(v=>v.driver))).size),'green')}${miniStat('Service due',dueService+' this month','amber')}</div></div>`}
-function transRiders(){const linked=ROUTES.flatMap(r=>(r.studentRefs||[]).map(ref=>({student:STUDENTS.find(s=>s.id===ref.id||s.name===ref.name),route:r}))).filter(x=>x.student);const riders=linked.length?linked.slice(0,10):STUDENTS.slice(0,10).map((student,i)=>({student,route:ROUTES[i%ROUTES.length]}));return `<div class="card pad"><div class="sec-head" style="margin-bottom:6px"><h3 style="font-size:15px">Riders & route assignment</h3><span class="muted" style="font-size:12px">Students using school transport</span></div>
-  <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Student</th><th>Grade</th><th>Route</th><th>Stop</th><th>Boarding</th></tr></thead><tbody>
-  ${riders.map((entry,i)=>{const s=entry.student;return `<tr style="cursor:pointer" onclick="openDrawer(studentProfile('${s.id}'))"><td>${cellUser(s.name,s.id)}</td><td>${s.grade}</td><td>${entry.route.r}</td><td>${['Al Barsha','Jumeirah','Mirdif','Deira','Marina','JLT','Silicon Oasis','Motor City','Al Quoz','Festival City'][i]}</td><td>${chip(i%7===0?'Two-way':'One-way',i%7===0?'blue':'gray')}</td></tr>`}).join('')}
-  </tbody></table></div></div>`}
+/* Transport is a saved operations register. GPS telemetry is never simulated. */
+let TRANS_INCIDENTS = [];
+function transportWorkspaceManage() {
+  return ["Administrator", "Principal", "Teacher"].includes(state.role);
+}
+function transportWorkspaceState() {
+  const userId = commUserId();
+  if (state.transportWorkspace?.userId !== userId)
+    state.transportWorkspace = {
+      userId,
+      routes: [],
+      vehicles: [],
+      incidents: [],
+      students: [],
+      loaded: false,
+      loading: false,
+      saving: false,
+      error: "",
+      tab: "Routes",
+      q: "",
+      archived: false,
+      page: 1,
+    };
+  return state.transportWorkspace;
+}
+window.transportWorkspaceLoad = async function () {
+  const b = transportWorkspaceState();
+  if (b.loading) return;
+  b.loading = true;
+  b.error = "";
+  try {
+    const r = await Promise.all([
+      SCHOOLOS_ADAPTER.apiAll("/transport/routes"),
+      SCHOOLOS_ADAPTER.apiAll("/transport/routes?archived=true"),
+      SCHOOLOS_ADAPTER.api("/transport/vehicles"),
+      SCHOOLOS_ADAPTER.apiAll("/transport/incidents"),
+      transportWorkspaceManage()
+        ? SCHOOLOS_ADAPTER.apiAll("/students")
+        : Promise.resolve({ data: [] }),
+    ]);
+    b.routes = [...(r[0].data || []), ...(r[1].data || [])];
+    b.vehicles = r[2].data || [];
+    b.incidents = r[3].data || [];
+    b.students = r[4].data || [];
+    b.loaded = true;
+  } catch (e) {
+    b.error = e.message;
+  } finally {
+    b.loading = false;
+    if (state.module === "transport") render();
+  }
+};
+window.transportWorkspaceFilter = function (k, v) {
+  const b = transportWorkspaceState();
+  b[k] = v;
+  if (k !== "page") b.page = 1;
+  render();
+};
+function transportWorkspaceFiltered() {
+  const b = transportWorkspaceState(),
+    rows =
+      b.tab === "Vehicles"
+        ? b.vehicles
+        : b.tab === "Incidents"
+          ? b.incidents
+          : b.routes;
+  return rows.filter(
+    (r) =>
+      (b.tab !== "Routes" || !!r.archived === b.archived) &&
+      (!b.q ||
+        [
+          r.name,
+          r.regNumber,
+          r.driverName,
+          r.route?.name,
+          r.description,
+          r.type,
+        ]
+          .join(" ")
+          .toLowerCase()
+          .includes(b.q.toLowerCase())),
+  );
+}
+function transportWorkspaceRoute(id) {
+  return transportWorkspaceState().routes.find((r) => r._id === id);
+}
+window.transportWorkspaceVehicleForm = function (id) {
+  if (!transportWorkspaceManage()) return;
+  const b = transportWorkspaceState(),
+    r = b.vehicles.find((r) => r._id === id);
+  b.editId = id || null;
+  b.mode = "vehicle";
+  studentFormDrawer(
+    r ? "Review vehicle" : "Add vehicle",
+    "Driver contacts and configured expiry dates.",
+    [
+      {
+        key: "regNumber",
+        label: "Registration",
+        req: true,
+        val: r?.regNumber || "",
+        half: true,
+      },
+      {
+        key: "capacity",
+        label: "Capacity",
+        req: true,
+        type: "number",
+        val: r?.capacity || 30,
+        half: true,
+      },
+      {
+        key: "driverName",
+        label: "Driver name",
+        req: true,
+        val: r?.driverName || "",
+        half: true,
+      },
+      {
+        key: "driverPhone",
+        label: "Driver phone",
+        req: true,
+        val: r?.driverPhone || "",
+        half: true,
+      },
+      {
+        key: "insuranceExpiry",
+        label: "Insurance expiry",
+        type: "date",
+        val: curriculumWorkspaceDay(r?.insuranceExpiry),
+        half: true,
+      },
+      {
+        key: "driverLicenseExpiry",
+        label: "Driver licence expiry",
+        type: "date",
+        val: curriculumWorkspaceDay(r?.driverLicenseExpiry),
+        half: true,
+      },
+      ...(r
+        ? [
+            {
+              key: "status",
+              label: "Vehicle state",
+              opts: ["Available", "Maintenance"],
+              val: r.status,
+            },
+            {
+              key: "reason",
+              label: "Reason for review",
+              req: true,
+              area: true,
+            },
+          ]
+        : []),
+    ],
+    "Save vehicle",
+    "",
+    "transportWorkspaceSave",
+  );
+};
+window.transportWorkspaceRouteForm = function (id) {
+  if (!transportWorkspaceManage()) return;
+  const b = transportWorkspaceState(),
+    r = transportWorkspaceRoute(id);
+  b.editId = id || null;
+  b.mode = "route";
+  b.vehicleChoices = b.vehicles.map((v) => ({
+    id: v._id,
+    label: v.regNumber + " · " + v.capacity + " seats · " + v.status,
+  }));
+  studentFormDrawer(
+    r ? "Review route" : "Add route",
+    "Stops: one per line; optional time/address: Stop | HH:mm | Address.",
+    [
+      { key: "name", label: "Route name", req: true, val: r?.name || "" },
+      {
+        key: "vehicle",
+        label: "Vehicle",
+        req: true,
+        opts: b.vehicleChoices.map((v) => v.label),
+        val: b.vehicleChoices.find(
+          (v) => v.id === (r?.vehicle?._id || r?.vehicle),
+        )?.label,
+      },
+      {
+        key: "stops",
+        label: "Scheduled stops",
+        req: true,
+        area: true,
+        val:
+          r?.stops
+            .map((s) => [s.name, s.time || "", s.address || ""].join(" | "))
+            .join("\n") || "",
+      },
+      {
+        key: "gpsId",
+        label: "GPS device reference (no telemetry integration)",
+        val: r?.gpsId || "",
+      },
+      ...(r
+        ? [
+            {
+              key: "archived",
+              label: "Route directory state",
+              opts: ["Active", "Archived"],
+              val: r.archived ? "Archived" : "Active",
+            },
+            {
+              key: "reason",
+              label: "Reason for plan review",
+              req: true,
+              area: true,
+            },
+          ]
+        : []),
+    ],
+    "Save route",
+    "",
+    "transportWorkspaceSave",
+  );
+};
+window.transportWorkspaceAssignForm = function (id) {
+  if (!transportWorkspaceManage()) return;
+  const b = transportWorkspaceState(),
+    r = transportWorkspaceRoute(id);
+  if (!r) return;
+  b.editId = id;
+  b.mode = "assign";
+  b.studentChoices = b.students
+    .filter((s) => s.status === "Active")
+    .map((s) => ({
+      id: s._id,
+      label: s.name + " · " + s.grade + " · " + s.refId,
+    }));
+  studentFormDrawer(
+    "Assign rider",
+    r.name,
+    [
+      {
+        key: "student",
+        label: "Student",
+        req: true,
+        opts: b.studentChoices.map((s) => s.label),
+      },
+      {
+        key: "stopName",
+        label: "Pickup stop",
+        req: true,
+        opts: r.stops.map((s) => s.name),
+      },
+    ],
+    "Assign rider",
+    "",
+    "transportWorkspaceSave",
+  );
+};
+window.transportWorkspaceRemoveForm = function (id, studentId) {
+  if (!transportWorkspaceManage()) return;
+  const b = transportWorkspaceState(),
+    r = transportWorkspaceRoute(id);
+  b.editId = id;
+  b.studentId = studentId;
+  b.mode = "remove";
+  studentFormDrawer(
+    "Remove rider",
+    r.name,
+    [
+      {
+        key: "reason",
+        label: "Reason for transport change",
+        req: true,
+        area: true,
+      },
+    ],
+    "Remove rider",
+    "",
+    "transportWorkspaceSave",
+  );
+};
+window.transportWorkspaceOperationForm = function (id) {
+  if (!transportWorkspaceManage()) return;
+  const b = transportWorkspaceState(),
+    r = transportWorkspaceRoute(id);
+  if (!r) return;
+  b.editId = id;
+  b.mode = "operation";
+  studentFormDrawer(
+    "Route operation",
+    r.name,
+    [
+      {
+        key: "status",
+        label: "Current operation",
+        opts: ["Depot", "On road", "Delayed"],
+        val: r.status,
+      },
+      {
+        key: "reason",
+        label: "Operational note / reason",
+        req: true,
+        area: true,
+      },
+    ],
+    "Save operation",
+    "",
+    "transportWorkspaceSave",
+  );
+};
+window.transportWorkspaceIncidentForm = function (id) {
+  if (!transportWorkspaceManage()) return;
+  const b = transportWorkspaceState(),
+    r = transportWorkspaceRoute(id);
+  if (!r) return;
+  b.editId = id;
+  b.mode = "incident";
+  studentFormDrawer(
+    "Report incident",
+    r.name,
+    [
+      {
+        key: "type",
+        label: "Type",
+        opts: [
+          "Mechanical issue",
+          "Traffic delay",
+          "Accident (minor)",
+          "Student behaviour",
+          "Route deviation",
+        ],
+      },
+      {
+        key: "severity",
+        label: "Severity",
+        opts: ["Minor", "Moderate", "Serious"],
+      },
+      {
+        key: "occurredAt",
+        label: "Occurred at (ISO timestamp with offset)",
+        req: true,
+        val: new Date().toISOString(),
+      },
+      { key: "location", label: "Location" },
+      {
+        key: "description",
+        label: "Incident description",
+        req: true,
+        area: true,
+      },
+    ],
+    "Log incident",
+    "",
+    "transportWorkspaceSave",
+  );
+};
+window.transportWorkspaceReviewIncident = function (id) {
+  if (!transportWorkspaceManage()) return;
+  const b = transportWorkspaceState(),
+    r = b.incidents.find((r) => r._id === id);
+  if (!r) return;
+  b.editId = id;
+  b.mode = "reviewIncident";
+  studentFormDrawer(
+    "Review incident",
+    r.route?.name || "Transport",
+    [
+      {
+        key: "status",
+        label: "Status",
+        opts: ["Open", "Resolved"],
+        val: r.status,
+      },
+      {
+        key: "resolution",
+        label: "Resolution / follow-up action",
+        req: true,
+        area: true,
+        val: r.resolution || "",
+      },
+      { key: "reason", label: "Review reason", req: true, area: true },
+    ],
+    "Save review",
+    "",
+    "transportWorkspaceSave",
+  );
+};
+window.transportWorkspaceSave = async function (v) {
+  const b = transportWorkspaceState();
+  if (b.saving) return false;
+  let path,
+    payload,
+    method = "POST";
+  if (b.mode === "vehicle") {
+    const r = b.vehicles.find((r) => r._id === b.editId);
+    path = "/transport/vehicles" + (r ? "/" + r._id : "");
+    payload = {
+      regNumber: v.regNumber,
+      capacity: Number(v.capacity),
+      driverName: v.driverName,
+      driverPhone: v.driverPhone,
+      insuranceExpiry: v.insuranceExpiry || null,
+      driverLicenseExpiry: v.driverLicenseExpiry || null,
+    };
+    if (r) {
+      method = "PATCH";
+      Object.assign(payload, {
+        status: v.status,
+        expectedUpdatedAt: r.updatedAt,
+        reason: v.reason,
+      });
+    }
+  } else if (b.mode === "route") {
+    const r = transportWorkspaceRoute(b.editId),
+      vehicle = b.vehicleChoices.find((c) => c.label === v.vehicle);
+    if (!vehicle) {
+      toast("Select a saved vehicle");
+      return false;
+    }
+    path = "/transport/routes" + (r ? "/" + r._id : "");
+    payload = {
+      name: v.name,
+      vehicleId: vehicle.id,
+      gpsId: v.gpsId,
+      stops: String(v.stops || "")
+        .split("\n")
+        .filter((s) => s.trim())
+        .map((line) => {
+          const [name, time, address] = line.split("|").map((s) => s.trim());
+          return {
+            name,
+            ...(time ? { time } : {}),
+            ...(address ? { address } : {}),
+          };
+        }),
+    };
+    if (r) {
+      method = "PATCH";
+      Object.assign(payload, {
+        archived: v.archived === "Archived",
+        expectedUpdatedAt: r.updatedAt,
+        reason: v.reason,
+      });
+    }
+  } else if (b.mode === "assign") {
+    const student = b.studentChoices.find((s) => s.label === v.student);
+    if (!student) {
+      toast("Select an active saved student");
+      return false;
+    }
+    path = "/transport/routes/" + b.editId + "/assign";
+    payload = { studentId: student.id, stopName: v.stopName };
+  } else if (b.mode === "remove") {
+    path = "/transport/routes/" + b.editId + "/remove";
+    payload = {
+      studentId: b.studentId,
+      expectedUpdatedAt: transportWorkspaceRoute(b.editId).updatedAt,
+      reason: v.reason,
+    };
+  } else if (b.mode === "operation") {
+    path = "/transport/routes/" + b.editId + "/operational-status";
+    method = "PATCH";
+    payload = {
+      status: v.status,
+      expectedUpdatedAt: transportWorkspaceRoute(b.editId).updatedAt,
+      reason: v.reason,
+    };
+  } else if (b.mode === "incident") {
+    path = "/transport/routes/" + b.editId + "/incidents";
+    payload = {
+      type: v.type,
+      severity: v.severity,
+      occurredAt: v.occurredAt,
+      location: v.location,
+      description: v.description,
+    };
+  } else {
+    path = "/transport/incidents/" + b.editId;
+    method = "PATCH";
+    payload = {
+      status: v.status,
+      resolution: v.resolution,
+      reason: v.reason,
+      expectedUpdatedAt: b.incidents.find((r) => r._id === b.editId).updatedAt,
+    };
+  }
+  b.saving = true;
+  try {
+    await SCHOOLOS_ADAPTER.api(path, { method, body: JSON.stringify(payload) });
+    closeDrawer();
+    await transportWorkspaceLoad();
+    toast("Transport record saved");
+  } catch (e) {
+    toast(e.message);
+  } finally {
+    b.saving = false;
+  }
+  return false;
+};
+window.transportWorkspaceDetail = function (id) {
+  const b = transportWorkspaceState(),
+    r = (
+      b.tab === "Vehicles"
+        ? b.vehicles
+        : b.tab === "Incidents"
+          ? b.incidents
+          : b.routes
+    ).find((r) => r._id === id);
+  if (!r) return;
+  const esc = studentEscape,
+    staff = transportWorkspaceManage();
+  let sections,
+    footer = [];
+  if (b.tab === "Vehicles") {
+    sections = [
+      {
+        h: "Vehicle",
+        rows: [
+          ["Registration", esc(r.regNumber)],
+          ["Driver", esc(r.driverName)],
+          ["Phone", esc(r.driverPhone)],
+          ["Capacity", String(r.capacity)],
+          ["Status", esc(r.status)],
+          [
+            "Insurance expiry",
+            esc(curriculumWorkspaceDay(r.insuranceExpiry) || "Not configured"),
+          ],
+          [
+            "Licence expiry",
+            esc(
+              curriculumWorkspaceDay(r.driverLicenseExpiry) || "Not configured",
+            ),
+          ],
+        ],
+      },
+    ];
+    if (staff)
+      footer.push([
+        "Review vehicle",
+        studentClick("transportWorkspaceVehicleForm", id),
+        true,
+      ]);
+  } else if (b.tab === "Incidents") {
+    sections = [
+      {
+        h: "Incident",
+        rows: [
+          ["Route", esc(r.route?.name || "")],
+          ["Type", esc(r.type)],
+          ["Severity", esc(r.severity)],
+          ["Occurred", esc(commDate(r.occurredAt || r.createdAt))],
+          ["Location", esc(r.location || "—")],
+          ["Description", esc(r.description)],
+          ["Status", esc(r.status)],
+          ["Resolution", esc(r.resolution || "Awaiting review")],
+        ],
+      },
+      {
+        h: "Review history",
+        rows: (r.history || []).map((h) => [
+          esc(commDate(h.at)),
+          esc(h.status + " · " + h.reason),
+        ]),
+      },
+    ];
+    if (staff)
+      footer.push([
+        "Review incident",
+        studentClick("transportWorkspaceReviewIncident", id),
+        true,
+      ]);
+  } else {
+    sections = [
+      {
+        h: "Route operation",
+        rows: [
+          ["Vehicle", esc(r.vehicle?.regNumber || "")],
+          ["Driver", esc(r.vehicle?.driverName || "")],
+          ["Phone", esc(r.vehicle?.driverPhone || "")],
+          ["Status", esc(r.status)],
+          ["Riders in your view", String(r.assignedStudents.length)],
+          ["Capacity", String(r.vehicle?.capacity || 0)],
+          ["GPS telemetry", "Not connected"],
+        ],
+      },
+      {
+        h: "Scheduled stops",
+        rows: r.stops.map((s) => [
+          esc(s.name),
+          esc(
+            [s.time || "Time not set", s.address || ""]
+              .filter(Boolean)
+              .join(" · "),
+          ),
+        ]),
+      },
+      {
+        h: "Authorized riders",
+        html: r.assignedStudents.length
+          ? r.assignedStudents
+              .map(
+                (s) =>
+                  '<div class="lrow"><div><b>' +
+                  esc(s.name) +
+                  "</b><p>" +
+                  esc(s.refId + " · " + s.grade) +
+                  '</p><span class="muted">' +
+                  esc(
+                    r.studentStops?.find((x) => x.student === s._id)
+                      ?.stopName || "Stop not configured",
+                  ) +
+                  "</span></div>" +
+                  (staff
+                    ? '<button class="btn" onclick="transportWorkspaceRemoveForm(\'' +
+                      id +
+                      "','" +
+                      s._id +
+                      "')\">Remove</button>"
+                    : "") +
+                  "</div>",
+              )
+              .join("")
+          : '<p class="muted">No riders assigned.</p>',
+      },
+      ...(staff
+        ? [
+            {
+              h: "Operational history",
+              rows: (r.history || []).map((h) => [
+                esc(commDate(h.at)),
+                esc(h.action + (h.reason ? " · " + h.reason : "")),
+              ]),
+            },
+          ]
+        : []),
+    ];
+    if (staff)
+      footer.push(
+        ["Review route", studentClick("transportWorkspaceRouteForm", id)],
+        ...(!r.archived
+          ? [
+              [
+                "Assign rider",
+                studentClick("transportWorkspaceAssignForm", id),
+              ],
+              [
+                "Operation",
+                studentClick("transportWorkspaceOperationForm", id),
+                true,
+              ],
+              [
+                "Report incident",
+                studentClick("transportWorkspaceIncidentForm", id),
+              ],
+            ]
+          : []),
+      );
+  }
+  openDrawer(
+    detailDrawer({
+      title: esc(r.name || r.regNumber || r.type),
+      sub: esc(r.route?.name || r.status),
+      sections,
+      footer: [...footer, ["Close", "closeDrawer()"]],
+    }),
+  );
+};
+window.transportWorkspaceExport = function () {
+  const b = transportWorkspaceState();
+  studentDownloadCSV("transport.csv", [
+    ["Route", "Vehicle", "Status", "Riders in view", "Capacity"],
+    ...b.routes
+      .filter((r) => !r.archived)
+      .map((r) => [
+        r.name,
+        r.vehicle?.regNumber,
+        r.status,
+        r.assignedStudents.length,
+        r.vehicle?.capacity,
+      ]),
+  ]);
+};
+M.transport = () => {
+  const b = transportWorkspaceState();
+  if (!b.loaded && !b.loading && !b.error) transportWorkspaceLoad();
+  const rows = transportWorkspaceFiltered(),
+    pages = Math.max(1, Math.ceil(rows.length / 20));
+  b.page = Math.min(b.page, pages);
+  const esc = studentEscape,
+    staff = transportWorkspaceManage();
+  return (
+    '<div class="page-head"><div class="ph-l"><h2>Transport</h2><p>Saved routes, authorized riders, driver contacts and reviewed incidents.</p></div><div class="ph-r">' +
+    (staff
+      ? '<button class="btn" onclick="transportWorkspaceVehicleForm()">Add vehicle</button><button class="btn primary" onclick="transportWorkspaceRouteForm()">Add route</button>'
+      : "") +
+    '<button class="btn" onclick="transportWorkspaceLoad()">Refresh</button></div></div><div class="grid cols-4" style="margin-bottom:18px">' +
+    kpi(
+      "trans",
+      "#17A24A",
+      "Active routes",
+      String(b.routes.filter((r) => !r.archived).length),
+    ) +
+    kpi(
+      "students",
+      "#2563EB",
+      "Riders in view",
+      String(b.routes.reduce((n, r) => n + r.assignedStudents.length, 0)),
+    ) +
+    kpi(
+      "comm",
+      "#E2920C",
+      "Delayed routes",
+      String(b.routes.filter((r) => r.status === "Delayed").length),
+    ) +
+    kpi(
+      "reports",
+      "#0E7C39",
+      staff ? "Open incidents" : "Assigned vehicles",
+      String(
+        staff
+          ? b.incidents.filter((r) => r.status === "Open").length
+          : b.vehicles.length,
+      ),
+    ) +
+    '</div><div class="card pad" style="margin-bottom:16px"><div class="flex ac" style="gap:10px;flex-wrap:wrap">' +
+    ["Routes", "Vehicles", ...(staff ? ["Incidents"] : [])]
+      .map(
+        (t) =>
+          '<button class="btn ' +
+          (b.tab === t ? "primary" : "") +
+          "\" onclick=\"transportWorkspaceFilter('tab','" +
+          t +
+          "')\">" +
+          t +
+          "</button>",
+      )
+      .join("") +
+    '<input aria-label="Search transport" placeholder="Search transport" value="' +
+    esc(b.q) +
+    '" onchange="transportWorkspaceFilter(\'q\',this.value)"><label><input type="checkbox" ' +
+    (b.archived ? "checked" : "") +
+    ' onchange="transportWorkspaceFilter(\'archived\',this.checked)"> Archived routes</label><button class="btn" onclick="transportWorkspaceExport()">Export routes</button></div></div>' +
+    (b.error ? '<div class="card pad">' + esc(b.error) + "</div>" : "") +
+    '<div class="card"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Route / vehicle</th><th>Operation</th><th>Details</th><th></th></tr></thead><tbody>' +
+    rows
+      .slice((b.page - 1) * 20, b.page * 20)
+      .map(
+        (r) =>
+          "<tr><td><b>" +
+          esc(r.name || r.regNumber || r.type) +
+          '</b><div class="muted">' +
+          esc(r.route?.name || r.vehicle?.regNumber || r.driverName || "") +
+          "</div></td><td>" +
+          chip(
+            r.archived ? "Archived" : r.status,
+            r.status === "Delayed" || r.status === "Open"
+              ? "amber"
+              : r.status === "Maintenance"
+                ? "red"
+                : "blue",
+          ) +
+          "</td><td>" +
+          esc(
+            b.tab === "Vehicles"
+              ? r.capacity + " seats · " + r.driverPhone
+              : b.tab === "Incidents"
+                ? r.severity + " · " + commDate(r.occurredAt || r.createdAt)
+                : r.assignedStudents.length +
+                  " riders in view · " +
+                  r.stops.length +
+                  " stops",
+          ) +
+          '</td><td><button class="btn" onclick="' +
+          studentClick("transportWorkspaceDetail", r._id) +
+          '">View</button></td></tr>',
+      )
+      .join("") +
+    "</tbody></table></div>" +
+    (!rows.length
+      ? '<p class="pad muted">' +
+        (b.loading
+          ? "Loading transport…"
+          : "No transport records in your view.") +
+        "</p>"
+      : "") +
+    '<div class="pad flex ac jb"><span>' +
+    rows.length +
+    " records · Page " +
+    b.page +
+    " of " +
+    pages +
+    '</span><div><button class="btn" ' +
+    (b.page === 1 ? "disabled" : "") +
+    " onclick=\"transportWorkspaceFilter('page'," +
+    (b.page - 1) +
+    ')">Previous</button><button class="btn" ' +
+    (b.page === pages ? "disabled" : "") +
+    " onclick=\"transportWorkspaceFilter('page'," +
+    (b.page + 1) +
+    ')">Next</button></div></div></div><p class="muted">Operations are recorded by staff. GPS telemetry, boarding events and on-time performance are not connected. Families see only their own linked riders.</p>'
+  );
+};

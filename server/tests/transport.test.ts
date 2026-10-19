@@ -11,6 +11,9 @@ async function registerAndLogin(role: 'Administrator' | 'Teacher' | 'Parent', em
 }
 
 async function createStudent(token: string, refId: string, guardianUserId?: string) {
+  if (guardianUserId)
+    token = (await registerAndLogin('Administrator', 'transport-link-' + refId.toLowerCase() + '@example.invalid'))
+      .token;
   const res = await request(app).post('/api/v1/students').set('Authorization', `Bearer ${token}`).send({
     refId,
     name: 'Fatima Al Hashimi',
@@ -154,8 +157,14 @@ describe('Transport API', () => {
     const route1 = await createRoute(teacher.token, 'Route G', vehicle1);
     const route2 = await createRoute(teacher.token, 'Route H', vehicle2);
     const studentId = await createStudent(teacher.token, 'ANS-4009');
-    await request(app).post(`/api/v1/transport/routes/${route1}/assign`).set('Authorization', `Bearer ${teacher.token}`).send({ studentId });
-    const duplicate = await request(app).post(`/api/v1/transport/routes/${route2}/assign`).set('Authorization', `Bearer ${teacher.token}`).send({ studentId });
+    await request(app)
+      .post(`/api/v1/transport/routes/${route1}/assign`)
+      .set('Authorization', `Bearer ${teacher.token}`)
+      .send({ studentId });
+    const duplicate = await request(app)
+      .post(`/api/v1/transport/routes/${route2}/assign`)
+      .set('Authorization', `Bearer ${teacher.token}`)
+      .send({ studentId });
     expect(duplicate.status).toBe(409);
   });
 
@@ -163,19 +172,52 @@ describe('Transport API', () => {
     const teacher = await registerAndLogin('Teacher', 'teacher-operations@alnoor.ae');
     const vehicleId = await createVehicle(teacher.token, 'DXB-9', 5);
     const routeId = await createRoute(teacher.token, 'Route I', vehicleId);
-    const delayed = await request(app).patch(`/api/v1/transport/routes/${routeId}/operational-status`).set('Authorization', `Bearer ${teacher.token}`).send({ status: 'Delayed' });
+    const delayed = await request(app)
+      .patch(`/api/v1/transport/routes/${routeId}/operational-status`)
+      .set('Authorization', `Bearer ${teacher.token}`)
+      .send({
+        status: 'Delayed',
+        expectedUpdatedAt: (
+          await request(app).get('/api/v1/transport/routes').set('Authorization', `Bearer ${teacher.token}`)
+        ).body.data[0].updatedAt,
+        reason: 'QA traffic delay',
+      });
     expect(delayed.status).toBe(200);
     expect(delayed.body.data.status).toBe('Delayed');
-    const incident = await request(app).post(`/api/v1/transport/routes/${routeId}/incidents`).set('Authorization', `Bearer ${teacher.token}`).send({ type: 'Traffic delay', severity: 'Moderate', location: 'Sheikh Zayed Road', description: 'Traffic congestion affected pickup time' });
+    const incident = await request(app)
+      .post(`/api/v1/transport/routes/${routeId}/incidents`)
+      .set('Authorization', `Bearer ${teacher.token}`)
+      .send({
+        type: 'Traffic delay',
+        severity: 'Moderate',
+        location: 'Sheikh Zayed Road',
+        description: 'Traffic congestion affected pickup time',
+      });
     expect(incident.status).toBe(201);
-    const listed = await request(app).get('/api/v1/transport/incidents').set('Authorization', `Bearer ${teacher.token}`);
+    const listed = await request(app)
+      .get('/api/v1/transport/incidents')
+      .set('Authorization', `Bearer ${teacher.token}`);
     expect(listed.status).toBe(200);
     expect(listed.body.data).toHaveLength(1);
-    const maintenance = await request(app).patch(`/api/v1/transport/vehicles/${vehicleId}/maintenance`).set('Authorization', `Bearer ${teacher.token}`).send({ status: 'Maintenance' });
+    const maintenance = await request(app)
+      .patch(`/api/v1/transport/vehicles/${vehicleId}/maintenance`)
+      .set('Authorization', `Bearer ${teacher.token}`)
+      .send({
+        status: 'Maintenance',
+        expectedUpdatedAt: (
+          await request(app).get('/api/v1/transport/vehicles').set('Authorization', `Bearer ${teacher.token}`)
+        ).body.data[0].updatedAt,
+        reason: 'QA maintenance review',
+      });
     expect(maintenance.status).toBe(200);
-    const routeList = await request(app).get('/api/v1/transport/routes').set('Authorization', `Bearer ${teacher.token}`);
+    const routeList = await request(app)
+      .get('/api/v1/transport/routes')
+      .set('Authorization', `Bearer ${teacher.token}`);
     expect(routeList.body.data[0].status).toBe('Depot');
-    const restart = await request(app).patch(`/api/v1/transport/routes/${routeId}/operational-status`).set('Authorization', `Bearer ${teacher.token}`).send({ status: 'On road' });
+    const restart = await request(app)
+      .patch(`/api/v1/transport/routes/${routeId}/operational-status`)
+      .set('Authorization', `Bearer ${teacher.token}`)
+      .send({ status: 'On road', expectedUpdatedAt: routeList.body.data[0].updatedAt, reason: 'QA restart attempted' });
     expect(restart.status).toBe(409);
   });
 });

@@ -1,3 +1,4 @@
+import { ApiError } from '../../utils/ApiError';
 import mongoose, { FilterQuery } from 'mongoose';
 import { InventoryItem, IInventoryItem } from '../../models/InventoryItem';
 import { PurchaseOrder, IPurchaseOrder } from '../../models/PurchaseOrder';
@@ -44,18 +45,41 @@ export function createPO(input: CreatePOInput, orderedBy: string): Promise<IPurc
 export function adjustStock(id: string, input: AdjustStockInput, recordedBy: string): Promise<IInventoryItem | null> {
   const availability = input.quantityDelta < 0 ? { quantityOnHand: { $gte: -input.quantityDelta } } : {};
   return InventoryItem.findOneAndUpdate(
-    { _id: id, ...availability },
-    { $inc: { quantityOnHand: input.quantityDelta }, $set: { lastCounted: new Date() }, $push: { movements: { date: new Date(), type: input.type, quantityDelta: input.quantityDelta, note: input.note, recordedBy } } },
+    { _id: id, ...availability, ...(input.expectedUpdatedAt ? { updatedAt: new Date(input.expectedUpdatedAt) } : {}) },
+    {
+      $inc: { quantityOnHand: input.quantityDelta },
+      $push: {
+        movements: {
+          date: new Date(),
+          type: input.type,
+          quantityDelta: input.quantityDelta,
+          note: input.note,
+          recordedBy,
+        },
+      },
+    },
     { new: true, runValidators: true },
   );
 }
 
 export function setPOStatus(
   id: string,
-  status: 'Sent' | 'Received' | 'Cancelled',
-  receivedDate?: Date,
-): Promise<IPurchaseOrder | null> {
-  return PurchaseOrder.findByIdAndUpdate(id, { status, ...(receivedDate ? { receivedDate } : {}) }, { new: true });
+  previous: string,
+  status: 'Sent' | 'Cancelled',
+  actor: string,
+  expectedUpdatedAt?: string,
+  reason?: string,
+) {
+  return PurchaseOrder.findOneAndUpdate(
+    { _id: id, status: previous, ...(expectedUpdatedAt ? { updatedAt: new Date(expectedUpdatedAt) } : {}) },
+    {
+      $set: { status },
+      $push: {
+        history: { at: new Date(), by: actor, action: status, reason: reason || 'Recorded purchase-order transition' },
+      },
+    },
+    { new: true },
+  );
 }
 
 /**
@@ -67,22 +91,49 @@ export function setPOStatus(
  * incremented while line 3 was never touched - a real, silent data-corruption risk with a
  * naive sequential loop of individual updates outside a transaction.
  */
-export async function receivePOAndUpdateStock(poId: string): Promise<IPurchaseOrder> {
+export async function receivePOAndUpdateStock(
+  poId: string,
+  actor: string,
+  expectedUpdatedAt?: string,
+  reason?: string,
+): Promise<IPurchaseOrder> {
   const session = await mongoose.startSession();
   try {
     let updated: IPurchaseOrder | null = null;
     await session.withTransaction(async () => {
       const po = await PurchaseOrder.findById(poId).session(session);
       if (!po) throw Object.assign(new Error('PO_NOT_FOUND'), { code: 'PO_NOT_FOUND' });
-      if (po.status !== 'Sent') throw Object.assign(new Error('PO_NOT_SENT'), { code: 'PO_NOT_SENT' });
+      if (po.status !== 'Sent' || (expectedUpdatedAt && po.updatedAt.toISOString() !== expectedUpdatedAt))
+        throw Object.assign(new Error('PO_NOT_SENT'), { code: 'PO_NOT_SENT' });
 
       for (const line of po.lines) {
-        await InventoryItem.findByIdAndUpdate(line.item, { $inc: { quantityOnHand: line.quantity } }, { session });
+        const item = await InventoryItem.findByIdAndUpdate(
+          line.item,
+          {
+            $inc: { quantityOnHand: line.quantity },
+            $push: {
+              movements: {
+                date: new Date(),
+                type: 'Purchase order receipt',
+                quantityDelta: line.quantity,
+                note: po.refId + ' · ' + (reason || 'Confirmed physical receipt'),
+                recordedBy: actor,
+              },
+            },
+          },
+          { session },
+        );
+        if (!item) throw ApiError.conflict('A purchase-order item is missing; no stock was received');
       }
 
       const result = await PurchaseOrder.findOneAndUpdate(
         { _id: poId, status: 'Sent' },
-        { status: 'Received', receivedDate: new Date() },
+        {
+          $set: { status: 'Received', receivedDate: new Date() },
+          $push: {
+            history: { at: new Date(), by: actor, action: 'Received', reason: reason || 'Confirmed physical receipt' },
+          },
+        },
         { new: true, session },
       );
       if (!result) throw Object.assign(new Error('PO_NOT_SENT'), { code: 'PO_NOT_SENT' });

@@ -9,7 +9,7 @@ export const listSlotsSchema = z.object({
   query: z.object({
     page: z.coerce.number().int().min(1).default(1),
     limit: z.coerce.number().int().min(1).max(100).default(20),
-    onlyOpen: z.coerce.boolean().optional(),
+    onlyOpen: z.preprocess((v) => (v === 'true' ? true : v === 'false' ? false : v), z.boolean().optional()),
   }),
 });
 
@@ -34,16 +34,20 @@ export const bookSlotSchema = z.object({
 });
 
 export const staffBookSlotSchema = z.object({
-  query: z.object({}).optional(), params: z.object({ id: objectId }),
+  query: z.object({}).optional(),
+  params: z.object({ id: objectId }),
   body: z.object({ guardianId: objectId, studentId: objectId, note: z.string().trim().max(600).optional() }),
 });
 
 export const slotIdSchema = z.object({
-  query: z.object({}).optional(), body: z.object({}).optional(), params: z.object({ id: objectId }),
+  query: z.object({}).optional(),
+  body: z.object({}).optional(),
+  params: z.object({ id: objectId }),
 });
 
 export const rescheduleSlotSchema = z.object({
-  query: z.object({}).optional(), params: z.object({ id: objectId }),
+  query: z.object({}).optional(),
+  params: z.object({ id: objectId }),
   body: z.object({ targetSlotId: objectId }),
 });
 

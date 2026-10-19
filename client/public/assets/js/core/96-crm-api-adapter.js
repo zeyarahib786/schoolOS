@@ -19,12 +19,13 @@
   function label(value) {
     var date = new Date(value);
     if (dayOffset(date) === 0) return 'Today';
-    return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+    return date.toLocaleDateString((typeof schoolLocale==='function'?schoolLocale():'en-GB'), { day: '2-digit', month: 'short' });
   }
   function mapLead(lead) {
     return {
-      mongoId: lead._id, name: lead.name, grade: lead.grade, stage: lead.stage, source: lead.source,
+      mongoId: lead._id, updatedAt: lead.updatedAt, name: lead.name, grade: lead.grade, stage: lead.stage, source: lead.source,
       phone: lead.phone || '—', guardian: lead.guardian || '—', email: lead.guardianEmail || '',
+      ownerUserId: lead.ownerUserId, applicationId: lead.applicationId,
       owner: lead.owner, date: label(lead.createdAt), temp: lead.temperature,
       idle: idleDays(lead.lastActivityAt), follow: dayOffset(lead.followUpDate),
       followType: lead.followUpType || null, archived: Boolean(lead.archived),
@@ -36,26 +37,32 @@
     var api = adapter();
     var target = rows();
     if (!api || !api.token || !target) return Promise.resolve(false);
-    return api.api('/crm?limit=100').then(function (response) {
+    return api.apiAll('/crm').then(function (response) {
       target.length = 0;
       Array.prototype.push.apply(target, (response.data || []).map(mapLead));
       api.crmRows = target;
       api.live.crm = true;
-      if (typeof render === 'function' && typeof state !== 'undefined' && state.page === 'crm') render();
+      if (typeof render === 'function' && typeof state !== 'undefined' && state.module === 'crm') render();
       return true;
     }).catch(function (error) {
-      console.info('[SchoolOS] keeping CRM demo data:', error.message);
+      target.length=0;api.live.crm=false;api.crmError=error.message;console.info('[SchoolOS] CRM unavailable:', error.message);
       return false;
     });
   }
   function lead(name) {
     var target = rows();
-    return target && target.find(function (item) { return item.name === name; });
+    return target && target.find(function (item) { return item.mongoId === name || item.name === name; });
   }
   function fail(error) { console.warn('[SchoolOS] CRM write failed:', error); if (typeof toast === 'function') toast('Not saved — ' + error.message); }
+  function drawerNode() { return document.getElementById('drawer')?.firstElementChild; }
   function persist(path, options, original, args, fullRefresh) {
+    var sourceDrawer = drawerNode(), sourceModule = state.module;
     return adapter().api(path, options || { method: 'POST' })
-      .then(function () { original.apply(null, args || []); return fullRefresh ? adapter().hydrate() : hydrateCrm(); })
+      .then(function () {
+        // A completed older action must not replace a newer form or navigation.
+        if (state.module === sourceModule && drawerNode() === sourceDrawer) original.apply(null, args || []);
+        return fullRefresh ? adapter().hydrate() : hydrateCrm();
+      })
       .then(function () { if (typeof render === 'function') render(); })
       .catch(fail);
   }
@@ -75,6 +82,7 @@
     var api = adapter();
     if (!api || !api.connected || api.crmWorkflowInstalled) return;
     api.crmWorkflowInstalled = true;
+    api.hydrateCrm=hydrateCrm;
 
     wrap('addLead', function (original) { return function (values) {
       values = values || {};
@@ -87,7 +95,15 @@
         temperature: values.temp || 'Warm', followUpDate: values.followdate || undefined,
         notes: String(values.notes || '').trim() || undefined,
       };
-      persist('/crm', { method: 'POST', body: JSON.stringify(body) }, original, [values]);
+      var sourceDrawer = drawerNode(), sourceModule = state.module;
+      api.api('/crm', { method: 'POST', body: JSON.stringify(body) }).then(function(response) {
+        return hydrateCrm().then(function() {
+          if(state.module === sourceModule && drawerNode() === sourceDrawer) {
+            closeDrawer();openDrawer(crmDetail(response.data._id));
+          }
+          render();toast('CRM record saved');
+        });
+      }).catch(fail);
       return false;
     }; });
     wrap('quickSchedule', function (original) { return function (name, days) {

@@ -1,49 +1,546 @@
-/* ---- Curriculum ---- */
-let CURRIC_UNITS=[];
-function curricUnits(sub){if(!CURRIC_UNITS.length&&!(window.SCHOOLOS_ADAPTER&&window.SCHOOLOS_ADAPTER.live.curriculum)){CURRIC.forEach(c=>{for(let i=1;i<=Math.min(c.units,6);i++)CURRIC_UNITS.push({subject:c.sub,title:'Unit '+i+' — '+['Foundations','Core skills','Application','Analysis','Synthesis','Review'][(i-1)%6],term:i<=3?'Term 1':'Term 2',plannedDate:'0'+(i+3)+' '+['Jan','Feb','Mar','Apr','May','Jun'][i%6],completedDate:i<=c.done/c.units*6?'0'+(i+3)+' '+['Jan','Feb','Mar','Apr','May','Jun'][i%6]:null,outcomes:['Recall key concepts','Apply to worked examples','Evaluate & extend'],framework:'MOE / school-defined',owner:'Subject coordinator'})})}
- return sub?CURRIC_UNITS.filter(u=>u.subject===sub):CURRIC_UNITS}
-function curricUnitDetail(subject,title){const u=curricUnits().find(x=>x.subject===subject&&x.title===title);if(!u)return '';
- return detailDrawer({title:u.title,sub:u.subject+' · '+u.term,color:'#2563EB',badge:ic('curric',18),
-  stats:[['Framework',u.framework,'blue'],['Owner',u.owner,'green'],['Planned',u.plannedDate,'gray'],['Status',u.completedDate?'Completed':'Planned',u.completedDate?'green':'amber']],
-  sections:[{h:'Learning outcomes',rows:u.outcomes.map((o,i)=>['LO-'+(i+1),o])},
-   {h:'Coverage',rows:[['Planned date',u.plannedDate],['Actual completion',u.completedDate||'Not yet completed'],['Assessment link','Mapped to Exams & Gradebook subject analysis']]},
-   {h:'Resources',rows:[['Attached','Lesson slides, worksheet, rubric (demo)'],['LMS link','See Learning (LMS) module for this subject']]}],
-  footer:u.completedDate?[['Reopen coverage',"markUnitPlanned('"+subject+"','"+title.replace(/'/g,"\\'")+"')"],['Close','closeDrawer()',true]]
-   :[['Mark completed',"markUnitDone('"+subject+"','"+title.replace(/'/g,"\\'")+"')",true]]})}
-window.markUnitDone=function(subject,title){const u=curricUnits().find(x=>x.subject===subject&&x.title===title);if(u){u.completedDate='Today';const c=CURRIC.find(x=>x.sub===subject);if(c&&c.done<c.units)c.done++;logAudit('Marked curriculum unit complete · '+subject+' · '+title,'Curriculum')}closeDrawer();render();toast('Coverage updated · '+title)};
-window.markUnitPlanned=function(subject,title){const u=curricUnits().find(x=>x.subject===subject&&x.title===title);if(u){u.completedDate=null;const c=CURRIC.find(x=>x.sub===subject);if(c&&c.done>0)c.done--;logAudit('Reopened curriculum unit · '+subject+' · '+title,'Curriculum')}closeDrawer();render();toast('Unit reopened — coverage recalculated')};
-function addUnitForm(){formDrawer('Add curriculum unit','New unit — creates a real coverage record',[
- {label:'Subject',key:'subject',opts:CURRIC.map(c=>c.sub),half:true},{label:'Term',key:'term',opts:['Term 1','Term 2'],half:true},
- {label:'Unit title',key:'title',req:true},{label:'Planned date',key:'date',type:'date'},
- {label:'Learning outcomes',key:'outcomes',area:true,ph:'One per line',aiContext:'curriculum-outcomes',maxlen:400}],'Add unit','','saveUnit')}
-window.saveUnit=function(v){const subject=v.subject||CURRIC[0].sub;const title=(v.title||'').trim();if(!title){toast('Unit title is required');return false}
- curricUnits();CURRIC_UNITS.push({subject,title,term:v.term||'Term 2',plannedDate:v.date||'TBC',completedDate:null,outcomes:(v.outcomes||'Recall key concepts').split('\n').filter(Boolean),framework:'School-defined',owner:'Subject coordinator'});
- const c=CURRIC.find(x=>x.sub===subject);if(c)c.units++;logAudit('Added curriculum unit · '+subject+' · '+title,'Curriculum');
- closeDrawer();render();toast('Unit added · '+title);return false};
-function curricSubjectsDrawer(){return detailDrawer({title:'All subjects',sub:CURRIC.length+' subjects in the curriculum map',color:'#17A24A',badge:ic('curric',18),
- sections:[{h:'Subjects',html:'<div class="card pad" style="box-shadow:none">'+CURRIC.map(c=>{const pct=c.units?Math.round(c.done/c.units*100):0;return '<div class="lrow" style="cursor:pointer;border-bottom:1px solid var(--line-soft)" onclick="closeDrawer();openDrawer(curricSubjectDetail(\''+c.sub.replace(/\x27/g,"\\\x27")+'\'))"><div style="flex:1"><div style="font-weight:600;color:var(--slate-900);font-size:13px">'+c.sub+'</div><div class="muted" style="font-size:11px">'+c.grades+' - '+c.units+' units</div></div><b class="num">'+pct+'%</b></div>'}).join('')+'</div>'}],
- footer:[['Close','closeDrawer()',true]]})}
-function curricUnitsDrawer(){const all=curricUnits();return detailDrawer({title:'All curriculum units',sub:all.length+' units mapped across '+CURRIC.length+' subjects',color:'#2563EB',badge:ic('classes',18),
- sections:[{h:'Units',html:'<div class="card pad" style="box-shadow:none">'+all.map(u=>'<div class="lrow" style="cursor:pointer;border-bottom:1px solid var(--line-soft)" onclick="closeDrawer();openDrawer(curricUnitDetail(\''+u.subject.replace(/\x27/g,"\\\x27")+'\',\''+u.title.replace(/\x27/g,"\\\x27")+'\'))"><div style="flex:1"><div style="font-weight:600;color:var(--slate-900);font-size:13px">'+u.title+'</div><div class="muted" style="font-size:11px">'+u.subject+' - '+u.term+'</div></div>'+(u.completedDate?chip('Done','green'):chip('Planned','amber'))+'</div>').join('')+'</div>'}],
- footer:[['Close','closeDrawer()',true]]})}
-function curricCoverageDrawer(){const cov=CURRIC.map(c=>({sub:c.sub,pct:c.units?Math.round(c.done/c.units*100):0})).sort((a,b)=>a.pct-b.pct);
- return detailDrawer({title:'Coverage by subject',sub:'Lowest coverage first - review pacing where behind plan',color:'#0E7C39',badge:ic('reports',18),
- sections:[{h:'Coverage',html:'<div class="card pad" style="box-shadow:none">'+cov.map(c=>{const hc=c.pct>=90?'green':c.pct>=80?'blue':c.pct>=70?'amber':'red';return '<div style="padding:9px 0;border-bottom:1px solid var(--line-soft)" onclick="closeDrawer();openDrawer(curricSubjectDetail(\''+c.sub.replace(/\x27/g,"\\\x27")+'\'))" style="cursor:pointer"><div class="flex ac jb" style="margin-bottom:5px"><span style="font-weight:600;color:var(--slate-900);font-size:13px">'+c.sub+'</span><b class="num">'+c.pct+'%</b></div>'+cbar(c.pct,hc)+'</div>'}).join('')+'</div>'}],
- footer:[['Close','closeDrawer()',true]]})}
-M.curriculum=()=>{const totUnits=CURRIC.reduce((a,c)=>a+c.units,0);const totDone=CURRIC.reduce((a,c)=>a+c.done,0);const cov=totUnits?Math.round(totDone/totUnits*100):0;
- return `
-  <div class="page-head"><div class="ph-l"><h2>Curriculum</h2><p>Board framework → grade → subject → term → unit → learning outcomes. Coverage is computed from real unit records.</p></div>
-  <div class="ph-r"><button class="btn" onclick="exportCSV('curriculum-map.csv',['Subject','Grades','Units','Completed','Coverage %'],CURRIC.map(c=>[c.sub,c.grades,c.units,c.done,c.units?Math.round(c.done/c.units*100):0]))">${ic('download',16)} Export map</button><button class="btn primary" onclick="addUnitForm()">${ic('plus',16)} Add unit</button></div></div>
-  <div class="grid cols-4" style="margin-bottom:18px">
-    ${kpi('curric','#17A24A','Subjects',String(CURRIC.length),null,"openDrawer(curricSubjectsDrawer())")}${kpi('classes','#2563EB','Units mapped',String(totUnits),{dir:'flat',v:'live',note:'computed'},"openDrawer(curricUnitsDrawer())")}
-    ${kpi('lms','#B45309','Units completed',String(totDone),null,"openDrawer(curricUnitsDrawer())")}${kpi('reports','#0E7C39','Coverage',cov+'%',{dir:cov>=80?'up':'down',v:'vs plan',note:''},"openDrawer(curricCoverageDrawer())")}</div>
-  <div class="card pad" style="margin-bottom:16px"><div class="sec-head" style="margin-bottom:6px"><h3 style="font-size:15px">Term 2 coverage by subject</h3><span class="muted" style="font-size:12px">Click a subject to see its units</span></div>
-  <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Subject</th><th>Grades</th><th class="right">Units</th><th class="right">Completed</th><th style="width:240px">Coverage</th></tr></thead><tbody>
-  ${CURRIC.map(c=>{const pct=c.units?Math.round(c.done/c.units*100):0;const hc=pct>=90?'green':pct>=80?'blue':pct>=70?'amber':'red';return `<tr style="cursor:pointer" onclick="openDrawer(curricSubjectDetail('${c.sub}'))"><td style="font-weight:600;color:var(--slate-900)">${c.sub}</td><td>${c.grades}</td><td class="right num">${c.units}</td><td class="right num">${c.done}</td>
-    <td><div class="flex ac" style="gap:10px">${cbar(pct,hc)}<span class="num" style="font-size:12px;font-weight:600;color:var(--slate-700);min-width:34px">${pct}%</span></div></td></tr>`}).join('')}
-  </tbody></table></div></div>
-  <div class="muted" style="font-size:11px">Legend: <span style="color:var(--brand)">green</span> ≥90% on track · <span style="color:var(--blue)">blue</span> ≥80% · <span style="color:var(--amber)">amber</span> ≥70% · <span style="color:var(--red)">red</span> below plan — review pacing.</div>`};
-function curricSubjectDetail(sub){const units=curricUnits(sub);const c=CURRIC.find(x=>x.sub===sub);
- return detailDrawer({title:sub,sub:c.grades+' · '+c.done+'/'+c.units+' units complete',color:'#17A24A',badge:ic('curric',18),
-  sections:[{h:'Units — planned vs completed',html:'<div class="card pad" style="box-shadow:none">'+units.map(u=>'<div class="lrow" style="cursor:pointer;border-bottom:1px solid var(--line-soft)" onclick="openDrawer(curricUnitDetail(\''+sub+'\',\''+u.title.replace(/\x27/g,"\\\x27")+'\'))">'+'<div style="flex:1"><div style="font-weight:600;color:var(--slate-900);font-size:13px">'+u.title+'</div><div class="muted" style="font-size:11px">Planned '+u.plannedDate+'</div></div>'+(u.completedDate?chip('Done '+u.completedDate,'green'):chip('Planned','amber'))+'</div>').join('')+'</div>'}],
-  footer:[['Close','closeDrawer()',true]]})}
+/* Saved curriculum plans, scoped coverage and reviewed teaching history. */
+let CURRIC_UNITS = [];
+function curriculumWorkspaceManage() {
+  return ["Administrator", "Principal", "Teacher"].includes(state.role);
+}
+function curriculumWorkspaceOffice() {
+  return ["Administrator", "Principal"].includes(state.role);
+}
+function curriculumWorkspaceState() {
+  const userId = commUserId();
+  if (state.curriculumWorkspace?.userId !== userId)
+    state.curriculumWorkspace = {
+      userId,
+      rows: [],
+      loaded: false,
+      loading: false,
+      saving: false,
+      error: "",
+      q: "",
+      grade: "All",
+      academicYear: "All",
+      term: "All",
+      subject: "All",
+      status: "All",
+      archived: false,
+      page: 1,
+    };
+  return state.curriculumWorkspace;
+}
+window.curriculumWorkspaceLoad = async function () {
+  const b = curriculumWorkspaceState();
+  if (b.loading) return;
+  b.loading = true;
+  b.error = "";
+  try {
+    const r = await SCHOOLOS_ADAPTER.apiAll(
+      "/curriculum?archived=" + b.archived,
+    );
+    b.rows = r.data || [];
+    b.loaded = true;
+  } catch (e) {
+    b.error = e.message;
+  } finally {
+    b.loading = false;
+    if (state.module === "curriculum") render();
+  }
+};
+function curriculumWorkspaceDay(v) {
+  return v ? String(v).slice(0, 10) : "";
+}
+function curriculumWorkspaceStatus(r) {
+  return r.completedDate
+    ? "Completed"
+    : r.plannedDate && curriculumWorkspaceDay(r.plannedDate) < healthDay()
+      ? "Overdue"
+      : "Planned";
+}
+function curriculumWorkspaceFiltered() {
+  const b = curriculumWorkspaceState();
+  return b.rows.filter(
+    (r) =>
+      ["grade", "academicYear", "term", "subject"].every(
+        (k) => b[k] === "All" || r[k] === b[k],
+      ) &&
+      (b.status === "All" || curriculumWorkspaceStatus(r) === b.status) &&
+      (!b.q ||
+        [r.title, r.outcomes, r.owner, r.framework]
+          .join(" ")
+          .toLowerCase()
+          .includes(b.q.toLowerCase())),
+  );
+}
+window.curriculumWorkspaceFilter = function (k, v) {
+  const b = curriculumWorkspaceState();
+  b[k] = v;
+  b.page = 1;
+  if (k === "archived") {
+    b.loaded = false;
+    curriculumWorkspaceLoad();
+  } else render();
+};
+window.curriculumWorkspaceSearch = function (v) {
+  curriculumWorkspaceFilter("q", v);
+};
+window.curriculumWorkspacePage = function (v) {
+  curriculumWorkspaceState().page = v;
+  render();
+};
+function curriculumWorkspaceRow(id) {
+  return curriculumWorkspaceState().rows.find((r) => r._id === id);
+}
+window.curriculumWorkspaceForm = function (id) {
+  if (!curriculumWorkspaceManage()) return;
+  const b = curriculumWorkspaceState(),
+    r = id ? curriculumWorkspaceRow(id) : null;
+  if (id && !r) return;
+  b.editId = id || null;
+  b.mode = "edit";
+  studentFormDrawer(
+    r ? "Edit curriculum unit" : "Add curriculum unit",
+    "Plan the teaching scope and learning outcomes.",
+    [
+      {
+        key: "subject",
+        label: "Subject",
+        req: true,
+        val: r?.subject || "",
+        half: true,
+      },
+      {
+        key: "grade",
+        label: "Grade",
+        req: true,
+        val: r?.grade || "All grades",
+        half: true,
+      },
+      {
+        key: "academicYear",
+        label: "Academic year",
+        req: true,
+        val: r?.academicYear || SCHOOLOS_ADAPTER.settings?.academicYear || "",
+        half: true,
+      },
+      {
+        key: "term",
+        label: "Term",
+        req: true,
+        val: r?.term || "Term 1",
+        half: true,
+      },
+      { key: "title", label: "Unit title", req: true, val: r?.title || "" },
+      {
+        key: "outcomes",
+        label: "Learning outcomes",
+        area: true,
+        req: true,
+        val: r?.outcomes || "",
+      },
+      {
+        key: "plannedDate",
+        label: "Planned completion",
+        type: "date",
+        val: curriculumWorkspaceDay(r?.plannedDate),
+        half: true,
+      },
+      {
+        key: "sequenceOrder",
+        label: "Sequence",
+        type: "number",
+        val: r?.sequenceOrder || 0,
+        half: true,
+      },
+      {
+        key: "framework",
+        label: "Framework",
+        val: r?.framework || "School-defined",
+        half: true,
+      },
+      {
+        key: "owner",
+        label: "Coordinator",
+        val: r?.owner || "Subject coordinator",
+        half: true,
+      },
+      ...(r
+        ? [{ key: "reason", label: "Reason for change", req: true, area: true }]
+        : []),
+    ],
+    "Save unit",
+    "",
+    "curriculumWorkspaceSave",
+  );
+  const defaults={grade:'All grades',term:'Term 1',framework:'School-defined',owner:'Subject coordinator'};
+  Object.entries(defaults).forEach(([key,value])=>{
+    const input=document.querySelector('#drawer [data-fkey="'+key+'"]');
+    if(input?.value===value)input.setAttribute('data-school-default-value',value);
+  });
+  if(typeof localizeView==='function')localizeView(document.getElementById('drawer'));
+};
+function curriculumCanonicalDefault(value,canonical){
+  const translations=typeof I18N!=='undefined'?I18N[canonical]:null;
+  return value===canonical||Object.values(translations||{}).includes(value)?canonical:value;
+}
+window.curriculumWorkspaceCoverage = function (id) {
+  const r = curriculumWorkspaceRow(id);
+  if (!r || r.archived || !curriculumWorkspaceManage()) return;
+  const b = curriculumWorkspaceState();
+  b.editId = id;
+  b.mode = "coverage";
+  studentFormDrawer(
+    r.completedDate ? "Reopen coverage" : "Complete coverage",
+    r.title,
+    [
+      ...(!r.completedDate
+        ? [
+            {
+              key: "completedDate",
+              label: "Actual completion date",
+              req: true,
+              type: "date",
+              val: healthDay(),
+            },
+          ]
+        : []),
+      {
+        key: "reason",
+        label: "Teaching review / reason",
+        req: true,
+        area: true,
+      },
+    ],
+    r.completedDate ? "Reopen unit" : "Mark completed",
+    "",
+    "curriculumWorkspaceSave",
+  );
+};
+window.curriculumWorkspaceArchive = function (id) {
+  const r = curriculumWorkspaceRow(id);
+  if (!r || !curriculumWorkspaceOffice()) return;
+  const b = curriculumWorkspaceState();
+  b.editId = id;
+  b.mode = "archive";
+  studentFormDrawer(
+    r.archived ? "Restore unit" : "Archive unit",
+    r.title,
+    [{ key: "reason", label: "Reason", req: true, area: true }],
+    r.archived ? "Restore" : "Archive",
+    "",
+    "curriculumWorkspaceSave",
+  );
+};
+window.curriculumWorkspaceSave = async function (v) {
+  const b = curriculumWorkspaceState();
+  if (b.saving) return false;
+  const r = b.editId ? curriculumWorkspaceRow(b.editId) : null;
+  let payload;
+  if (b.mode === "archive") payload = { archived: !r.archived };
+  else if (b.mode === "coverage")
+    payload = { completedDate: r.completedDate ? null : v.completedDate };
+  else {
+    payload = {
+      subject: v.subject,
+      grade: curriculumCanonicalDefault(v.grade,"All grades"),
+      academicYear: v.academicYear,
+      term: curriculumCanonicalDefault(v.term,"Term 1"),
+      title: v.title,
+      outcomes: v.outcomes,
+      sequenceOrder: Number(v.sequenceOrder || 0),
+      framework: curriculumCanonicalDefault(v.framework,"School-defined"),
+      owner: curriculumCanonicalDefault(v.owner,"Subject coordinator"),
+    };
+    if (v.plannedDate) payload.plannedDate = v.plannedDate;
+    else if (r) payload.plannedDate = null;
+  }
+  if (r) {
+    payload.expectedUpdatedAt = r.updatedAt;
+    payload.reason = v.reason;
+  }
+  b.saving = true;
+  try {
+    await SCHOOLOS_ADAPTER.api(
+      "/curriculum" +
+        (r ? "/" + r._id : "") +
+        (b.mode === "archive" ? "/archive" : ""),
+      {
+        method: r && b.mode !== "archive" ? "PATCH" : "POST",
+        body: JSON.stringify(payload),
+      },
+    );
+    closeDrawer();
+    await curriculumWorkspaceLoad();
+    toast("Curriculum saved");
+  } catch (e) {
+    toast(e.message);
+  } finally {
+    b.saving = false;
+  }
+  return false;
+};
+window.curriculumWorkspaceDetail = function (id) {
+  const r = curriculumWorkspaceRow(id);
+  if (!r) return;
+  const esc = studentEscape;
+  openDrawer(
+    detailDrawer({
+      title: esc(r.title),
+      sub: esc(
+        r.subject + " · " + r.grade + " · " + r.academicYear + " · " + r.term,
+      ),
+      sections: [
+        {
+          h: "Teaching plan",
+          rows: [
+            ["Status", r.archived ? "Archived" : curriculumWorkspaceStatus(r)],
+            [
+              "Planned completion",
+              esc(curriculumWorkspaceDay(r.plannedDate) || "Unscheduled"),
+            ],
+            [
+              "Actual completion",
+              esc(curriculumWorkspaceDay(r.completedDate) || "Pending"),
+            ],
+            ["Framework", esc(r.framework)],
+            ["Coordinator", esc(r.owner)],
+            ["Sequence", String(r.sequenceOrder)],
+          ],
+        },
+        {
+          h: "Learning outcomes",
+          html:
+            '<div style="white-space:pre-wrap">' + esc(r.outcomes) + "</div>",
+        },
+        ...(curriculumWorkspaceManage()
+          ? [
+              {
+                h: "Review history",
+                html: r.history?.length
+                  ? r.history
+                      .map(
+                        (h) =>
+                          '<div class="lrow"><div><b>' +
+                          esc(commDate(h.at)) +
+                          "</b><p>" +
+                          esc(h.reason) +
+                          '</p><span class="muted">' +
+                          esc(
+                            h.after?.archived
+                              ? "Archived"
+                              : h.after?.completedDate
+                                ? "Completed"
+                                : h.before?.completedDate
+                                  ? "Reopened"
+                                  : "Plan updated",
+                          ) +
+                          "</span></div></div>",
+                      )
+                      .join("")
+                  : '<p class="muted">No changes recorded.</p>',
+              },
+            ]
+          : []),
+      ],
+      footer: [
+        ...(curriculumWorkspaceManage() && !r.archived
+          ? [
+              ["Edit plan", studentClick("curriculumWorkspaceForm", id)],
+              [
+                r.completedDate ? "Reopen" : "Complete",
+                studentClick("curriculumWorkspaceCoverage", id),
+                true,
+              ],
+            ]
+          : []),
+        ...(curriculumWorkspaceOffice()
+          ? [
+              [
+                r.archived ? "Restore" : "Archive",
+                studentClick("curriculumWorkspaceArchive", id),
+              ],
+            ]
+          : []),
+        ["Close", "closeDrawer()"],
+      ],
+    }),
+  );
+};
+window.curriculumWorkspaceExport = function () {
+  studentDownloadCSV("curriculum.csv", [
+    [
+      "Subject",
+      "Grade",
+      "Academic year",
+      "Term",
+      "Unit",
+      "Outcomes",
+      "Planned",
+      "Completed",
+      "Status",
+      "Coordinator",
+    ],
+    ...curriculumWorkspaceFiltered().map((r) => [
+      r.subject,
+      r.grade,
+      r.academicYear,
+      r.term,
+      r.title,
+      r.outcomes,
+      curriculumWorkspaceDay(r.plannedDate),
+      curriculumWorkspaceDay(r.completedDate),
+      curriculumWorkspaceStatus(r),
+      r.owner,
+    ]),
+  ]);
+};
+/* Legacy dashboard links open the same reviewed workflow. */
+function curricUnits(subject) {
+  return curriculumWorkspaceState().rows.filter(
+    (r) => !subject || r.subject === subject,
+  );
+}
+function curricUnitDetail(subject, title) {
+  const r = curricUnits(subject).find((r) => r.title === title);
+  if (r) curriculumWorkspaceDetail(r._id);
+  return "";
+}
+function addUnitForm() {
+  curriculumWorkspaceForm();
+}
+window.markUnitDone = window.markUnitPlanned = function (subject, title) {
+  const rows = curricUnits(subject).filter((r) => r.title === title);
+  if (rows.length === 1) curriculumWorkspaceCoverage(rows[0]._id);
+  else {
+    go("curriculum");
+    toast("Select the grade and academic year for this unit");
+  }
+};
+window.markUnitDone.__apiBacked = true;
+M.curriculum = () => {
+  const b = curriculumWorkspaceState();
+  if (!b.loaded && !b.loading && !b.error) curriculumWorkspaceLoad();
+  const rows = curriculumWorkspaceFiltered(),
+    done = rows.filter((r) => r.completedDate).length,
+    overdue = rows.filter(
+      (r) => curriculumWorkspaceStatus(r) === "Overdue",
+    ).length;
+  const pages = Math.max(1, Math.ceil(rows.length / 20));
+  b.page = Math.min(b.page, pages);
+  const esc = studentEscape;
+  const selectors = ["grade", "academicYear", "term", "subject"]
+    .map(
+      (k) =>
+        "<label>" +
+        {
+          grade: "Grade",
+          academicYear: "Academic year",
+          term: "Term",
+          subject: "Subject",
+        }[k] +
+        " <select onchange=\"curriculumWorkspaceFilter('" +
+        k +
+        "',this.value)\">" +
+        ["All", ...new Set(b.rows.map((r) => r[k]))]
+          .map(
+            (v) =>
+              "<option " +
+              (b[k] === v ? "selected" : "") +
+              ' value="' +
+              esc(v) +
+              '">' +
+              esc(v) +
+              "</option>",
+          )
+          .join("") +
+        "</select></label>",
+    )
+    .join("");
+  return (
+    '<div class="page-head"><div class="ph-l"><h2>Curriculum</h2><p>Teaching plans, learning outcomes and recorded completion by grade and academic year.</p></div><div class="ph-r"><button class="btn" onclick="curriculumWorkspaceExport()">Export plan</button>' +
+    (curriculumWorkspaceManage()
+      ? '<button class="btn primary" onclick="curriculumWorkspaceForm()">Add unit</button>'
+      : "") +
+    "</div></div>" +
+    '<div class="grid cols-4" style="margin-bottom:18px">' +
+    kpi("curric", "#17A24A", "Units", String(rows.length)) +
+    kpi("classes", "#2563EB", "Completed", String(done)) +
+    kpi("reports", "#B45309", "Overdue", String(overdue)) +
+    kpi(
+      "lms",
+      "#0E7C39",
+      "Coverage",
+      rows.length ? Math.round((done / rows.length) * 100) + "%" : "—",
+    ) +
+    "</div>" +
+    '<div class="card pad" style="margin-bottom:16px"><div class="flex ac" style="gap:12px;flex-wrap:wrap"><input aria-label="Search curriculum" placeholder="Search units, outcomes or coordinator" value="' +
+    esc(b.q) +
+    '" onchange="curriculumWorkspaceSearch(this.value)">' +
+    selectors +
+    "<label>Status <select onchange=\"curriculumWorkspaceFilter('status',this.value)\">" +
+    ["All", "Planned", "Overdue", "Completed"]
+      .map(
+        (v) =>
+          "<option " +
+          (b.status === v ? "selected" : "") +
+          ">" +
+          v +
+          "</option>",
+      )
+      .join("") +
+    '</select></label><label><input type="checkbox" ' +
+    (b.archived ? "checked" : "") +
+    ' onchange="curriculumWorkspaceFilter(\'archived\',this.checked)"> Archived</label><button class="btn" onclick="curriculumWorkspaceLoad()">Refresh</button></div></div>' +
+    (b.error ? '<div class="card pad">' + esc(b.error) + "</div>" : "") +
+    '<div class="card"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Unit / subject</th><th>Scope</th><th>Planned</th><th>Status</th><th>Coordinator</th><th></th></tr></thead><tbody>' +
+    rows
+      .slice((b.page - 1) * 20, b.page * 20)
+      .map(
+        (r) =>
+          "<tr><td><b>" +
+          esc(r.title) +
+          '</b><div class="muted">' +
+          esc(r.subject) +
+          "</div></td><td>" +
+          esc(r.grade) +
+          '<div class="muted">' +
+          esc(r.academicYear + " · " + r.term) +
+          "</div></td><td>" +
+          esc(curriculumWorkspaceDay(r.plannedDate) || "Unscheduled") +
+          "</td><td>" +
+          chip(
+            r.archived ? "Archived" : curriculumWorkspaceStatus(r),
+            r.completedDate
+              ? "green"
+              : curriculumWorkspaceStatus(r) === "Overdue"
+                ? "red"
+                : "blue",
+          ) +
+          "</td><td>" +
+          esc(r.owner) +
+          '</td><td><button class="btn" onclick="' +
+          studentClick("curriculumWorkspaceDetail", r._id) +
+          '">View</button></td></tr>',
+      )
+      .join("") +
+    "</tbody></table></div>" +
+    (!rows.length
+      ? '<p class="pad muted">' +
+        (b.loading ? "Loading curriculum…" : "No units match this view.") +
+        "</p>"
+      : "") +
+    '<div class="pad flex ac jb"><span>' +
+    rows.length +
+    " units · Page " +
+    b.page +
+    " of " +
+    pages +
+    '</span><div><button class="btn" ' +
+    (b.page === 1 ? "disabled" : "") +
+    ' onclick="curriculumWorkspacePage(' +
+    (b.page - 1) +
+    ')">Previous</button><button class="btn" ' +
+    (b.page === pages ? "disabled" : "") +
+    ' onclick="curriculumWorkspacePage(' +
+    (b.page + 1) +
+    ')">Next</button></div></div></div><p class="muted">Coverage is the share of selected units marked completed. Overdue means the planned completion date has passed. Archived units are excluded from the active plan.</p>'
+  );
+};

@@ -20,12 +20,15 @@ describe('Roles & Access API', () => {
     expect((await request(app).get('/api/v1/roles/me').set('Authorization', `Bearer ${principal}`)).status).toBe(200);
   });
 
-  it('initializes and returns the established six-role, eleven-module matrix with real user totals', async () => {
+  it('initializes and returns the established six-role, full released-module matrix with real user totals', async () => {
     const admin = await account('Administrator', 'roles-admin@alnoor.ae');
     const response = await request(app).get('/api/v1/roles').set('Authorization', `Bearer ${admin}`);
     expect(response.status).toBe(200);
     expect(response.body.data.roles).toHaveLength(6);
-    expect(response.body.data.modules).toHaveLength(11);
+    expect(response.body.data.modules).toHaveLength(37);
+    expect(response.body.data.modules).toEqual(
+      expect.arrayContaining(['Hostel', 'Documents', 'ID Cards', 'Helpdesk', 'Surveys & Feedback']),
+    );
     expect(response.body.data.totalUsers).toBe(1);
     expect(
       response.body.data.roles.find((role: { name: string }) => role.name === 'Administrator').permissions.Settings,

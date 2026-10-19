@@ -11,15 +11,18 @@ export const examIdParamSchema = z.object({
 export const createExamSchema = z.object({
   query: z.object({}).optional(),
   params: z.object({}).optional(),
-  body: z.object({
-    name: z.string().trim().min(2).max(120),
-    term: z.string().trim().min(1).max(60),
-    subjects: z.array(z.string().trim().min(1).max(60)).min(1, 'At least one subject is required'),
-    maxMarks: z.number().int().positive().default(100),
-    passMark: z.number().int().min(0).default(50),
-  }).refine((value) => value.passMark <= value.maxMarks, {
-    message: 'Pass mark cannot exceed maximum marks', path: ['passMark'],
-  }),
+  body: z
+    .object({
+      name: z.string().trim().min(2).max(120),
+      term: z.string().trim().min(1).max(60),
+      subjects: z.array(z.string().trim().min(1).max(60)).min(1, 'At least one subject is required').max(30),
+      maxMarks: z.number().int().positive().max(10000).default(100),
+      passMark: z.number().int().min(0).default(50),
+    })
+    .refine((value) => value.passMark <= value.maxMarks, {
+      message: 'Pass mark cannot exceed maximum marks',
+      path: ['passMark'],
+    }),
 });
 
 export const addSubjectSchema = z.object({
@@ -67,17 +70,20 @@ export const recordResultSchema = z.object({
 });
 
 export const publishExamSchema = z.object({
-  query: z.object({}).optional(), body: z.object({}).optional(),
+  query: z.object({}).optional(),
+  body: z.object({}).optional(),
   params: z.object({ id: objectId }),
 });
 
 export const generateReportCardsSchema = z.object({
-  query: z.object({}).optional(), params: z.object({ id: objectId }),
+  query: z.object({}).optional(),
+  params: z.object({ id: objectId }),
   body: z.object({ grade: z.string().trim().min(1).max(80).optional() }),
 });
 
 export const notifyResultSchema = z.object({
-  query: z.object({}).optional(), body: z.object({}).optional(),
+  query: z.object({}).optional(),
+  body: z.object({}).optional(),
   params: z.object({ id: objectId, studentId: objectId }),
 });
 
@@ -86,3 +92,43 @@ export type ListExamsQuery = z.infer<typeof listExamsSchema>['query'];
 export type ListResultsQuery = z.infer<typeof listResultsSchema>['query'];
 export type RecordResultInput = z.infer<typeof recordResultSchema>['body'];
 export type GenerateReportCardsInput = z.infer<typeof generateReportCardsSchema>['body'];
+
+const scheduleSchema = z
+  .array(
+    z.object({
+      subject: z.string().trim().min(1).max(60),
+      date: z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/)
+        .refine(
+          (v) => !Number.isNaN(Date.parse(v)) && new Date(v).toISOString().slice(0, 10) === v,
+          'Invalid calendar date',
+        ),
+      startTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+      durationMinutes: z.number().int().min(1).max(480),
+      venue: z.string().trim().min(1).max(100),
+    }),
+  )
+  .max(30);
+export const updateExamSchema = z.object({
+  params: z.object({ id: objectId }),
+  query: z.object({}).optional(),
+  body: z.object({ expectedUpdatedAt: z.string().datetime(), schedule: scheduleSchema }),
+});
+export const saveExamRegisterSchema = z.object({
+  params: z.object({ id: objectId }),
+  query: z.object({}).optional(),
+  body: z.object({
+    entries: z
+      .array(
+        recordResultSchema.shape.body
+          .omit({ examId: true })
+          .extend({ expectedUpdatedAt: z.string().datetime().nullable() }),
+      )
+      .min(1)
+      .max(100),
+    correctionReason: z.string().trim().max(300).optional(),
+  }),
+});
+export type SaveExamRegisterInput = z.infer<typeof saveExamRegisterSchema>['body'];
+export type UpdateExamInput = z.infer<typeof updateExamSchema>['body'];

@@ -24,13 +24,6 @@ export async function findMany(
   return { items, total };
 }
 
-export function update(id: string, input: { outcome?: string; parentContacted?: boolean }) {
-  const update: Record<string, unknown> = { ...input };
-  if (input.parentContacted) update.parentContactedAt = new Date();
-  return ClinicVisit.findByIdAndUpdate(id, { $set: update }, { new: true, runValidators: true })
-    .populate('student', 'name refId grade').populate('recordedBy', 'name role');
-}
-
 export function create(input: CreateVisitInput, recordedBy: string): Promise<IClinicVisit> {
   const { studentId, ...visit } = input;
   return ClinicVisit.create({ ...visit, student: studentId, recordedBy });
@@ -40,8 +33,14 @@ export function findStudentById(id: string) {
   return Student.findById(id);
 }
 
-export function findAuthorizedStudentIds(guardianUserId: string) {
-  return Student.find({ guardianUserId })
+export function findAuthorizedStudentIds(userId: string, role: string) {
+  return Student.find(
+    role === 'Parent'
+      ? { guardianUserId: userId }
+      : role === 'Student'
+        ? { studentUserId: userId }
+        : { _id: { $in: [] } },
+  )
     .select('_id')
     .then((students) => students.map((s) => s._id));
 }

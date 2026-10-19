@@ -22,5 +22,6 @@ export function scopeLeaveFilter(
   ownStaffId: Types.ObjectId | null,
 ): FilterQuery<ILeaveRequest> {
   if (canDecideLeave(requester.role)) return base;
+  if (!['Teacher', 'Accountant'].includes(requester.role)) return { ...base, _id: { $in: [] } };
   return { ...base, staff: ownStaffId ?? new Types.ObjectId('000000000000000000000000') };
 }

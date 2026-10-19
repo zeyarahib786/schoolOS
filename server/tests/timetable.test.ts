@@ -114,10 +114,55 @@ describe('Timetable API', () => {
       .set('Authorization', `Bearer ${teacher.token}`)
       .query({ grade: 'Grade 7 · A' });
     expect(listed.body.data[0].status).toBe('Published');
-    expect((await request(app).delete(`/api/v1/timetable/${id}`).set('Authorization', `Bearer ${teacher.token}`)).status).toBe(204);
+    expect(
+      (await request(app).delete(`/api/v1/timetable/${id}`).set('Authorization', `Bearer ${teacher.token}`)).status,
+    ).toBe(204);
   });
-  it('rejects cross-class teacher and room double-booking',async()=>{const teacher=await registerAndLogin('Teacher','teacher-clash@alnoor.ae');await request(app).post('/api/v1/timetable').set('Authorization',`Bearer ${teacher.token}`).send({...validSlot,grade:'Grade 6 · A',room:'Room 10'});const teacherClash=await request(app).post('/api/v1/timetable').set('Authorization',`Bearer ${teacher.token}`).send({...validSlot,grade:'Grade 6 · B',room:'Room 11'});expect(teacherClash.status).toBe(409);const roomClash=await request(app).post('/api/v1/timetable').set('Authorization',`Bearer ${teacher.token}`).send({...validSlot,grade:'Grade 6 · C',teacherName:'Another Teacher',room:'Room 10'});expect(roomClash.status).toBe(409);});
-  it('rejects timetable mutations by a Parent',async()=>{const teacher=await registerAndLogin('Teacher','teacher-owner@alnoor.ae');const parent=await registerAndLogin('Parent','parent-owner@alnoor.ae');const created=await request(app).post('/api/v1/timetable').set('Authorization',`Bearer ${teacher.token}`).send({...validSlot,grade:'Grade 5 · A'});const id=created.body.data._id;expect((await request(app).patch(`/api/v1/timetable/${id}`).set('Authorization',`Bearer ${parent.token}`).send({room:'X'})).status).toBe(403);expect((await request(app).delete(`/api/v1/timetable/${id}`).set('Authorization',`Bearer ${parent.token}`)).status).toBe(403);expect((await request(app).post('/api/v1/timetable/publish').set('Authorization',`Bearer ${parent.token}`).send({grade:'Grade 5 · A'})).status).toBe(403);});
+  it('rejects cross-class teacher and room double-booking', async () => {
+    const teacher = await registerAndLogin('Teacher', 'teacher-clash@alnoor.ae');
+    await request(app)
+      .post('/api/v1/timetable')
+      .set('Authorization', `Bearer ${teacher.token}`)
+      .send({ ...validSlot, grade: 'Grade 6 · A', room: 'Room 10' });
+    const teacherClash = await request(app)
+      .post('/api/v1/timetable')
+      .set('Authorization', `Bearer ${teacher.token}`)
+      .send({ ...validSlot, grade: 'Grade 6 · B', room: 'Room 11' });
+    expect(teacherClash.status).toBe(409);
+    const roomClash = await request(app)
+      .post('/api/v1/timetable')
+      .set('Authorization', `Bearer ${teacher.token}`)
+      .send({ ...validSlot, grade: 'Grade 6 · C', teacherName: 'Another Teacher', room: 'Room 10' });
+    expect(roomClash.status).toBe(409);
+  });
+  it('rejects timetable mutations by a Parent', async () => {
+    const teacher = await registerAndLogin('Teacher', 'teacher-owner@alnoor.ae');
+    const parent = await registerAndLogin('Parent', 'parent-owner@alnoor.ae');
+    const created = await request(app)
+      .post('/api/v1/timetable')
+      .set('Authorization', `Bearer ${teacher.token}`)
+      .send({ ...validSlot, grade: 'Grade 5 · A' });
+    const id = created.body.data._id;
+    expect(
+      (
+        await request(app)
+          .patch(`/api/v1/timetable/${id}`)
+          .set('Authorization', `Bearer ${parent.token}`)
+          .send({ room: 'X' })
+      ).status,
+    ).toBe(403);
+    expect(
+      (await request(app).delete(`/api/v1/timetable/${id}`).set('Authorization', `Bearer ${parent.token}`)).status,
+    ).toBe(403);
+    expect(
+      (
+        await request(app)
+          .post('/api/v1/timetable/publish')
+          .set('Authorization', `Bearer ${parent.token}`)
+          .send({ grade: 'Grade 5 · A' })
+      ).status,
+    ).toBe(403);
+  });
 
   it('shows drafts to staff but only published slots to parents', async () => {
     const teacher = await registerAndLogin('Teacher', 'teacher-visibility@alnoor.ae');
@@ -150,11 +195,25 @@ describe('Timetable API', () => {
     await request(app)
       .post('/api/v1/timetable')
       .set('Authorization', `Bearer ${teacher.token}`)
-      .send({ ...validSlot, grade, periodNumber: 1, subject: 'English', teacherName: 'English Teacher', room: 'Room 1' });
+      .send({
+        ...validSlot,
+        grade,
+        periodNumber: 1,
+        subject: 'English',
+        teacherName: 'English Teacher',
+        room: 'Room 1',
+      });
     await request(app)
       .post('/api/v1/timetable')
       .set('Authorization', `Bearer ${teacher.token}`)
-      .send({ ...validSlot, grade, periodNumber: 2, subject: 'Physics', teacherName: 'Physics Teacher', room: 'Room 2' });
+      .send({
+        ...validSlot,
+        grade,
+        periodNumber: 2,
+        subject: 'Physics',
+        teacherName: 'Physics Teacher',
+        room: 'Room 2',
+      });
 
     const swap = await request(app)
       .post('/api/v1/timetable/swap')
@@ -185,8 +244,15 @@ describe('Timetable API', () => {
       .get('/api/v1/timetable')
       .set('Authorization', `Bearer ${teacher.token}`)
       .query({ grade });
-    expect(listed.body.data.some((slot: { dayOfWeek: string; periodNumber: number }) => slot.dayOfWeek === 'Monday' && slot.periodNumber === 2)).toBe(false);
-    expect(listed.body.data.find((slot: { dayOfWeek: string; periodNumber: number }) => slot.dayOfWeek === 'Tuesday' && slot.periodNumber === 3).subject).toBe('English');
+    expect(
+      listed.body.data.some(
+        (slot: { dayOfWeek: string; periodNumber: number }) => slot.dayOfWeek === 'Monday' && slot.periodNumber === 2,
+      ),
+    ).toBe(false);
+    expect(
+      listed.body.data.find(
+        (slot: { dayOfWeek: string; periodNumber: number }) => slot.dayOfWeek === 'Tuesday' && slot.periodNumber === 3,
+      ).subject,
+    ).toBe('English');
   });
-
 });

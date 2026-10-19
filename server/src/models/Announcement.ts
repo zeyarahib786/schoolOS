@@ -11,6 +11,7 @@ export interface IAnnouncement extends Document {
   audience: 'All' | 'Staff' | 'Parents' | 'Students';
   status: 'Draft' | 'Pending approval' | 'Published';
   pinned: boolean;
+  reviewNote: string;
   publishedBy: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -22,6 +23,7 @@ const announcementSchema = new Schema<IAnnouncement>(
     body: { type: String, required: true, trim: true, maxlength: 3000 },
     audience: { type: String, enum: ['All', 'Staff', 'Parents', 'Students'], default: 'All', index: true },
     status: { type: String, enum: ['Draft', 'Pending approval', 'Published'], default: 'Published', index: true },
+    reviewNote: { type: String, trim: true, maxlength: 300, default: '' },
     pinned: { type: Boolean, default: false },
     publishedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },

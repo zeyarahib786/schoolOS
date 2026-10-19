@@ -1,3 +1,4 @@
+import { calendarDateSchema } from '../../utils/calendarDate';
 import { z } from 'zod';
 
 export const listAuditLogSchema = z.object({
@@ -6,6 +7,9 @@ export const listAuditLogSchema = z.object({
   query: z.object({
     page: z.coerce.number().int().min(1).default(1),
     limit: z.coerce.number().int().min(1).max(100).default(20),
+    q: z.string().trim().max(200).optional(),
+    dateFrom: calendarDateSchema.optional(),
+    dateTo: calendarDateSchema.optional(),
     module: z.string().trim().max(80).optional(),
     severity: z.enum(['Info', 'Warning', 'Critical']).optional(),
   }),

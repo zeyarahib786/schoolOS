@@ -16,7 +16,11 @@ export function scopeIncidentFilter(
   if (UNRESTRICTED_READ_ROLES.includes(requester.role)) {
     return base;
   }
-  return { ...base, student: { $in: authorizedStudentIds } };
+  return {
+    ...base,
+    student: { $in: authorizedStudentIds },
+    $or: [{ visibility: 'Shared with family' }, { visibility: { $exists: false }, type: { $ne: 'Pastoral note' } }],
+  };
 }
 
 export function canLogIncident(role: Role): boolean {

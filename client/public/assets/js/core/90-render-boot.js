@@ -22,8 +22,9 @@ function render(){
   }
   const fn=M[state.module];$('#view').innerHTML=fn?fn():M.dashboard();
   if(state.module==='students')filterStudents();
-  if(state.module==='attendance')updateAttKpis();
+  if(state.module==='parents')filterParents();
   a11yEnhance($('#view'));localizeView($('#view'));
+  if (typeof schoolLocalizeShell === 'function') schoolLocalizeShell();
 }
 
 /* ============ COMMAND PALETTE ============ */
@@ -35,8 +36,8 @@ function cmdItems(){const o=[];flatItems().forEach(it=>{if((!it.roles||it.roles.
   return o}
 function openCmd(){$('#cmdk').classList.add('on');$('#cmdInput').value='';cmdSel=0;renderCmd();setTimeout(()=>$('#cmdInput').focus(),30)}
 function closeCmd(){$('#cmdk').classList.remove('on')}
-function renderCmd(){const q=($('#cmdInput').value||'').toLowerCase();const items=cmdItems().filter(i=>i.label.toLowerCase().includes(q));window._cmd=items;
-  $('#cmdList').innerHTML=items.map((i,x)=>`<div class="cr${x===cmdSel?' sel':''}" onclick="window._cmd[${x}].act();closeCmd()">${ic(i.icon,16).replace('class="ic"','')}<span>${i.label}</span><span class="grp">${i.group}</span></div>`).join('')||`<div class="muted" style="padding:18px;text-align:center">No matches</div>`}
+function renderCmd(){const q=($('#cmdInput').value||'').toLowerCase();const items=cmdItems().filter(i=>(i.label.toLowerCase().includes(q)||schoolTranslateText(i.label).toLowerCase().includes(q)));window._cmd=items;
+  $('#cmdList').innerHTML=items.map((i,x)=>`<div class="cr${x===cmdSel?' sel':''}" onclick="window._cmd[${x}].act();closeCmd()">${ic(i.icon,16).replace('class="ic"','')}<span>${studentEscape(schoolTranslateText(i.label))}</span><span class="grp">${studentEscape(schoolTranslateText(i.group))}</span></div>`).join('')||`<div class="muted" style="padding:18px;text-align:center">${t('No matches')}</div>`;localizeView($('#cmdk'))}
 function cmdKey(e){const items=window._cmd||[];if(e.key==='ArrowDown'){cmdSel=Math.min(cmdSel+1,items.length-1);renderCmd();e.preventDefault()}else if(e.key==='ArrowUp'){cmdSel=Math.max(cmdSel-1,0);renderCmd();e.preventDefault()}else if(e.key==='Enter'){if(items[cmdSel]){items[cmdSel].act();closeCmd()}}else if(e.key==='Escape')closeCmd()}
 document.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();$('#cmdk').classList.contains('on')?closeCmd():openCmd()}if(e.key==='Escape'){closeDrawer();if(typeof BOT_OPEN!=='undefined'&&BOT_OPEN)closeBot()}});
 
@@ -54,10 +55,7 @@ window.addRole=function(v){const role=(v.role||'').trim();if(!role){toast('Role 
   if(ROLES.includes(role)){toast('Role already exists');return false}
   const baseIdx=Math.max(0,ROLES.indexOf(v.base||'Teacher'));ROLES.push(role);
   PERMROWS.forEach(r=>r[1].push(r[1][baseIdx]||0));closeDrawer();render();toast('Role created · '+role);return false};
-function newArrivalForm(){formDrawer('Add new arrival','Adds a real, searchable, issuable title to the catalogue',[
- {label:'Title',key:'title',req:true},{label:'Author',key:'author',req:true},
- {label:'Category',key:'category',opts:[...new Set(LIBCAT.map(c=>c[0]))],half:true},{label:'Copies',key:'copies',type:'number',half:true,val:1}
- ],'Add to catalogue','','addTitle')}
+function newArrivalForm(){go('library');libraryWorkspaceBookForm();}
 window.addTitle=function(v){const title=(v.title||'').trim();if(!title){toast('Title is required');return false}
   if(BOOKCAT.some(b=>b.title.toLowerCase()===title.toLowerCase())){toast(title+' is already in the catalogue');return false}
   const cat=(v.category||'').trim()||'General';const copies=parseInt(v.copies,10)||1;
@@ -82,7 +80,7 @@ const BOT_KB=[
  {k:['timetable','schedule','period','periods','class schedule','lessons'],a:'Timetable shows the weekly class schedule grid, colour-coded by subject.',links:[['timetable','Timetable']]},
  {k:['class','classes','section','sections','stream','division'],a:'Classes & Sections manages grade sections, streams, class teachers and capacity.',links:[['classes','Classes & Sections']]},
  {k:['curriculum','syllabus','unit','units','learning outcome','scheme'],a:'Curriculum organises subjects into units, terms and learning outcomes.',links:[['curriculum','Curriculum']]},
- {k:['lms','learning','course','courses','online','elearning','quiz','assignment','homework'],a:'Learning (LMS) hosts courses, assignments and quizzes for blended learning.',links:[['lms','Learning (LMS)']]},
+ {k:['lms','learning','course','courses','online','elearning','quiz','assignment','homework'],a:'Learning (LMS) manages saved courses, assignments, submissions and reviewed assessments.',links:[['lms','Learning (LMS)']]},
  {k:['behaviour','behavior','discipline','merit','demerit','incident','conduct'],a:'Behaviour logs merits and incidents to track conduct over time.',links:[['behaviour','Behaviour']]},
  {k:['health','clinic','medical','nurse','sick','infirmary','allergy'],a:'Health & Clinic records clinic visits, reasons and actions taken, plus medical alerts.',links:[['health','Health & Clinic']]},
  {k:['cafeteria','canteen','meal','meals','food','wallet','lunch','top up'],a:'Cafeteria manages meal plans and student wallets \u2014 you can top up a wallet balance.',links:[['cafeteria','Cafeteria']]},
@@ -90,11 +88,11 @@ const BOT_KB=[
  {k:['transport','bus','buses','route','routes','vehicle','fleet','driver','pickup'],a:'Transport covers routes, fleet vehicles and riders. Add routes and vehicles to the fleet.',links:[['transport','Transport']]},
  {k:['hostel','boarding','dorm','room','bed','accommodation'],a:'Hostel manages boarding blocks and room/bed allocation.',links:[['hostel','Hostel']]},
  {k:['inventory','asset','assets','stock','supply','store','reorder'],a:'Inventory tracks stock items, quantities and reorder levels.',links:[['inventory','Inventory']]},
- {k:['biometric','fingerprint','device','devices','sync','face'],a:'Biometric Sync manages attendance devices and their sync status.',links:[['biometric','Biometric Sync']]},
+ {k:['biometric','fingerprint','device','devices','sync','face'],a:'The biometric registry records devices and observed status. Hardware ingestion is not configured; it does not automatically create attendance.',links:[['biometric','Biometric Sync']]},
  {k:['visitor','visitors','gate','guest','check in visitor','front desk','reception'],a:'Visitor Management logs visitor check-ins, purpose and host.',links:[['visitors','Visitor Management']]},
  {k:['facility','facilities','booking','bookings','hall','reserve','venue','lab'],a:'Facilities & Bookings lets you reserve halls, labs and other facilities.',links:[['facilities','Facilities & Bookings']]},
  {k:['helpdesk','ticket','tickets','support','issue','maintenance request'],a:'Helpdesk manages support tickets by category and priority.',links:[['helpdesk','Helpdesk']]},
- {k:['communication','announce','announcement','message','notice','circular','sms','email','broadcast'],a:'Communication sends announcements and messages to parents and staff across channels.',links:[['comm','Communication']]},
+ {k:['communication','announce','announcement','message','notice','circular','sms','email','broadcast'],a:'Communication manages portal announcements and private messages. External email and SMS require configured providers.',links:[['comm','Communication']]},
  {k:['event','events','calendar','holiday','ptm','parent teacher meeting','activity'],a:'Events Calendar schedules school events, holidays and parent-teacher meetings.',links:[['calendar','Events Calendar']]},
  {k:['survey','surveys','feedback','poll','questionnaire'],a:'Surveys & Feedback creates polls and collects responses from your community.',links:[['surveys','Surveys & Feedback']]},
  {k:['certificate','certificates','bonafide','transfer certificate','character','document','tc'],a:'Certificates issues official documents \u2014 transfer, bonafide and character certificates \u2014 as downloadable, print-ready files.',links:[['certificates','Certificates']]},
@@ -102,7 +100,7 @@ const BOT_KB=[
  {k:['expense','expenses','spend','cost','vendor','purchase'],a:'Expenses logs operational spending by category and vendor.',links:[['expenses','Expenses']]},
  {k:['payroll','salary','salaries','payslip','wages'],a:'Payroll handles staff salaries and payslips.',links:[['payroll','Payroll']]},
  {k:['report','reports','analytics','insight','insights','kpi','statistic','data','trend'],a:'Reports & Analytics and AI Insights surface trends across attendance, finance and performance. The Dashboard gives an at-a-glance overview.',links:[['reports','Reports & Analytics'],['aiinsights','AI Insights'],['dashboard','Dashboard']]},
- {k:['role','roles','access','permission','permissions','rights','security'],a:'Roles & Access controls what each role can see and do via a permission matrix. You can add custom roles.',links:[['roles','Roles & Access']]},
+ {k:['role','roles','access','permission','permissions','rights','security'],a:'Roles & Access manages workspace visibility. API roles and record ownership still govern actions. Custom roles are permission templates.',links:[['roles','Roles & Access']]},
  {k:['audit','log','logs','history','activity trail','track changes'],a:'Audit Log records system activity for accountability and compliance.',links:[['audit','Audit Log']]},
  {k:['dark','light','theme','themes','appearance','accent','mode','colour scheme'],a:'Open Settings \u2192 Appearance to switch Light, Dark or System themes and pick a brand accent \u2014 or use the moon icon in the top bar. Your choice is saved on this device.',links:[['settings','Open Settings']]},
  {k:['language','languages','arabic','urdu','hindi','english','translate','translation','rtl'],a:'SchoolOS supports English, Arabic, Urdu and Hindi \u2014 with right-to-left layout for Arabic and Urdu. Use the language button in the top bar, or Settings \u2192 Region & localization. Your choice is remembered.',links:[['settings','Open Settings']]},
@@ -110,28 +108,28 @@ const BOT_KB=[
  {k:['region','country','currency','localization','locale','market'],a:'Settings \u2192 Region & localization adapts currency, language, direction and the grading/compliance framework across India, the GCC and global regions.',links:[['settings','Open Settings']]},
  {k:['export','csv','download data','backup'],a:'Many modules support export \u2014 the Students list exports to CSV, and report cards, fee statements and certificates download as print-ready documents.',links:[['students','Students']]},
  {k:['search','find','command','shortcut','palette','jump'],a:'Press \u2318K / Ctrl-K (or click the search bar) to open the command palette and jump to any module or action.',links:[]},
- {k:['switch role','view as','change role','principal','administrator','accountant','impersonate'],a:'Use the role pill in the top bar to switch between Administrator, Principal, Teacher, Accountant, Parent and Student views \u2014 navigation and data adapt to each role.',links:[]},
+ {k:['switch role','view as','change role','principal','administrator','accountant','impersonate'],a:'The live workspace uses your authenticated account role. Interface controls do not impersonate another account or bypass server permissions.',links:[]},
  {k:['what','who are you','help','capabilities','about','schoolos','features','can you do'],a:'I\u2019m the SchoolOS assistant. I help you navigate this platform \u2014 ask about any area (students, fees, attendance, exams, timetable, HR, transport, compliance, themes, languages\u2026) and I\u2019ll explain it and open the right screen for you. I only cover Solvagence SchoolOS.',links:[['dashboard','Dashboard']]}
 ];
 const BOT_SUGGEST=['How do I add a student?','Where are fees & invoices?','Change theme or language','Data & compliance','Generate a report card'];
 let BOT_HISTORY=[],BOT_OPEN=false;
 function botMatch(q){q=(q||'').toLowerCase();const words=q.split(/[^a-z0-9\u0600-\u06FF\u0900-\u097F]+/).filter(w=>w.length>1);
-  let best=null,bs=0;BOT_KB.forEach(e=>{let sc=0;e.k.forEach(kw=>{if(q.indexOf(kw)>=0)sc+=kw.split(' ').length*2;words.forEach(w=>{if(kw.indexOf(w)>=0)sc+=1});});if(sc>bs){bs=sc;best=e;}});return bs>0?best:null;}
-function botReply(q){const m=botMatch(q);if(m)return{text:m.a,links:m.links||[]};
-  return{text:'I can help with anything inside Solvagence SchoolOS \u2014 students, admissions, fees, attendance, exams, timetable, library, transport, HR, compliance, themes and languages. Try naming a topic, or pick a suggestion below. (I only cover this platform.)',links:[['dashboard','Dashboard'],['settings','Settings']]};}
+  let best=null,bs=0;BOT_KB.forEach(e=>{let sc=0;e.k.concat(ARABIC_HELP_TOPICS[e.k[0]]?.keywords||[]).forEach(kw=>{if(q.indexOf(kw)>=0)sc+=kw.split(' ').length*2;words.forEach(w=>{if(kw.indexOf(w)>=0)sc+=1});});if(sc>bs){bs=sc;best=e;}});return bs>0?best:null;}
+function botReply(q){const m=botMatch(q);if(m)return{text:m.a,arabicText:ARABIC_HELP_TOPICS[m.k[0]]?.answer,links:m.links||[]};
+  return{arabicText:ARABIC_HELP_TOPICS.what.answer,text:'I can help with anything inside Solvagence SchoolOS \u2014 students, admissions, fees, attendance, exams, timetable, library, transport, HR, compliance, themes and languages. Try naming a topic, or pick a suggestion below. (I only cover this platform.)',links:[['dashboard','Dashboard'],['settings','Settings']]};}
 function botEsc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 const BOT_USER_SVG='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M5 21a7 7 0 0 1 14 0"/></svg>';
-function botRenderMsg(m){if(m.role==='me')return `<div class="bot-msg me"><span class="mava">${BOT_USER_SVG}</span><div class="bub">${botEsc(m.text)}</div></div>`;
+function botRenderMsg(m){if(m.role==='me')return `<div class="bot-msg me" data-i18n-skip="true"><span class="mava">${BOT_USER_SVG}</span><div class="bub">${botEsc(m.text)}</div></div>`;
   const links=(m.links&&m.links.length)?`<div class="bot-links">${m.links.map(l=>`<span class="bot-link" role="button" tabindex="0" onclick="botGo('${l[0]}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();botGo('${l[0]}')}">${ic('arrow',13)} ${botEsc(t(l[1]))}</span>`).join('')}</div>`:'';
-  return `<div class="bot-msg bot"><span class="mava">${ic('ai',15)}</span><div class="bub">${botEsc(m.text)}${links}</div></div>`;}
+  return `<div class="bot-msg bot"><span class="mava">${ic('ai',15)}</span><div class="bub">${botEsc(LANG==='ar'?(m.arabicText||schoolTranslateText(m.text)):m.text)}${links}</div></div>`;}
 function botRender(){const body=$('#botBody');if(!body)return;body.innerHTML=BOT_HISTORY.map(botRenderMsg).join('');body.scrollTop=body.scrollHeight;
-  const chips=$('#botChips');if(chips)chips.innerHTML=BOT_SUGGEST.map(s=>`<span class="bot-chip" role="button" tabindex="0" onclick="botAsk(this.dataset.q)" onkeydown="if(event.key==='Enter'){botAsk(this.dataset.q)}" data-q="${botEsc(s)}">${botEsc(s)}</span>`).join('');}
+  localizeView($('#botPanel'));const chips=$('#botChips');if(chips)chips.innerHTML=BOT_SUGGEST.map(s=>`<span class="bot-chip" role="button" tabindex="0" onclick="botAsk(this.dataset.q)" onkeydown="if(event.key==='Enter'){botAsk(this.dataset.q)}" data-q="${botEsc(s)}">${botEsc(schoolTranslateText(s))}</span>`).join('');}
 function botGreet(){if(!BOT_HISTORY.length)BOT_HISTORY.push({role:'bot',text:'Hi! I\u2019m the SchoolOS assistant. Ask me how to do something or where to find a feature \u2014 I\u2019ll explain it and open the right screen for you.',links:[]});}
 function openBot(){BOT_OPEN=true;botGreet();botRender();$('#botPanel').classList.add('on');$('#botPanel').removeAttribute('inert');$('#botScrim').classList.add('on');$('#botFab').style.display='none';setTimeout(()=>{const i=$('#botInput');i&&i.focus()},80);}
 function closeBot(){BOT_OPEN=false;$('#botPanel').classList.remove('on');$('#botPanel').setAttribute('inert','');$('#botScrim').classList.remove('on');$('#botFab').style.display='grid';const f=$('#botFab');f&&f.focus&&f.focus();}
 function botAsk(q){const i=$('#botInput');if(i)i.value=q;botSend();}
 function botSend(){const i=$('#botInput');if(!i)return;const q=i.value.trim();if(!q)return;i.value='';BOT_HISTORY.push({role:'me',text:q});botRender();
-  setTimeout(()=>{const r=botReply(q);BOT_HISTORY.push({role:'bot',text:r.text,links:r.links});botRender();},200);}
+  setTimeout(()=>{const r=botReply(q);BOT_HISTORY.push({role:'bot',text:r.text,arabicText:r.arabicText,links:r.links});botRender();},200);}
 function botGo(id){go(id);closeBot();}
 
 /* ============ PUBLIC LANDING / LOGIN ============ */
@@ -156,6 +154,14 @@ const LX={
 const LX_FEAT_ICONS=['<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h10"/></svg>','<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg>','<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>'];
 function lxT(k){return (LX[k]&&LX[k][LANG])||(LX[k]&&LX[k].en)||''}
 let LANDING_ROLE='Administrator';
+LX.sub.en='School people, academics, finance and operations in one authenticated workspace, with saved records and Arabic/RTL support.';
+LX.sub.ar='بيانات المدرسة والدراسة والمالية والعمليات في مساحة عمل تتطلب تسجيل الدخول، مع سجلات محفوظة ودعم العربية واتجاه اليمين إلى اليسار.';
+LX.feats.en=['Saved school records and role-aware workflows','English and Arabic interface with RTL support','School configuration and operational reporting'];
+LX.feats.ar=['سجلات مدرسية محفوظة وإجراءات حسب صلاحيات الحساب','واجهة إنجليزية وعربية مع دعم اتجاه اليمين إلى اليسار','إعدادات المدرسة والتقارير التشغيلية'];
+LX.stats.en[0][0]='37';LX.stats.ar[0][0]='٣٧';
+LX.note.en='Sign in with your school account. Saved records are stored on the configured school server.';
+LX.note.ar='سجّل الدخول بحساب المدرسة. تُحفظ السجلات على خادم المدرسة المهيأ.';
+LX.foot.en='Solvagence · SchoolOS';LX.foot.ar='سولفاجنس · نظام المدرسة';
 function renderLanding(){
   const L=$('#landing');if(!L)return;
   const logo=document.querySelector('.app img[alt="Solvagence SchoolOS"]');
@@ -180,6 +186,7 @@ function renderLanding(){
   const roles=['Administrator','Principal','Teacher','Parent','Student'];
   $('#lxRoles').innerHTML=roles.map(r=>`<button type="button" class="lx-role ${r===LANDING_ROLE?'on':''}" data-role="${r}" onclick="selectLandingRole('${r}')">${escHtml(t(r))}</button>`).join('');
   $('#lxLangs').innerHTML=langEnabled().map(c=>`<button type="button" class="lx-lang ${LANG===c?'on':''}" onclick="setLanguage('${c}')" lang="${c}">${escHtml(LANGS[c].native)}</button>`).join('');
+  localizeView(L);
 }
 function selectLandingRole(r){LANDING_ROLE=r;document.querySelectorAll('#lxRoles .lx-role').forEach(el=>el.classList.toggle('on',el.dataset.role===r))}
 function enterApp(role){const r=role||LANDING_ROLE||'Administrator';const L=$('#landing');

@@ -11,8 +11,12 @@ router.use(requireAuth);
 
 router.get('/', validate(listDocumentsSchema), controller.list);
 router.get('/:id/file', validate(documentIdSchema), controller.downloadFile);
-router.post('/file', requireRole('Administrator', 'Principal', 'Teacher'),
-  express.raw({ type: 'application/pdf', limit: '8mb' }), controller.publishFile);
+router.post(
+  '/file',
+  requireRole('Administrator', 'Principal', 'Teacher'),
+  express.raw({ type: 'application/pdf', limit: '8mb' }),
+  controller.publishFile,
+);
 router.post(
   '/',
   requireRole('Administrator', 'Principal', 'Teacher'),

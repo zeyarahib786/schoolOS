@@ -35,7 +35,7 @@ describe('reviewClaimSchema', () => {
   it('accepts an Approved status with notes', () => {
     const result = reviewClaimSchema.safeParse({
       params: { id: '64b7f9c9a1b2c3d4e5f60789' },
-      body: { status: 'Approved', reviewNotes: 'Receipts verified' },
+      body: { status: 'Approved', expectedUpdatedAt: '2026-10-11T12:00:00.000Z', reviewNotes: 'Receipts verified' },
       query: {},
     });
     expect(result.success).toBe(true);

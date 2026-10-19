@@ -34,9 +34,12 @@ describe('scopeStaffFilter', () => {
     expect(filter.userId).toBe(teacherAId);
   });
 
-  it('scopes Parent and Student roles (no plausible reason to see any staff record) to their own linked record too, matching nothing if unlinked', () => {
-    const filter = scopeStaffFilter({}, makeUser('some-parent-id', 'Parent'));
-    expect(filter).toEqual({ userId: 'some-parent-id' });
+  it('denies Parent and Student staff-directory scope even if a legacy link exists', () => {
+    for (const role of ['Parent', 'Student'] as const) {
+      const filter = scopeStaffFilter({}, makeUser('family-id', role));
+      expect(filter).toEqual({ _id: { $in: [] } });
+      expect(() => assertCanReadStaff(makeStaff('family-id'), makeUser('family-id', role))).toThrow(ApiError);
+    }
   });
 });
 

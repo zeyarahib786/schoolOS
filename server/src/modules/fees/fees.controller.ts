@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { asyncHandler } from '../../middleware/errorHandler';
 import { sendSuccess } from '../../utils/apiResponse';
 import { ApiError } from '../../utils/ApiError';
+import { listInvoicesSchema, listPaymentsSchema } from './fees.validation';
 import * as service from './fees.service';
 
 function requireUser(req: Request) {
@@ -11,10 +12,7 @@ function requireUser(req: Request) {
 
 export const list = asyncHandler(async (req: Request, res: Response) => {
   const requester = requireUser(req);
-  const result = await service.listInvoices(
-    req.query as unknown as Parameters<typeof service.listInvoices>[0],
-    requester,
-  );
+  const result = await service.listInvoices(listInvoicesSchema.shape.query.parse(req.query), requester);
   sendSuccess(res, 200, result.items, { pagination: result.pagination });
 });
 
@@ -38,7 +36,7 @@ export const recordStudentPayment = asyncHandler(async (req: Request, res: Respo
 
 export const listPayments = asyncHandler(async (req: Request, res: Response) => {
   const requester = requireUser(req);
-  const result = await service.listPayments(req.query as unknown as Parameters<typeof service.listPayments>[0], requester);
+  const result = await service.listPayments(listPaymentsSchema.shape.query.parse(req.query), requester);
   sendSuccess(res, 200, result.items, { pagination: result.pagination });
 });
 
@@ -46,4 +44,14 @@ export const sendReminders = asyncHandler(async (req: Request, res: Response) =>
   const requester = requireUser(req);
   const result = await service.sendFeeReminders(req.body, requester);
   sendSuccess(res, 200, result);
+});
+
+export const listHeads = asyncHandler(async (req: Request, res: Response) => {
+  sendSuccess(res, 200, await service.listHeads(requireUser(req)));
+});
+export const createHead = asyncHandler(async (req: Request, res: Response) => {
+  sendSuccess(res, 201, await service.saveHead(undefined, req.body, requireUser(req)));
+});
+export const updateHead = asyncHandler(async (req: Request, res: Response) => {
+  sendSuccess(res, 200, await service.saveHead(req.params.id, req.body, requireUser(req)));
 });

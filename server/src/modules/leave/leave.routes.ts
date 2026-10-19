@@ -2,7 +2,7 @@ import { Router } from 'express';
 import * as controller from './leave.controller';
 import { validate } from '../../middleware/validate';
 import { requireAuth } from '../../middleware/auth';
-import { listLeaveSchema, requestLeaveSchema, decideLeaveSchema } from './leave.validation';
+import { listLeaveSchema, requestLeaveSchema, decideLeaveSchema, cancelLeaveSchema } from './leave.validation';
 
 const router = Router();
 
@@ -16,4 +16,5 @@ router.get('/', validate(listLeaveSchema), controller.list);
 router.post('/', validate(requestLeaveSchema), controller.create);
 router.post('/:id/decide', validate(decideLeaveSchema), controller.decide);
 
+router.post('/:id/cancel', validate(cancelLeaveSchema), controller.cancel);
 export default router;

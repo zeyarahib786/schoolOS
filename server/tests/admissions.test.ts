@@ -28,9 +28,13 @@ async function createApplication(token: string) {
 
 async function transitionTo(token: string, id: string, status: string) {
   if (status === 'Accepted') {
-    await Promise.all(['id', 'birth', 'photo'].map((key) => request(app)
-      .post(`/api/v1/admissions/${id}/documents/${key}/mark-received`)
-      .set('Authorization', `Bearer ${token}`)));
+    await Promise.all(
+      ['id', 'birth', 'photo'].map((key) =>
+        request(app)
+          .post(`/api/v1/admissions/${id}/documents/${key}/mark-received`)
+          .set('Authorization', `Bearer ${token}`),
+      ),
+    );
   }
   return request(app)
     .post(`/api/v1/admissions/${id}/transition`)
@@ -102,19 +106,31 @@ describe('Admissions API', () => {
     const id = await createApplication(admin.token);
     await transitionTo(admin.token, id, 'Shortlisted');
     await transitionTo(admin.token, id, 'Interviewed');
-    const res = await request(app).post(`/api/v1/admissions/${id}/transition`).set('Authorization', `Bearer ${admin.token}`).send({ status: 'Accepted' });
+    const res = await request(app)
+      .post(`/api/v1/admissions/${id}/transition`)
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({ status: 'Accepted' });
     expect(res.status).toBe(400);
   });
 
   it('securely stores, reads, and removes an admission document', async () => {
     const admin = await registerAndLogin('Administrator', 'admin-upload@alnoor.ae');
     const id = await createApplication(admin.token);
-    const upload = await request(app).put(`/api/v1/admissions/${id}/documents/id`).set('Authorization', `Bearer ${admin.token}`).set('Content-Type', 'application/pdf').set('X-File-Name', encodeURIComponent('passport.pdf')).send(Buffer.from('%PDF admission'));
+    const upload = await request(app)
+      .put(`/api/v1/admissions/${id}/documents/id`)
+      .set('Authorization', `Bearer ${admin.token}`)
+      .set('Content-Type', 'application/pdf')
+      .set('X-File-Name', encodeURIComponent('passport.pdf'))
+      .send(Buffer.from('%PDF admission'));
     expect(upload.status).toBe(201);
-    const download = await request(app).get(`/api/v1/admissions/${id}/documents/id`).set('Authorization', `Bearer ${admin.token}`);
+    const download = await request(app)
+      .get(`/api/v1/admissions/${id}/documents/id`)
+      .set('Authorization', `Bearer ${admin.token}`);
     expect(download.status).toBe(200);
     expect(download.headers['content-type']).toContain('application/pdf');
-    const remove = await request(app).delete(`/api/v1/admissions/${id}/documents/id`).set('Authorization', `Bearer ${admin.token}`);
+    const remove = await request(app)
+      .delete(`/api/v1/admissions/${id}/documents/id`)
+      .set('Authorization', `Bearer ${admin.token}`);
     expect(remove.status).toBe(200);
   });
 

@@ -20,7 +20,7 @@ export function scopeResultFilter(
   }
   // Parents receive marks only once the school has formally published (locked) the exam.
   // Staff can see draft marks for entry and moderation.
-  return { ...base, student: { $in: authorizedStudentIds } };
+  return { $and: [base, { student: { $in: authorizedStudentIds } }] };
 }
 
 export function canManageExams(role: Role): boolean {

@@ -71,7 +71,9 @@ export function findLoanById(id: string): Promise<ILoan | null> {
   return Loan.findById(id);
 }
 
-export function findStudentById(id: string) { return Student.findById(id); }
+export function findStudentById(id: string) {
+  return Student.findById(id);
+}
 
 export function findActiveLoanForBookAndStudent(bookId: string, studentId: string): Promise<ILoan | null> {
   return Loan.findOne({ book: bookId, student: studentId, status: { $in: ['Active', 'Overdue'] } });
@@ -116,40 +118,69 @@ export async function findManyLoans(
 }
 
 export function findAuthorizedStudentIds(userId: string, role: Role) {
-  const filter = role === 'Parent' ? { guardianUserId: userId }
-    : role === 'Student' ? { studentUserId: userId }
-    : { _id: { $in: [] } };
+  const filter =
+    role === 'Parent'
+      ? { guardianUserId: userId }
+      : role === 'Student'
+        ? { studentUserId: userId }
+        : { _id: { $in: [] } };
   return Student.find(filter)
     .select('_id')
     .then((students) => students.map((s) => s._id));
 }
 
-export function findStudentForStudentUser(userId: string) { return Student.findOne({ studentUserId: userId }); }
-export function findStudentsForGuardian(userId: string) { return Student.find({ guardianUserId: userId }); }
+export function findStudentForStudentUser(userId: string) {
+  return Student.findOne({ studentUserId: userId });
+}
+export function findStudentsForGuardian(userId: string) {
+  return Student.find({ guardianUserId: userId });
+}
 
 export function findPendingRequest(bookId: string, studentId: string): Promise<IBookRequest | null> {
   return BookRequest.findOne({ book: bookId, student: studentId, status: 'Pending' });
 }
-export function createBookRequest(bookId: string, studentId: string, requestedBy: string, note?: string): Promise<IBookRequest> {
+export function createBookRequest(
+  bookId: string,
+  studentId: string,
+  requestedBy: string,
+  note?: string,
+): Promise<IBookRequest> {
   return BookRequest.create({ book: bookId, student: studentId, requestedBy, note });
 }
-export function findBookRequestById(id: string): Promise<IBookRequest | null> { return BookRequest.findById(id); }
-export function fulfillBookRequest(id: string, fulfilledBy: string): Promise<IBookRequest | null> {
-  return BookRequest.findOneAndUpdate({ _id: id, status: 'Pending' }, { status: 'Fulfilled', fulfilledBy, fulfilledAt: new Date() }, { new: true });
+export function findBookRequestById(id: string): Promise<IBookRequest | null> {
+  return BookRequest.findById(id);
 }
-export async function findManyBookRequests(query: { page: number; limit: number; status?: 'Pending' | 'Fulfilled' }, studentIds?: string[]): Promise<{ items: IBookRequest[]; total: number }> {
+export function fulfillBookRequest(id: string, fulfilledBy: string): Promise<IBookRequest | null> {
+  return BookRequest.findOneAndUpdate(
+    { _id: id, status: 'Pending' },
+    { status: 'Fulfilled', fulfilledBy, fulfilledAt: new Date() },
+    { new: true },
+  );
+}
+export async function findManyBookRequests(
+  query: { page: number; limit: number; status?: 'Pending' | 'Fulfilled' | 'Rejected' | 'Cancelled' },
+  studentIds?: string[],
+): Promise<{ items: IBookRequest[]; total: number }> {
   const filter: FilterQuery<IBookRequest> = {};
   if (query.status) filter.status = query.status;
   if (studentIds) filter.student = { $in: studentIds };
   const skip = (query.page - 1) * query.limit;
   const [items, total] = await Promise.all([
-    BookRequest.find(filter).sort({ createdAt: -1 }).skip(skip).limit(query.limit).populate('book', 'title author').populate('student', 'name refId grade').populate('requestedBy', 'name role'),
+    BookRequest.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(query.limit)
+      .populate('book', 'title author')
+      .populate('student', 'name refId grade')
+      .populate('requestedBy', 'name role'),
     BookRequest.countDocuments(filter),
   ]);
   return { items, total };
 }
 export function findLoansForReminder(ids: string[]): Promise<ILoan[]> {
-  return Loan.find({ _id: { $in: ids }, status: 'Overdue' }).populate('book', 'title').populate('student', 'name guardianUserId studentUserId');
+  return Loan.find({ _id: { $in: ids }, status: 'Overdue' })
+    .populate('book', 'title')
+    .populate('student', 'name guardianUserId studentUserId');
 }
 export function recordReminder(loanId: string): Promise<ILoan | null> {
   return Loan.findByIdAndUpdate(loanId, { $inc: { reminderCount: 1 }, lastReminderAt: new Date() }, { new: true });

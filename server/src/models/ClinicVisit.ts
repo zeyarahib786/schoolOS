@@ -16,6 +16,18 @@ export interface IClinicVisit extends Document {
   severity: 'Routine' | 'Urgent' | 'Emergency';
   vitals?: string;
   medicine?: string;
+  visitDate?: string;
+  followUpDate?: string;
+  followUpNote?: string;
+  history: Array<{
+    changedAt: Date;
+    changedBy: Types.ObjectId;
+    reason: string;
+    previousOutcome: string;
+    outcome: string;
+    parentContacted: boolean;
+    followUpDate?: string;
+  }>;
   parentContacted: boolean;
   parentContactedAt?: Date;
   recordedBy: Types.ObjectId;
@@ -28,10 +40,29 @@ const clinicVisitSchema = new Schema<IClinicVisit>(
     student: { type: Schema.Types.ObjectId, ref: 'Student', required: true, index: true },
     reason: { type: String, required: true, trim: true, maxlength: 500 },
     treatment: { type: String, required: true, trim: true, maxlength: 500 },
-    outcome: { type: String, enum: ['Returned to class', 'Sent home', 'Referred to hospital', 'Under observation'], required: true },
+    outcome: {
+      type: String,
+      enum: ['Returned to class', 'Sent home', 'Referred to hospital', 'Under observation'],
+      required: true,
+    },
     severity: { type: String, enum: ['Routine', 'Urgent', 'Emergency'], default: 'Routine' },
     vitals: { type: String, trim: true, maxlength: 300 },
     medicine: { type: String, trim: true, maxlength: 300 },
+    visitDate: { type: String, match: /^\d{4}-\d{2}-\d{2}$/ },
+    followUpDate: { type: String, match: /^\d{4}-\d{2}-\d{2}$/ },
+    followUpNote: { type: String, trim: true, maxlength: 500 },
+    history: [
+      {
+        _id: false,
+        changedAt: { type: Date, required: true },
+        changedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+        reason: { type: String, required: true, maxlength: 500 },
+        previousOutcome: String,
+        outcome: String,
+        parentContacted: Boolean,
+        followUpDate: String,
+      },
+    ],
     parentContacted: { type: Boolean, default: false },
     parentContactedAt: Date,
     recordedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
@@ -39,4 +70,5 @@ const clinicVisitSchema = new Schema<IClinicVisit>(
   { timestamps: true },
 );
 
+clinicVisitSchema.index({ visitDate: 1, followUpDate: 1 });
 export const ClinicVisit = model<IClinicVisit>('ClinicVisit', clinicVisitSchema);

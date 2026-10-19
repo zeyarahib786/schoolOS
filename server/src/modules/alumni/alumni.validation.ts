@@ -17,6 +17,8 @@ export const graduateSchema = z.object({
   params: z.object({}).optional(),
   body: z.object({
     studentId: objectId,
+    academicCompletionConfirmed: z.boolean().default(false),
+    expectedUpdatedAt: z.string().datetime().optional(),
     graduationYear: z.number().int().min(1990).max(2100),
     currentEmployer: z.string().trim().max(200).optional(),
     contactEmail: z.string().trim().email().optional(),
@@ -26,3 +28,21 @@ export const graduateSchema = z.object({
 
 export type ListAlumniQuery = z.infer<typeof listAlumniSchema>['query'];
 export type GraduateInput = z.infer<typeof graduateSchema>['body'];
+
+export const updateAlumniSchema = z.object({
+  params: z.object({ id: objectId }),
+  query: z.object({}).optional(),
+  body: z.object({
+    expectedUpdatedAt: z.string().datetime(),
+    reason: z.string().trim().min(3).max(500),
+    currentEmployer: z.string().trim().max(200),
+    contactEmail: z.string().trim().email().or(z.literal('')),
+    allowContact: z.boolean(),
+    notes: z.string().trim().max(1000).optional(),
+  }),
+});
+export const alumniStudentSchema = z.object({
+  params: z.object({ id: objectId }),
+  query: z.object({}).optional(),
+  body: z.object({}).optional(),
+});

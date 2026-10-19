@@ -1,7 +1,8 @@
 import { z } from 'zod';
+import { calendarDateSchema } from '../../utils/calendarDate';
 
 const objectId = z.string().regex(/^[a-f0-9]{24}$/i, 'Invalid id');
-const monthFormat = z.string().regex(/^\d{4}-\d{2}$/, 'month must be in YYYY-MM format');
+const monthFormat = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'month must be in YYYY-MM format');
 
 export const listPayslipsSchema = z.object({
   body: z.object({}).optional(),
@@ -21,9 +22,11 @@ export const generatePayslipSchema = z.object({
   body: z.object({
     staffId: objectId,
     month: monthFormat,
-    basicSalary: z.number().positive(),
-    allowances: z.number().min(0).default(0),
-    deductions: z.number().min(0).default(0),
+    basicSalary: z.number().positive().max(1000000000).multipleOf(0.01),
+    allowances: z.number().min(0).max(1000000000).multipleOf(0.01).default(0),
+    expectedUpdatedAt: z.string().datetime().optional(),
+    correctionReason: z.string().trim().min(3).max(500).optional(),
+    deductions: z.number().min(0).max(1000000000).multipleOf(0.01).default(0),
   }),
 });
 
@@ -35,3 +38,15 @@ export const payslipIdParamSchema = z.object({
 
 export type ListPayslipsQuery = z.infer<typeof listPayslipsSchema>['query'];
 export type GeneratePayslipInput = z.infer<typeof generatePayslipSchema>['body'];
+
+export const payPayslipSchema = z.object({
+  query: z.object({}).optional(),
+  params: z.object({ id: objectId }),
+  body: z.object({
+    expectedUpdatedAt: z.string().datetime(),
+    paidDate: calendarDateSchema,
+    paymentReference: z.string().trim().min(3).max(120),
+    paymentMethod: z.enum(['Bank transfer', 'Cash', 'Cheque', 'Other']),
+  }),
+});
+export type PayPayslipInput = z.infer<typeof payPayslipSchema>['body'];

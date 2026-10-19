@@ -1,4 +1,4 @@
-import { FilterQuery, Types } from 'mongoose';
+import mongoose, { FilterQuery, Types } from 'mongoose';
 import { Attendance, IAttendance } from '../../models/Attendance';
 import { StaffAttendance, IStaffAttendance } from '../../models/StaffAttendance';
 import { AbsenceRequest, IAbsenceRequest } from '../../models/AbsenceRequest';
@@ -32,13 +32,11 @@ export async function findMany(
 /** Student ids linked to a given guardian - the DB-dependent half of ownership scoping that
  * attendance.ownership.ts's pure function deliberately doesn't do itself. */
 export async function findAuthorizedStudentIds(guardianUserId: string) {
-  const students = await Student.find({ guardianUserId }).select('_id');
+  const students = await Student.find({ $or: [{ guardianUserId }, { studentUserId: guardianUserId }] }).select('_id');
   return students.map((s) => s._id);
 }
 
-export function findStaffAttendance(
-  filter: FilterQuery<IStaffAttendance>,
-) {
+export function findStaffAttendance(filter: FilterQuery<IStaffAttendance>) {
   return StaffAttendance.find(filter).sort({ role: 1, name: 1 });
 }
 
@@ -71,7 +69,7 @@ export async function findAbsenceRequests(
   query: ListAbsenceRequestsQuery,
   filter: FilterQuery<IAbsenceRequest>,
 ): Promise<{ items: IAbsenceRequest[]; total: number }> {
-  if (query.studentId) filter.student = query.studentId;
+  if (query.studentId) filter.$and = [{ student: filter.student || query.studentId }, { student: query.studentId }];
   if (query.status) filter.status = query.status;
   const skip = (query.page - 1) * query.limit;
   const [items, total] = await Promise.all([
@@ -130,7 +128,7 @@ export function bulkCreate(
     notes?: string;
   }>,
 ) {
-  return Attendance.insertMany(records, { ordered: true });
+  return mongoose.connection.transaction(async (session) => Attendance.insertMany(records, { ordered: true, session }));
 }
 
 export async function bulkUpsert(
@@ -144,28 +142,33 @@ export async function bulkUpsert(
   }>,
 ) {
   if (!records.length) return { upsertedCount: 0, modifiedCount: 0, matchedCount: 0 };
-  const result = await Attendance.bulkWrite(records.map((record) => {
-    const student = new Types.ObjectId(record.student);
-    const markedBy = new Types.ObjectId(record.markedBy);
-    return {
-      updateOne: {
-        filter: { student, date: record.date, session: record.session },
-        update: {
-          $set: {
-            status: record.status,
-            markedBy,
-            notes: record.notes,
+  const result = await mongoose.connection.transaction(async (session) =>
+    Attendance.bulkWrite(
+      records.map((record) => {
+        const student = new Types.ObjectId(record.student);
+        const markedBy = new Types.ObjectId(record.markedBy);
+        return {
+          updateOne: {
+            filter: { student, date: record.date, session: record.session },
+            update: {
+              $set: {
+                status: record.status,
+                markedBy,
+                notes: record.notes,
+              },
+              $setOnInsert: {
+                student,
+                date: record.date,
+                session: record.session,
+              },
+            },
+            upsert: true,
           },
-          $setOnInsert: {
-            student,
-            date: record.date,
-            session: record.session,
-          },
-        },
-        upsert: true,
-      },
-    };
-  }));
+        };
+      }),
+      { session },
+    ),
+  );
   return {
     upsertedCount: result.upsertedCount,
     modifiedCount: result.modifiedCount,

@@ -77,7 +77,9 @@ describe('assertCanReadStudent (single-record ownership check)', () => {
 
   it('allows only the linked Student account to read its own record', () => {
     expect(() => assertCanReadStudent(makeStudent(undefined, parentAId), makeUser(parentAId, 'Student'))).not.toThrow();
-    expect(() => assertCanReadStudent(makeStudent(undefined, parentBId), makeUser(parentAId, 'Student'))).toThrow(ApiError);
+    expect(() => assertCanReadStudent(makeStudent(undefined, parentBId), makeUser(parentAId, 'Student'))).toThrow(
+      ApiError,
+    );
     expect(() => assertCanReadStudent(makeStudent(undefined), makeUser(parentAId, 'Student'))).toThrow(ApiError);
   });
 });

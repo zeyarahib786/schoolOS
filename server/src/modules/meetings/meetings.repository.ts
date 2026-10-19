@@ -1,11 +1,31 @@
 import { FilterQuery, Types } from 'mongoose';
 import { MeetingSlot, IMeetingSlot } from '../../models/MeetingSlot';
 import { Student } from '../../models/Student';
+import { AuthenticatedUser } from '../../middleware/auth';
+import { Guardian } from '../../models/Guardian';
+import { Staff } from '../../models/Staff';
 import { ListSlotsQuery, CreateSlotInput } from './meetings.validation';
 
-export async function findMany(query: ListSlotsQuery): Promise<{ items: IMeetingSlot[]; total: number }> {
+export async function findMany(
+  query: ListSlotsQuery,
+  requester: AuthenticatedUser,
+): Promise<{ items: IMeetingSlot[]; total: number }> {
   const filter: FilterQuery<IMeetingSlot> = {};
   if (query.onlyOpen) filter.status = 'Available';
+  if (requester.role === 'Parent') {
+    const [children, guardian] = await Promise.all([
+      Student.find({ guardianUserId: requester.id }).select('_id'),
+      Guardian.findOne({ userId: requester.id }).select('_id'),
+    ]);
+    filter.$or = [
+      { status: 'Available' },
+      { bookedBy: requester.id, bookedForStudent: { $in: children.map((s) => s._id) } },
+      ...(guardian ? [{ bookedGuardian: guardian._id, bookedForStudent: { $in: children.map((s) => s._id) } }] : []),
+    ];
+  } else if (requester.role === 'Teacher') {
+    const staff = await Staff.findOne({ userId: requester.id });
+    filter.$or = [{ status: 'Available' }, ...(staff ? [{ teacher: staff._id }] : [])];
+  } else if (!['Administrator', 'Principal'].includes(requester.role)) filter.status = 'Available';
 
   const skip = (query.page - 1) * query.limit;
   const [items, total] = await Promise.all([
@@ -23,7 +43,13 @@ export async function findMany(query: ListSlotsQuery): Promise<{ items: IMeeting
 }
 
 export function create(input: CreateSlotInput): Promise<IMeetingSlot> {
-  return MeetingSlot.create({ teacher: input.teacherStaffId, date: new Date(input.date), startTime: input.startTime, room: input.room, note: input.note });
+  return MeetingSlot.create({
+    teacher: input.teacherStaffId,
+    date: new Date(input.date),
+    startTime: input.startTime,
+    room: input.room,
+    note: input.note,
+  });
 }
 
 /**

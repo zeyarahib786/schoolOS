@@ -94,26 +94,34 @@ describe('Announcements API', () => {
     const teacher = await registerAndLogin('Teacher', 'draft-teacher@alnoor.ae');
     const admin = await registerAndLogin('Administrator', 'draft-admin@alnoor.ae');
     const parent = await registerAndLogin('Parent', 'draft-parent@alnoor.ae');
-    const created = await request(app).post('/api/v1/announcements')
+    const created = await request(app)
+      .post('/api/v1/announcements')
       .set('Authorization', `Bearer ${teacher.token}`)
       .send({ title: 'Private draft notice', body: 'Not approved yet.', audience: 'All', status: 'Draft' });
     expect(created.status).toBe(201);
     const id = created.body.data._id;
-    const directPublish = await request(app).post('/api/v1/announcements')
+    const directPublish = await request(app)
+      .post('/api/v1/announcements')
       .set('Authorization', `Bearer ${teacher.token}`)
       .send({ title: 'Unreviewed direct notice', body: 'Must not publish.', audience: 'All' });
     expect(directPublish.status).toBe(403);
     const parentList = () => request(app).get('/api/v1/announcements').set('Authorization', `Bearer ${parent.token}`);
     expect((await parentList()).body.data.some((a: { _id: string }) => a._id === id)).toBe(false);
-    const submitted = await request(app).patch(`/api/v1/announcements/${id}/status`)
-      .set('Authorization', `Bearer ${teacher.token}`).send({ status: 'Pending approval' });
+    const submitted = await request(app)
+      .patch(`/api/v1/announcements/${id}/status`)
+      .set('Authorization', `Bearer ${teacher.token}`)
+      .send({ status: 'Pending approval' });
     expect(submitted.status).toBe(200);
     expect((await parentList()).body.data.some((a: { _id: string }) => a._id === id)).toBe(false);
-    const teacherApproval = await request(app).patch(`/api/v1/announcements/${id}/status`)
-      .set('Authorization', `Bearer ${teacher.token}`).send({ status: 'Published' });
+    const teacherApproval = await request(app)
+      .patch(`/api/v1/announcements/${id}/status`)
+      .set('Authorization', `Bearer ${teacher.token}`)
+      .send({ status: 'Published' });
     expect(teacherApproval.status).toBe(403);
-    const approved = await request(app).patch(`/api/v1/announcements/${id}/status`)
-      .set('Authorization', `Bearer ${admin.token}`).send({ status: 'Published' });
+    const approved = await request(app)
+      .patch(`/api/v1/announcements/${id}/status`)
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({ status: 'Published' });
     expect(approved.status).toBe(200);
     expect((await parentList()).body.data.some((a: { _id: string }) => a._id === id)).toBe(true);
   });
@@ -121,14 +129,17 @@ describe('Announcements API', () => {
   it('prevents another teacher from seeing or submitting a draft', async () => {
     const author = await registerAndLogin('Teacher', 'draft-author@alnoor.ae');
     const other = await registerAndLogin('Teacher', 'draft-other@alnoor.ae');
-    const created = await request(app).post('/api/v1/announcements')
+    const created = await request(app)
+      .post('/api/v1/announcements')
       .set('Authorization', `Bearer ${author.token}`)
       .send({ title: 'Author only draft', body: 'Work in progress', status: 'Draft' });
     const id = created.body.data._id;
     const otherList = await request(app).get('/api/v1/announcements').set('Authorization', `Bearer ${other.token}`);
     expect(otherList.body.data.some((a: { _id: string }) => a._id === id)).toBe(false);
-    const submit = await request(app).patch(`/api/v1/announcements/${id}/status`)
-      .set('Authorization', `Bearer ${other.token}`).send({ status: 'Pending approval' });
+    const submit = await request(app)
+      .patch(`/api/v1/announcements/${id}/status`)
+      .set('Authorization', `Bearer ${other.token}`)
+      .send({ status: 'Pending approval' });
     expect(submit.status).toBe(403);
   });
 });

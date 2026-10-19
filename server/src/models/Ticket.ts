@@ -14,12 +14,25 @@ export interface ITicket extends Document {
   status: 'Open' | 'Assigned' | 'Resolved' | 'Closed';
   assignedTo?: Types.ObjectId;
   resolutionNotes?: string;
+  history: { at: Date; by: Types.ObjectId; from: string; to: string; notes: string; assignedTo?: Types.ObjectId }[];
+  replies: { at: Date; by: Types.ObjectId; name: string; message: string }[];
   createdAt: Date;
   updatedAt: Date;
 }
 
 const ticketSchema = new Schema<ITicket>(
   {
+    history: [
+      {
+        at: Date,
+        by: { type: Schema.Types.ObjectId, ref: 'User' },
+        from: String,
+        to: String,
+        notes: String,
+        assignedTo: { type: Schema.Types.ObjectId, ref: 'Staff' },
+      },
+    ],
+    replies: [{ at: Date, by: { type: Schema.Types.ObjectId, ref: 'User' }, name: String, message: String }],
     raisedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     category: { type: String, required: true, trim: true, index: true },
     subject: { type: String, required: true, trim: true, maxlength: 160 },

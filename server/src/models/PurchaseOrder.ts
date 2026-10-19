@@ -16,6 +16,7 @@ export interface IPurchaseOrder extends Document {
   receivedDate?: Date;
   expectedDelivery?: Date;
   notes?: string;
+  history: { at: Date; by: Types.ObjectId; action: string; reason: string }[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -31,6 +32,7 @@ const purchaseOrderLineSchema = new Schema<IPurchaseOrderLine>(
 
 const purchaseOrderSchema = new Schema<IPurchaseOrder>(
   {
+    history: [{ at: Date, by: { type: Schema.Types.ObjectId, ref: 'User' }, action: String, reason: String }],
     refId: { type: String, required: true, unique: true, trim: true },
     supplier: { type: String, required: true, trim: true, maxlength: 160 },
     lines: {

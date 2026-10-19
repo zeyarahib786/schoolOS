@@ -19,6 +19,7 @@ export async function findMany(query: ListCrmLeadsQuery): Promise<{ items: ICrmL
       { name: new RegExp(escaped, 'i') },
       { guardian: new RegExp(escaped, 'i') },
       { phone: new RegExp(escaped, 'i') },
+      { guardianEmail: new RegExp(escaped, 'i') },
     ];
   }
   const skip = (query.page - 1) * query.limit;
@@ -34,7 +35,7 @@ export function findById(id: string): Promise<ICrmLead | null> {
 }
 
 export function findDuplicate(name: string, phone?: string): Promise<ICrmLead | null> {
-  return CrmLead.findOne({ name, phone: phone || '' }).collation({ locale: 'en', strength: 2 });
+  return CrmLead.findOne({ name, phone: phone || { $in: ['', null] } }).collation({ locale: 'en', strength: 2 });
 }
 
 export function create(input: CreateCrmLeadInput): Promise<ICrmLead> {

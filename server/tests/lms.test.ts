@@ -131,7 +131,7 @@ describe('LMS API', () => {
     const res = await request(app)
       .post(`/api/v1/lms/submissions/${submission.body.data._id}/grade`)
       .set('Authorization', `Bearer ${admin.token}`)
-      .send({ score: 150 });
+      .send({ score: 150, expectedUpdatedAt: submission.body.data.updatedAt, reason: 'Reviewed coursework' });
     expect(res.status).toBe(400);
   });
 
@@ -147,7 +147,12 @@ describe('LMS API', () => {
     const res = await request(app)
       .post(`/api/v1/lms/submissions/${submission.body.data._id}/grade`)
       .set('Authorization', `Bearer ${admin.token}`)
-      .send({ score: 85, feedback: 'Good work' });
+      .send({
+        score: 85,
+        feedback: 'Good work',
+        expectedUpdatedAt: submission.body.data.updatedAt,
+        reason: 'Reviewed coursework',
+      });
     expect(res.status).toBe(200);
     expect(res.body.data.status).toBe('Graded');
   });
@@ -181,5 +186,49 @@ describe('LMS API', () => {
       .get('/api/v1/lms/submissions')
       .set('Authorization', `Bearer ${parentOfA.token}`);
     expect(parentView.body.data.length).toBe(1); // sees only their child's, via a DIFFERENT relationship field, same result shape
+  });
+});
+
+describe('LMS course persistence', () => {
+  it('persists a created course across independent list requests', async () => {
+    const admin = await registerAndLogin('Administrator', 'course-admin@example.invalid');
+    const course = { title: 'Persistent course', teacher: 'QA Teacher', grade: '10-A', startDate: '2030-12-01' };
+    const created = await request(app)
+      .post('/api/v1/lms/courses')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send(course);
+    expect(created.status).toBe(201);
+    for (let i = 0; i < 2; i++) {
+      const listed = await request(app)
+        .get('/api/v1/lms/courses?limit=100')
+        .set('Authorization', `Bearer ${admin.token}`);
+      expect(listed.status).toBe(200);
+      expect(listed.body.data).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ _id: created.body.data._id, title: course.title, grade: course.grade }),
+        ]),
+      );
+    }
+  });
+  it('rejects unauthenticated reads, Student creation and invalid course payloads', async () => {
+    expect((await request(app).get('/api/v1/lms/courses')).status).toBe(401);
+    const student = await registerAndLogin('Student', 'course-student@example.invalid');
+    expect(
+      (
+        await request(app)
+          .post('/api/v1/lms/courses')
+          .set('Authorization', `Bearer ${student.token}`)
+          .send({ title: 'Course', teacher: 'QA', grade: '10-A' })
+      ).status,
+    ).toBe(403);
+    const admin = await registerAndLogin('Administrator', 'course-invalid@example.invalid');
+    expect(
+      (
+        await request(app)
+          .post('/api/v1/lms/courses')
+          .set('Authorization', `Bearer ${admin.token}`)
+          .send({ title: '', teacher: 'QA', grade: '10-A' })
+      ).status,
+    ).toBe(400);
   });
 });

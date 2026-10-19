@@ -12,6 +12,32 @@ export const ACCESS_MODULES = [
   'Reports',
   'Audit Log',
   'Settings',
+  'Enrolment CRM',
+  'Staff & HR',
+  'Parents',
+  'Classes & Sections',
+  'Timetable',
+  'Curriculum',
+  'Learning (LMS)',
+  'Behaviour',
+  'Health & Clinic',
+  'Cafeteria',
+  'Expenses',
+  'Library',
+  'Transport',
+  'Hostel',
+  'Inventory',
+  'Biometric Registry',
+  'Visitor Management',
+  'Facilities & Bookings',
+  'Events Calendar',
+  'Surveys & Feedback',
+  'Certificates',
+  'Documents',
+  'ID Cards',
+  'Alumni',
+  'Helpdesk',
+  'Roles & Access',
 ] as const;
 
 export type AccessModule = (typeof ACCESS_MODULES)[number];
@@ -56,8 +82,8 @@ export const DEFAULT_ACCESS_ROLES: readonly DefaultAccessRole[] = [
   },
   {
     name: 'Accountant',
-    description: 'Finance and reporting operations',
-    permissions: permissions('Fees & Finance', 'Payroll', 'Reports'),
+    description: 'Finance operations',
+    permissions: permissions('Fees & Finance', 'Payroll'),
   },
   {
     name: 'Parent',
@@ -70,6 +96,114 @@ export const DEFAULT_ACCESS_ROLES: readonly DefaultAccessRole[] = [
     permissions: permissions('Attendance', 'Exams & Gradebook', 'Communication'),
   },
 ] as const;
+
+// Additional released workspaces retain role-specific action checks in their APIs.
+DEFAULT_ACCESS_ROLES.forEach((role) => {
+  role.permissions['Enrolment CRM'] = ['Administrator', 'Principal'].includes(role.name);
+});
+DEFAULT_ACCESS_ROLES.forEach((role) => {
+  role.permissions['Staff & HR'] = ['Administrator', 'Principal', 'Teacher', 'Accountant'].includes(role.name);
+});
+DEFAULT_ACCESS_ROLES.forEach((role) => {
+  role.permissions['Parents'] = ['Administrator', 'Principal', 'Parent'].includes(role.name);
+});
+DEFAULT_ACCESS_ROLES.forEach((role) => {
+  role.permissions['Classes & Sections'] = ['Administrator', 'Principal', 'Teacher'].includes(role.name);
+});
+DEFAULT_ACCESS_ROLES.forEach((role) => {
+  role.permissions['Timetable'] = ['Administrator', 'Principal', 'Teacher', 'Accountant', 'Parent', 'Student'].includes(
+    role.name,
+  );
+});
+DEFAULT_ACCESS_ROLES.forEach((role) => {
+  role.permissions['Curriculum'] = ['Administrator', 'Principal', 'Teacher'].includes(role.name);
+});
+DEFAULT_ACCESS_ROLES.forEach((role) => {
+  role.permissions['Learning (LMS)'] = ['Administrator', 'Principal', 'Teacher', 'Parent', 'Student'].includes(
+    role.name,
+  );
+});
+DEFAULT_ACCESS_ROLES.forEach((role) => {
+  role.permissions['Behaviour'] = ['Administrator', 'Principal', 'Teacher', 'Parent', 'Student'].includes(role.name);
+});
+DEFAULT_ACCESS_ROLES.forEach((role) => {
+  role.permissions['Health & Clinic'] = ['Administrator', 'Principal', 'Teacher', 'Parent', 'Student'].includes(
+    role.name,
+  );
+});
+DEFAULT_ACCESS_ROLES.forEach((role) => {
+  role.permissions['Cafeteria'] = ['Administrator', 'Principal', 'Accountant', 'Parent', 'Student'].includes(role.name);
+});
+DEFAULT_ACCESS_ROLES.forEach((role) => {
+  role.permissions['Expenses'] = ['Administrator', 'Principal', 'Teacher', 'Accountant'].includes(role.name);
+});
+DEFAULT_ACCESS_ROLES.forEach((role) => {
+  role.permissions['Library'] = ['Administrator', 'Principal', 'Teacher', 'Parent', 'Student'].includes(role.name);
+});
+DEFAULT_ACCESS_ROLES.forEach((role) => {
+  role.permissions['Transport'] = ['Administrator', 'Principal', 'Teacher', 'Parent', 'Student'].includes(role.name);
+});
+DEFAULT_ACCESS_ROLES.forEach((role) => {
+  role.permissions['Hostel'] = ['Administrator', 'Principal', 'Teacher', 'Parent', 'Student'].includes(role.name);
+});
+DEFAULT_ACCESS_ROLES.forEach((role) => {
+  role.permissions['Inventory'] = ['Administrator', 'Principal', 'Teacher', 'Accountant'].includes(role.name);
+});
+DEFAULT_ACCESS_ROLES.forEach((role) => {
+  role.permissions['Biometric Registry'] = ['Administrator', 'Principal', 'Teacher'].includes(role.name);
+});
+DEFAULT_ACCESS_ROLES.forEach((role) => {
+  role.permissions['Visitor Management'] = ['Administrator', 'Principal', 'Teacher'].includes(role.name);
+});
+DEFAULT_ACCESS_ROLES.forEach((role) => {
+  role.permissions['Facilities & Bookings'] = ['Administrator', 'Principal', 'Teacher', 'Accountant'].includes(
+    role.name,
+  );
+});
+DEFAULT_ACCESS_ROLES.forEach((role) => {
+  role.permissions['Events Calendar'] = [
+    'Administrator',
+    'Principal',
+    'Teacher',
+    'Accountant',
+    'Parent',
+    'Student',
+  ].includes(role.name);
+});
+DEFAULT_ACCESS_ROLES.forEach((role) => {
+  role.permissions['Surveys & Feedback'] = [
+    'Administrator',
+    'Principal',
+    'Teacher',
+    'Accountant',
+    'Parent',
+    'Student',
+  ].includes(role.name);
+});
+DEFAULT_ACCESS_ROLES.forEach((role) => {
+  role.permissions['Certificates'] = ['Administrator', 'Principal', 'Teacher', 'Parent', 'Student'].includes(role.name);
+});
+DEFAULT_ACCESS_ROLES.forEach((role) => {
+  role.permissions['Documents'] = ['Administrator', 'Principal', 'Teacher', 'Accountant', 'Parent', 'Student'].includes(
+    role.name,
+  );
+});
+DEFAULT_ACCESS_ROLES.forEach((role) => {
+  role.permissions['ID Cards'] = ['Administrator', 'Principal', 'Teacher', 'Accountant', 'Parent', 'Student'].includes(
+    role.name,
+  );
+});
+DEFAULT_ACCESS_ROLES.forEach((role) => {
+  role.permissions['Alumni'] = ['Administrator', 'Principal', 'Teacher', 'Parent', 'Student'].includes(role.name);
+});
+DEFAULT_ACCESS_ROLES.forEach((role) => {
+  role.permissions['Helpdesk'] = ['Administrator', 'Principal', 'Teacher', 'Accountant', 'Parent', 'Student'].includes(
+    role.name,
+  );
+});
+DEFAULT_ACCESS_ROLES.forEach((role) => {
+  role.permissions['Roles & Access'] = ['Administrator'].includes(role.name);
+});
 
 export function roleKey(name: string): string {
   return name.trim().toLocaleLowerCase('en-US').replace(/\s+/g, '-');

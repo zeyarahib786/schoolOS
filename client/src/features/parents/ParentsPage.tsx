@@ -60,7 +60,7 @@ export function ParentsPage(): JSX.Element {
   const filtered = items.filter(
     (g) =>
       g.name.toLowerCase().includes(search.toLowerCase()) ||
-      g.email.toLowerCase().includes(search.toLowerCase()) ||
+      (g.email || "").toLowerCase().includes(search.toLowerCase()) ||
       g.refId.toLowerCase().includes(search.toLowerCase()),
   );
 

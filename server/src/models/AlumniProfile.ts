@@ -12,12 +12,32 @@ export interface IAlumniProfile extends Document {
   currentEmployer?: string;
   contactEmail?: string;
   notes?: string;
+  graduatedBy?: Types.ObjectId;
+  academicCompletionConfirmed: boolean;
+  allowContact: boolean;
+  history: {
+    at: Date;
+    by: Types.ObjectId;
+    reason: string;
+    previous: { currentEmployer?: string; contactEmail?: string; notes?: string; allowContact?: boolean };
+  }[];
   createdAt: Date;
   updatedAt: Date;
 }
 
 const alumniProfileSchema = new Schema<IAlumniProfile>(
   {
+    graduatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    academicCompletionConfirmed: { type: Boolean, default: false },
+    allowContact: { type: Boolean, default: false },
+    history: [
+      {
+        at: Date,
+        by: { type: Schema.Types.ObjectId, ref: 'User' },
+        reason: String,
+        previous: { currentEmployer: String, contactEmail: String, notes: String, allowContact: Boolean },
+      },
+    ],
     student: { type: Schema.Types.ObjectId, ref: 'Student', required: true, unique: true },
     graduationYear: { type: Number, required: true, min: 1990, max: 2100 },
     currentEmployer: { type: String, trim: true, maxlength: 200 },

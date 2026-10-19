@@ -8,6 +8,11 @@ export async function findMany(query: ListDocumentsQuery): Promise<{ items: ISch
   if (query.category) filter.category = query.category;
   if (query.code) filter.code = query.code.toUpperCase();
 
+  if (query.q) {
+    const term = query.q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    filter.$or = ['code', 'title', 'description'].map((field) => ({ [field]: { $regex: term, $options: 'i' } }));
+  }
+
   const skip = (query.page - 1) * query.limit;
   const [items, total] = await Promise.all([
     SchoolDocument.find(filter)
@@ -34,7 +39,14 @@ export function createVersion(
   publishedBy: string,
   file?: { fileId: string; filename: string; contentType: string; size: number },
 ): Promise<ISchoolDocument> {
-  return SchoolDocument.create({ ...input, ...file, code: input.code.toUpperCase(), version, isCurrent: true, publishedBy });
+  return SchoolDocument.create({
+    ...input,
+    ...file,
+    code: input.code.toUpperCase(),
+    version,
+    isCurrent: true,
+    publishedBy,
+  });
 }
 
 export function markCurrent(id: string) {

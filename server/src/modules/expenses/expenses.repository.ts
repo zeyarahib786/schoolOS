@@ -28,23 +28,17 @@ export function findById(id: string): Promise<IExpenseClaim | null> {
   return ExpenseClaim.findById(id);
 }
 
-export function create(staffId: string, input: SubmitClaimInput): Promise<IExpenseClaim> {
+export function create(staffId: string, input: SubmitClaimInput, submittedBy: string): Promise<IExpenseClaim> {
   return ExpenseClaim.create({
     staff: staffId,
+    submittedBy,
+    vendor: input.vendor,
+    receiptReference: input.receiptReference,
     category: input.category,
     amount: input.amount,
     description: input.description,
     expenseDate: new Date(input.expenseDate),
   });
-}
-
-export function review(
-  id: string,
-  status: 'Approved' | 'Rejected',
-  reviewedBy: string,
-  reviewNotes?: string,
-): Promise<IExpenseClaim | null> {
-  return ExpenseClaim.findByIdAndUpdate(id, { status, reviewedBy, reviewNotes }, { new: true, runValidators: true });
 }
 
 export function findOwnStaffId(userId: string) {

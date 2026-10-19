@@ -25,3 +25,7 @@ export const sync = asyncHandler(async (req: Request, res: Response) => {
   const device = await service.syncDevice(req.params.id, requester.role);
   sendSuccess(res, 200, device);
 });
+
+export const update = asyncHandler(async (req: Request, res: Response) => {
+  sendSuccess(res, 200, await service.updateDevice(req.params.id, req.body, requireUser(req)));
+});

@@ -8,6 +8,15 @@ export interface ILoan extends Document {
   dueDate: Date;
   returnedDate?: Date;
   status: 'Active' | 'Returned' | 'Overdue';
+  renewalCount: number;
+  history: Array<{
+    at: Date;
+    actor: Types.ObjectId;
+    action: string;
+    reason?: string;
+    previousDueDate?: Date;
+    dueDate?: Date;
+  }>;
   reminderCount: number;
   lastReminderAt?: Date;
   createdAt: Date;
@@ -22,6 +31,18 @@ const loanSchema = new Schema<ILoan>(
     dueDate: { type: Date, required: true },
     returnedDate: { type: Date },
     status: { type: String, enum: ['Active', 'Returned', 'Overdue'], default: 'Active', index: true },
+    renewalCount: { type: Number, default: 0, min: 0 },
+    history: [
+      {
+        _id: false,
+        at: Date,
+        actor: { type: Schema.Types.ObjectId, ref: 'User' },
+        action: String,
+        reason: String,
+        previousDueDate: Date,
+        dueDate: Date,
+      },
+    ],
     reminderCount: { type: Number, default: 0, min: 0 },
     lastReminderAt: { type: Date },
   },

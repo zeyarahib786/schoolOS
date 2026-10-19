@@ -2,6 +2,9 @@ import { Schema, model, Document, Types } from 'mongoose';
 
 export interface IVehicle extends Document {
   _id: Types.ObjectId;
+  insuranceExpiry?: Date;
+  driverLicenseExpiry?: Date;
+  history: Array<{ at: Date; actor: Types.ObjectId; reason: string }>;
   regNumber: string;
   capacity: number;
   driverName: string;
@@ -13,6 +16,9 @@ export interface IVehicle extends Document {
 
 const vehicleSchema = new Schema<IVehicle>(
   {
+    insuranceExpiry: Date,
+    driverLicenseExpiry: Date,
+    history: [{ _id: false, at: Date, actor: { type: Schema.Types.ObjectId, ref: 'User' }, reason: String }],
     regNumber: { type: String, required: true, unique: true, trim: true },
     capacity: { type: Number, required: true, min: 1 },
     driverName: { type: String, required: true, trim: true, maxlength: 120 },

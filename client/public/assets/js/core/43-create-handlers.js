@@ -23,12 +23,7 @@ window.logClinic=function(v){const pick=(v.student_pick||v.name||'').trim();if(!
  const name=pick.split(' - ')[0].trim();const st=STUDENTS.find(s=>s.name===name);const cls=st?st.grade.replace('Grade ','').replace(' · ','-'):(v.cls||'-');
  CLINIC.unshift({name,cls,reason:v.reason||'-',action:v.action||'-',time:nowTime(),status:v.outcome==='Returned to class'?'Resolved':'Open',outcome:v.outcome||'Under observation',severity:v.severity||'Routine',vitals:v.vitals||null,medicine:v.medicine||null,parentContacted:false,staff:state.role,consent:true});
  logAudit('Logged clinic visit - '+name+' ('+(v.severity||'Routine')+')','Health');closeDrawer();render();toast('Clinic visit recorded for '+name);return false};
-function checkInVisitorForm(){formDrawer('Check in visitor','Front-desk gate pass',[
- {label:'Visitor name',key:'visitor_name',req:true},
- {label:'Purpose',key:'purpose',opts:['Parent meeting','Vendor','Admissions tour','Inspection','Guest speaker','Contractor','Other']},
- {label:'Host / person visiting',key:'host_person_visiting',opts:raisedByOptions()},
- {label:'ID type',key:'id_type',opts:['Emirates ID','Passport','Driving licence']}
- ],'Check in & print badge','','checkInVisitor')}
+function checkInVisitorForm(){go('visitors');visitorsWorkspaceLoad().then(()=>visitorsWorkspaceForm())}
 window.checkInVisitor=function(v){if(!(v.visitor_name||'').trim()){toast('Visitor name is required');return false}VISITORS.unshift({name:v.visitor_name,purpose:v.purpose||'Visit',host:v.host_person_visiting||'—',in:nowTime(),out:'—',status:'On-site'});closeDrawer();render();toast('Visitor checked in · badge printed');return false};
 window.logExpense=function(v){if(!(v.description||'').trim()){toast('Description is required');return false}const amt=parseInt(v.amount_aed||0,10)||0;const e=EXPENSES.find(x=>x.cat===v.category);if(e)e.spent+=amt;closeDrawer();render();toast('Expense submitted for approval');return false};
 window.addInventory=function(v){if(!(v.item_name||'').trim()){toast('Item name is required');return false}
@@ -149,12 +144,7 @@ window.addCourse=function(v){if(!(v.course_title||'').trim()){toast('Course titl
    nothing matches - honest for a demo dataset, and the seam a real geocoding API would replace. */
 const DXB_GEOCODE=[['marina',25.0800,55.1400],['jlt',25.0700,55.1450],['barsha',25.1140,55.2010],['jumeirah',25.2048,55.2500],['mirdif',25.2170,55.4210],['wasl',25.2010,55.2560],['deira',25.2697,55.3095],['silicon oasis',25.1270,55.3860],['motor city',25.0490,55.2400],['al quoz',25.1420,55.2280],['festival city',25.2210,55.3520]];
 function geocodeStop(name){const n=(name||'').toLowerCase();const hit=DXB_GEOCODE.find(g=>n.includes(g[0]));return hit?{lat:hit[1],lng:hit[2]}:{lat:25.1150,lng:55.2010}}
-function addRouteForm(){formDrawer('Add route','Full route detail is required to build the live map - one stop per line: "Stop name, Address, Pin code, HH:MM"',[
- {label:'Route name',key:'route_name',req:true,half:true},{label:'Bus / plate number',key:'bus_plate_number',req:true,half:true},
- {label:'Driver',key:'driver',req:true,half:true},{label:'Driver phone',key:'driver_phone',half:true},
- {label:'Capacity',key:'capacity',type:'number',half:true},{label:'GPS device ID',key:'gps_id',ph:'e.g. GPS-4499',half:true},
- {label:'Stops (in order, one per line)',key:'stops',area:true,req:true,ph:'Al Barsha Mall, Sheikh Zayed Rd, 00000, 06:40\nMall of the Emirates, Interchange 4, 00000, 06:50\nAl Noor International, School Rd, 00000, 07:20'}
- ],'Save route','','addRoute')}
+function addRouteForm(){return transportWorkspaceLoad().then(()=>{go('transport');if(transportWorkspaceState().loaded)transportWorkspaceRouteForm();else toast('Wait for the transport register to load');});}
 window.addRoute=function(v){if(!(v.route_name||'').trim()){toast('Route name is required');return false}
  const stopLines=(v.stops||'').split('\n').map(l=>l.trim()).filter(Boolean);
  if(!stopLines.length){toast('At least one stop is required to build the live map');return false}

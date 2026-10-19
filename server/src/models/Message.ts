@@ -12,6 +12,8 @@ export interface IMessage extends Document {
   subject: string;
   body: string;
   readAt?: Date | null;
+  archivedBy: Types.ObjectId[];
+  replyTo?: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -22,6 +24,8 @@ const messageSchema = new Schema<IMessage>(
     recipient: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     subject: { type: String, required: true, trim: true, maxlength: 160 },
     body: { type: String, required: true, trim: true, maxlength: 5000 },
+    archivedBy: { type: [{ type: Schema.Types.ObjectId, ref: 'User' }], default: [] },
+    replyTo: { type: Schema.Types.ObjectId, ref: 'Message' },
     readAt: { type: Date, default: null },
   },
   { timestamps: true },

@@ -3,6 +3,7 @@ import { asyncHandler } from '../../middleware/errorHandler';
 import { sendSuccess } from '../../utils/apiResponse';
 import { ApiError } from '../../utils/ApiError';
 import * as service from './hostel.service';
+import { listRoomsSchema, listHostelLeaveSchema, listHostelMaintenanceSchema } from './hostel.validation';
 
 function requireUser(req: Request) {
   if (!req.user) throw ApiError.unauthorized();
@@ -17,18 +18,18 @@ export const addRoom = asyncHandler(async (req: Request, res: Response) => {
 
 export const listRooms = asyncHandler(async (req: Request, res: Response) => {
   const requester = requireUser(req);
-  const result = await service.listRooms(req.query as unknown as Parameters<typeof service.listRooms>[0], requester);
+  const result = await service.listRooms(listRoomsSchema.shape.query.parse(req.query), requester);
   sendSuccess(res, 200, result.items, { pagination: result.pagination });
 });
 
 export const allocate = asyncHandler(async (req: Request, res: Response) => {
   const requester = requireUser(req);
-  const room = await service.allocateRoom(req.params.id, req.body.studentId, requester);
+  const room = await service.allocateRoom(req.params.id, req.body.studentId, requester, req.body.bedLabel);
   sendSuccess(res, 200, room);
 });
 
 export const listLeave = asyncHandler(async (req: Request, res: Response) => {
-  const result = await service.listHostelLeave(req.query as never, requireUser(req));
+  const result = await service.listHostelLeave(listHostelLeaveSchema.shape.query.parse(req.query), requireUser(req));
   sendSuccess(res, 200, result.items, { pagination: result.pagination });
 });
 
@@ -37,7 +38,7 @@ export const createLeave = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const transitionLeave = asyncHandler(async (req: Request, res: Response) => {
-  sendSuccess(res, 200, await service.transitionHostelLeave(req.params.id, req.body.action, requireUser(req)));
+  sendSuccess(res, 200, await service.transitionHostelLeave(req.params.id, req.body, requireUser(req)));
 });
 
 export const listRollCall = asyncHandler(async (req: Request, res: Response) => {
@@ -53,7 +54,10 @@ export const markAllRollCall = asyncHandler(async (req: Request, res: Response) 
 });
 
 export const listMaintenance = asyncHandler(async (req: Request, res: Response) => {
-  const result = await service.listMaintenance(req.query as never, requireUser(req));
+  const result = await service.listMaintenance(
+    listHostelMaintenanceSchema.shape.query.parse(req.query),
+    requireUser(req),
+  );
   sendSuccess(res, 200, result.items, { pagination: result.pagination });
 });
 
@@ -62,5 +66,12 @@ export const createMaintenance = asyncHandler(async (req: Request, res: Response
 });
 
 export const resolveMaintenance = asyncHandler(async (req: Request, res: Response) => {
-  sendSuccess(res, 200, await service.resolveMaintenance(req.params.id, requireUser(req)));
+  sendSuccess(res, 200, await service.resolveMaintenance(req.params.id, requireUser(req), req.body));
 });
+
+export const reviewRoom = asyncHandler(async (req: Request, res: Response) =>
+  sendSuccess(res, 200, await service.reviewRoom(req.params.id, req.body, requireUser(req))),
+);
+export const discharge = asyncHandler(async (req: Request, res: Response) =>
+  sendSuccess(res, 200, await service.discharge(req.params.id, req.body, requireUser(req))),
+);

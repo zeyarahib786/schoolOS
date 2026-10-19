@@ -27,7 +27,7 @@ jobs:
       - name: Unit tests (no external dependencies required)
         run: npm run test:unit
       - name: Integration tests (requires MongoDB - provided by CI runner's open network access)
-        run: npm run test:integration
+        run: npm run test:integration:all
       - run: npm run build
       - name: Dependency security audit
         run: npm audit --audit-level=high

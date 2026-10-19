@@ -7,11 +7,17 @@ import { listCardsSchema, issueCardSchema, cardIdParamSchema } from './idcards.v
 const router = Router();
 
 router.use(requireAuth);
-router.use(requireRole('Administrator', 'Principal', 'Teacher')); // whole-module gate: cards carry personal data; issuance is front-office work
 
 router.get('/', validate(listCardsSchema), controller.list);
-router.post('/', validate(issueCardSchema), controller.issue);
+router.post('/', requireRole('Administrator', 'Principal', 'Teacher'), validate(issueCardSchema), controller.issue);
 router.post('/:id/report-lost', validate(cardIdParamSchema), controller.reportLost);
-router.post('/:id/revoke', validate(cardIdParamSchema), controller.revoke);
+router.post(
+  '/:id/revoke',
+  requireRole('Administrator', 'Principal', 'Teacher'),
+  validate(cardIdParamSchema),
+  controller.revoke,
+);
+
+router.get('/:id/pdf', validate(cardIdParamSchema), controller.pdf);
 
 export default router;

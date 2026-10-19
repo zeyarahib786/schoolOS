@@ -16,8 +16,9 @@ describe('production feature registry', () => {
   });
 
   it('registers the full established module chain', () => {
-    expect(RUNTIME_MODULES).toHaveLength(53);
+    expect(RUNTIME_MODULES).toHaveLength(54);
     expect(RUNTIME_MODULES.filter(({ kind }) => kind === 'feature')).toHaveLength(38);
+    expect(APP_SCRIPTS.indexOf('assets/js/i18n/11-arabic.js')).toBe(APP_SCRIPTS.indexOf('assets/js/i18n/10-localization.js') + 1);
     expect(RUNTIME_MODULES.some(({ id }) => id === 'documents')).toBe(true);
     expect(RUNTIME_MODULES.some(({ id }) => id === 'idcards')).toBe(true);
   });

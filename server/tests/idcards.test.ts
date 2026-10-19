@@ -48,11 +48,11 @@ async function issueCard(token: string, subjectType: 'Student' | 'Staff', subjec
 }
 
 describe('ID Cards API', () => {
-  it('rejects unauthenticated access, and a Parent even from reading - whole-module gate', async () => {
+  it('rejects unauthenticated access and gives an unlinked Parent an empty owned list', async () => {
     expect((await request(app).get('/api/v1/id-cards')).status).toBe(401);
     const parent = await registerAndLogin('Parent', 'parent1@alnoor.ae');
     expect((await request(app).get('/api/v1/id-cards').set('Authorization', `Bearer ${parent.token}`)).status).toBe(
-      403,
+      200,
     );
   });
 
@@ -134,7 +134,9 @@ describe('ID Cards API', () => {
     const studentId = await createStudent(admin.token, 'ANS-8009');
     const card = await issueCard(admin.token, 'Student', studentId);
     const [lost, revoked] = await Promise.all([
-      request(app).post(`/api/v1/id-cards/${card.body.data._id}/report-lost`).set('Authorization', `Bearer ${admin.token}`),
+      request(app)
+        .post(`/api/v1/id-cards/${card.body.data._id}/report-lost`)
+        .set('Authorization', `Bearer ${admin.token}`),
       request(app).post(`/api/v1/id-cards/${card.body.data._id}/revoke`).set('Authorization', `Bearer ${admin.token}`),
     ]);
     expect([lost.status, revoked.status].sort()).toEqual([200, 409]);
@@ -158,8 +160,14 @@ describe('ID Cards API', () => {
   it('does not issue a card to an inactive holder', async () => {
     const admin = await registerAndLogin('Administrator', 'admin-inactive@alnoor.ae');
     const student = await request(app).post('/api/v1/students').set('Authorization', `Bearer ${admin.token}`).send({
-      refId: 'ANS-8007', name: 'Inactive student', grade: 'Grade 10 · A', gender: 'Female',
-      roll: '13', guardianName: 'Khalid', phone: '+971501234567', status: 'Inactive',
+      refId: 'ANS-8007',
+      name: 'Inactive student',
+      grade: 'Grade 10 · A',
+      gender: 'Female',
+      roll: '13',
+      guardianName: 'Khalid',
+      phone: '+971501234567',
+      status: 'Inactive',
     });
     const issued = await issueCard(admin.token, 'Student', student.body.data._id);
     expect(issued.status).toBe(409);
@@ -169,14 +177,20 @@ describe('ID Cards API', () => {
     const admin = await registerAndLogin('Administrator', 'admin-audit@alnoor.ae');
     const studentId = await createStudent(admin.token, 'ANS-8008');
     const invalid = await request(app).post('/api/v1/id-cards').set('Authorization', `Bearer ${admin.token}`).send({
-      subjectType: 'Student', subjectId: studentId, expiryDate: '2028-02-30',
+      subjectType: 'Student',
+      subjectId: studentId,
+      expiryDate: '2028-02-30',
     });
     expect(invalid.status).toBe(400);
 
     const card = await issueCard(admin.token, 'Student', studentId);
     expect(card.status).toBe(201);
-    await request(app).post(`/api/v1/id-cards/${card.body.data._id}/report-lost`).set('Authorization', `Bearer ${admin.token}`);
-    const audit = await request(app).get('/api/v1/audit-log?module=ID%20Cards').set('Authorization', `Bearer ${admin.token}`);
+    await request(app)
+      .post(`/api/v1/id-cards/${card.body.data._id}/report-lost`)
+      .set('Authorization', `Bearer ${admin.token}`);
+    const audit = await request(app)
+      .get('/api/v1/audit-log?module=ID%20Cards')
+      .set('Authorization', `Bearer ${admin.token}`);
     expect(audit.status).toBe(200);
     const actions = audit.body.data.map((entry: { action: string }) => entry.action);
     expect(actions).toContain(`Issued ID card ${card.body.data.serial}`);

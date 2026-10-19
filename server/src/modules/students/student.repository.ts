@@ -14,10 +14,7 @@ export async function findMany(
   if (query.status) filter.status = query.status;
   if (query.search) {
     const escaped = query.search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    filter.$or = [
-      { name: { $regex: escaped, $options: 'i' } },
-      { refId: { $regex: escaped, $options: 'i' } },
-    ];
+    filter.$or = [{ name: { $regex: escaped, $options: 'i' } }, { refId: { $regex: escaped, $options: 'i' } }];
   }
   filter = applyOwnershipScope(filter);
 
@@ -34,7 +31,9 @@ export function findById(id: string): Promise<IStudent | null> {
 }
 
 export function findByRefId(refId: string): Promise<IStudent | null> {
-  return Student.findOne({ refId });
+  return Student.findOne({
+    refId: { $regex: '^' + refId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', $options: 'i' },
+  });
 }
 
 export function create(input: CreateStudentInput): Promise<IStudent> {
@@ -42,7 +41,14 @@ export function create(input: CreateStudentInput): Promise<IStudent> {
 }
 
 export function updateById(id: string, input: UpdateStudentInput): Promise<IStudent | null> {
-  return Student.findByIdAndUpdate(id, input, { new: true, runValidators: true });
+  const { clearFields, ...changes } = input;
+  const unset = Object.fromEntries((clearFields || []).map((key) => [key, '']));
+  for (const key of clearFields || []) delete (changes as Record<string, unknown>)[key];
+  return Student.findByIdAndUpdate(
+    id,
+    { $set: changes, ...(clearFields?.length ? { $unset: unset } : {}) },
+    { new: true, runValidators: true },
+  );
 }
 
 export function deleteById(id: string): Promise<IStudent | null> {

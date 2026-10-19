@@ -19,7 +19,8 @@ export async function findMany(
       .skip(skip)
       .limit(query.limit)
       .populate('student', 'name refId grade')
-      .populate('reportedBy', 'name role'),
+      .populate('reportedBy', 'name role')
+      .populate('assignedTo', 'name role email'),
     BehaviourIncident.countDocuments(filter),
   ]);
   return { items, total };
@@ -27,16 +28,22 @@ export async function findMany(
 
 export function create(input: CreateIncidentInput, reportedBy: string): Promise<IBehaviourIncident> {
   const { studentId, ...incident } = input;
-  return BehaviourIncident.create({ ...incident, student: studentId, reportedBy });
+  return BehaviourIncident.create({
+    ...incident,
+    student: studentId,
+    reportedBy,
+    status: input.type === 'Merit' ? 'Closed' : 'Logged',
+  });
 }
 
-export function updateStatus(id: string, status: 'Escalated' | 'Closed') {
-  return BehaviourIncident.findByIdAndUpdate(id, { $set: { status } }, { new: true })
-    .populate('student', 'name refId grade').populate('reportedBy', 'name role');
-}
-
-export function findAuthorizedStudentIds(guardianUserId: string) {
-  return Student.find({ guardianUserId })
+export function findAuthorizedStudentIds(userId: string, role: string) {
+  return Student.find(
+    role === 'Parent'
+      ? { guardianUserId: userId }
+      : role === 'Student'
+        ? { studentUserId: userId }
+        : { _id: { $in: [] } },
+  )
     .select('_id')
     .then((students) => students.map((s) => s._id));
 }

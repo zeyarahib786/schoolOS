@@ -32,6 +32,13 @@ describe('scopePayslipFilter', () => {
   });
 });
 
+describe('family role payroll privacy', () => {
+  it('denies a legacy family-to-staff link', () => {
+    for (const role of ['Parent', 'Student'] as const)
+      expect(scopePayslipFilter({}, makeUser('family', role), ownStaffId)).toEqual({ _id: { $in: [] } });
+  });
+});
+
 describe('canManagePayroll', () => {
   it('allows Administrator, Principal, and Accountant to manage payroll', () => {
     expect(canManagePayroll('Administrator')).toBe(true);

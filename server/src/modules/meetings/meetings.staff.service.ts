@@ -50,11 +50,11 @@ export async function reschedule(slotId: string, targetSlotId: string, user: Aut
   return moved;
 }
 
-export async function notify(slotId: string, user: AuthenticatedUser) {
+export async function notify(slotId: string, _user: AuthenticatedUser) {
   const slot = await baseRepo.findById(slotId);
   if (!slot) throw ApiError.notFound('Meeting slot not found');
   if (slot.status === 'Available') throw ApiError.conflict('An available slot has no participants to notify');
-  await logAudit(`Notified PTM participants ${slotId}`, 'Communication', user.id);
-  return { notified: true };
+  throw ApiError.badRequest(
+    'Participant reminders are not configured; send an in-app message from Parents communication',
+  );
 }
-

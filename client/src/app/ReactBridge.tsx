@@ -1,50 +1,50 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import ReactDOM from "react-dom";
 import { useAuthStore, Role } from "../lib/store/authStore";
 
-// Import all React page components
-import { AdmissionsPage } from "../features/admissions/AdmissionsPage";
-import { AlumniPage } from "../features/alumni/AlumniPage";
-import { AnnouncementsPage } from "../features/announcements/AnnouncementsPage";
-import { AttendancePage } from "../features/attendance/AttendancePage";
-import { AuditLogPage } from "../features/audit/AuditLogPage";
-import { BehaviourPage } from "../features/behaviour/BehaviourPage";
-import { BiometricPage } from "../features/biometric/BiometricPage";
-import { CafeteriaPage } from "../features/cafeteria/CafeteriaPage";
-import { CertificatesPage } from "../features/certificates/CertificatesPage";
-import { ClassesPage } from "../features/classes/ClassesPage";
-import { CrmPage } from "../features/crm/CrmPage";
-import { CurriculumPage } from "../features/curriculum/CurriculumPage";
-import { DocumentsPage } from "../features/documents/DocumentsPage";
-import { EventsPage } from "../features/events/EventsPage";
-import { ExamsPage } from "../features/exams/ExamsPage";
-import { ExpensesPage } from "../features/expenses/ExpensesPage";
-import { FacilitiesPage } from "../features/facilities/FacilitiesPage";
-import { FeesPage } from "../features/fees/FeesPage";
-import { HealthPage } from "../features/health/HealthPage";
-import { HelpdeskPage } from "../features/helpdesk/HelpdeskPage";
-import { HostelPage } from "../features/hostel/HostelPage";
-import { IdCardsPage } from "../features/idcards/IdCardsPage";
-import { InventoryPage } from "../features/inventory/InventoryPage";
-import { LeavePage } from "../features/leave/LeavePage";
-import { LibraryPage } from "../features/library/LibraryPage";
-import { LmsPage } from "../features/lms/LmsPage";
-import { MeetingsPage } from "../features/meetings/MeetingsPage";
-import { MessagesPage } from "../features/messages/MessagesPage";
-import { ParentsPage } from "../features/parents/ParentsPage";
-import { PayrollPage } from "../features/payroll/PayrollPage";
-import { ReportsPage } from "../features/reports/ReportsPage";
-import { RolesPage } from "../features/roles/RolesPage";
-import { SettingsPage } from "../features/settings/SettingsPage";
-import { StaffPage } from "../features/staff/StaffPage";
-import { StudentsPage } from "../features/students/StudentsPage";
-import { SurveysPage } from "../features/surveys/SurveysPage";
-import { TimetablePage } from "../features/timetable/TimetablePage";
-import { TransportPage } from "../features/transport/TransportPage";
-import { VisitorsPage } from "../features/visitors/VisitorsPage";
+// Load a React page only after it is explicitly released and opened.
+const AdmissionsPage=lazy(()=>import("../features/admissions/AdmissionsPage").then(module=>({default:module.AdmissionsPage})));
+const AlumniPage=lazy(()=>import("../features/alumni/AlumniPage").then(module=>({default:module.AlumniPage})));
+const AnnouncementsPage=lazy(()=>import("../features/announcements/AnnouncementsPage").then(module=>({default:module.AnnouncementsPage})));
+const AttendancePage=lazy(()=>import("../features/attendance/AttendancePage").then(module=>({default:module.AttendancePage})));
+const AuditLogPage=lazy(()=>import("../features/audit/AuditLogPage").then(module=>({default:module.AuditLogPage})));
+const BehaviourPage=lazy(()=>import("../features/behaviour/BehaviourPage").then(module=>({default:module.BehaviourPage})));
+const BiometricPage=lazy(()=>import("../features/biometric/BiometricPage").then(module=>({default:module.BiometricPage})));
+const CafeteriaPage=lazy(()=>import("../features/cafeteria/CafeteriaPage").then(module=>({default:module.CafeteriaPage})));
+const CertificatesPage=lazy(()=>import("../features/certificates/CertificatesPage").then(module=>({default:module.CertificatesPage})));
+const ClassesPage=lazy(()=>import("../features/classes/ClassesPage").then(module=>({default:module.ClassesPage})));
+const CrmPage=lazy(()=>import("../features/crm/CrmPage").then(module=>({default:module.CrmPage})));
+const CurriculumPage=lazy(()=>import("../features/curriculum/CurriculumPage").then(module=>({default:module.CurriculumPage})));
+const DocumentsPage=lazy(()=>import("../features/documents/DocumentsPage").then(module=>({default:module.DocumentsPage})));
+const EventsPage=lazy(()=>import("../features/events/EventsPage").then(module=>({default:module.EventsPage})));
+const ExamsPage=lazy(()=>import("../features/exams/ExamsPage").then(module=>({default:module.ExamsPage})));
+const ExpensesPage=lazy(()=>import("../features/expenses/ExpensesPage").then(module=>({default:module.ExpensesPage})));
+const FacilitiesPage=lazy(()=>import("../features/facilities/FacilitiesPage").then(module=>({default:module.FacilitiesPage})));
+const FeesPage=lazy(()=>import("../features/fees/FeesPage").then(module=>({default:module.FeesPage})));
+const HealthPage=lazy(()=>import("../features/health/HealthPage").then(module=>({default:module.HealthPage})));
+const HelpdeskPage=lazy(()=>import("../features/helpdesk/HelpdeskPage").then(module=>({default:module.HelpdeskPage})));
+const HostelPage=lazy(()=>import("../features/hostel/HostelPage").then(module=>({default:module.HostelPage})));
+const IdCardsPage=lazy(()=>import("../features/idcards/IdCardsPage").then(module=>({default:module.IdCardsPage})));
+const InventoryPage=lazy(()=>import("../features/inventory/InventoryPage").then(module=>({default:module.InventoryPage})));
+const LeavePage=lazy(()=>import("../features/leave/LeavePage").then(module=>({default:module.LeavePage})));
+const LibraryPage=lazy(()=>import("../features/library/LibraryPage").then(module=>({default:module.LibraryPage})));
+const LmsPage=lazy(()=>import("../features/lms/LmsPage").then(module=>({default:module.LmsPage})));
+const MeetingsPage=lazy(()=>import("../features/meetings/MeetingsPage").then(module=>({default:module.MeetingsPage})));
+const MessagesPage=lazy(()=>import("../features/messages/MessagesPage").then(module=>({default:module.MessagesPage})));
+const ParentsPage=lazy(()=>import("../features/parents/ParentsPage").then(module=>({default:module.ParentsPage})));
+const PayrollPage=lazy(()=>import("../features/payroll/PayrollPage").then(module=>({default:module.PayrollPage})));
+const ReportsPage=lazy(()=>import("../features/reports/ReportsPage").then(module=>({default:module.ReportsPage})));
+const RolesPage=lazy(()=>import("../features/roles/RolesPage").then(module=>({default:module.RolesPage})));
+const SettingsPage=lazy(()=>import("../features/settings/SettingsPage").then(module=>({default:module.SettingsPage})));
+const StaffPage=lazy(()=>import("../features/staff/StaffPage").then(module=>({default:module.StaffPage})));
+const StudentsPage=lazy(()=>import("../features/students/StudentsPage").then(module=>({default:module.StudentsPage})));
+const SurveysPage=lazy(()=>import("../features/surveys/SurveysPage").then(module=>({default:module.SurveysPage})));
+const TimetablePage=lazy(()=>import("../features/timetable/TimetablePage").then(module=>({default:module.TimetablePage})));
+const TransportPage=lazy(()=>import("../features/transport/TransportPage").then(module=>({default:module.TransportPage})));
+const VisitorsPage=lazy(()=>import("../features/visitors/VisitorsPage").then(module=>({default:module.VisitorsPage})));
 
 // Map legacy module ID to React Page component
-export const REACT_PAGE_MAP: Record<string, () => JSX.Element> = {
+export const REACT_PAGE_MAP: Record<string, React.LazyExoticComponent<React.ComponentType>> = {
   students: StudentsPage,
   staff: StaffPage,
   parents: ParentsPage,
@@ -141,5 +141,5 @@ export function ReactBridge(): JSX.Element | null {
   }
 
   const PageComponent = REACT_PAGE_MAP[activeModule];
-  return ReactDOM.createPortal(<PageComponent />, viewEl);
+  return ReactDOM.createPortal(<Suspense fallback={<div role="status">Loading…</div>}><PageComponent /></Suspense>, viewEl);
 }

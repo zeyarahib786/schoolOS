@@ -134,3 +134,20 @@
 .kdocs i{display:block;height:100%;background:var(--brand);border-radius:3px}
 .kempty{font-size:12px;color:var(--slate-400);text-align:center;padding:18px 0;border:1.5px dashed var(--line);border-radius:10px}
 @media(max-width:860px){.kcol{flex:1 0 80%;min-width:80%}}
+
+/* Keep classroom context and register controls close on mobile. */
+@media(max-width:560px){
+  .attendance-kpis,.class-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .attendance-kpis .kpi,.class-kpis .kpi{padding:14px}
+  .attendance-kpis .kp-top,.class-kpis .kp-top{gap:7px;margin-bottom:10px}
+  .attendance-kpis .kp-ic,.class-kpis .kp-ic{width:28px;height:28px;border-radius:8px}
+  .attendance-kpis .kp-lab,.class-kpis .kp-lab{font-size:11px}
+  .class-kpis>.kpi:last-child:nth-child(3){grid-column:span 2}
+}
+
+/* Arabic reading order without changing identifiers, input values or chart geometry. */
+[lang=ar] body{font-family:'Noto Sans Arabic','Segoe UI',Tahoma,Arial,sans-serif;line-height:1.65}
+[dir=rtl] .tbl th,[dir=rtl] .tbl td{text-align:start}
+[dir=rtl] input[type=email],[dir=rtl] input[type=tel],[dir=rtl] input[type=url],[dir=rtl] [data-i18n-skip]{unicode-bidi:plaintext}
+[dir=rtl] input[type=email],[dir=rtl] input[type=tel],[dir=rtl] input[type=url]{direction:ltr;text-align:start}
+[dir=rtl] .df label,[dir=rtl] .page-head,[dir=rtl] .card{text-align:start}

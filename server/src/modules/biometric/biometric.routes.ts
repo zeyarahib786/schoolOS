@@ -2,7 +2,7 @@ import { Router } from 'express';
 import * as controller from './biometric.controller';
 import { validate } from '../../middleware/validate';
 import { requireAuth, requireRole } from '../../middleware/auth';
-import { createDeviceSchema, deviceIdParamSchema } from './biometric.validation';
+import { createDeviceSchema, deviceIdParamSchema, updateDeviceSchema } from './biometric.validation';
 
 const router = Router();
 
@@ -12,5 +12,7 @@ router.use(requireRole('Administrator', 'Principal', 'Teacher')); // infrastruct
 router.get('/', controller.list);
 router.post('/', validate(createDeviceSchema), controller.create);
 router.post('/:id/sync', validate(deviceIdParamSchema), controller.sync);
+
+router.patch('/:id', validate(updateDeviceSchema), controller.update);
 
 export default router;

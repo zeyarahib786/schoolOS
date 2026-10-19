@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { calendarDateSchema as date } from '../../utils/calendarDate';
+
 const objectId = z.string().regex(/^[a-f0-9]{24}$/i, 'Invalid id');
 
 export const listVisitsSchema = z.object({
@@ -21,17 +23,34 @@ export const createVisitSchema = z.object({
     treatment: z.string().trim().min(1).max(500),
     outcome: z.enum(['Returned to class', 'Sent home', 'Referred to hospital', 'Under observation']),
     severity: z.enum(['Routine', 'Urgent', 'Emergency']).default('Routine'),
+    visitDate: date.optional(),
+    followUpDate: date.optional(),
+    followUpNote: z.string().trim().max(500).optional(),
     vitals: z.string().trim().max(300).optional(),
     medicine: z.string().trim().max(300).optional(),
   }),
 });
 
 export const updateVisitSchema = z.object({
-  query: z.object({}).optional(), params: z.object({ id: objectId }),
-  body: z.object({
-    outcome: z.enum(['Returned to class', 'Sent home', 'Referred to hospital', 'Under observation']).optional(),
-    parentContacted: z.boolean().optional(),
-  }).refine((body) => body.outcome !== undefined || body.parentContacted !== undefined, { message: 'At least one update is required' }),
+  query: z.object({}).optional(),
+  params: z.object({ id: objectId }),
+  body: z
+    .object({
+      outcome: z.enum(['Returned to class', 'Sent home', 'Referred to hospital', 'Under observation']).optional(),
+      parentContacted: z.boolean().optional(),
+      followUpDate: date.nullable().optional(),
+      followUpNote: z.string().trim().max(500).optional(),
+      expectedUpdatedAt: z.string().datetime(),
+      reason: z.string().trim().min(3).max(500),
+    })
+    .refine(
+      (body) =>
+        body.outcome !== undefined ||
+        body.parentContacted !== undefined ||
+        body.followUpDate !== undefined ||
+        body.followUpNote !== undefined,
+      { message: 'At least one update is required' },
+    ),
 });
 
 export type UpdateVisitInput = z.infer<typeof updateVisitSchema>['body'];

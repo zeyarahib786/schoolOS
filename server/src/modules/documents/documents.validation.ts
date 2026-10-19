@@ -4,10 +4,14 @@ export const listDocumentsSchema = z.object({
   body: z.object({}).optional(),
   params: z.object({}).optional(),
   query: z.object({
+    q: z.string().trim().max(120).optional(),
     page: z.coerce.number().int().min(1).default(1),
     limit: z.coerce.number().int().min(1).max(100).default(20),
     category: z.enum(['Policy', 'Form', 'Circular', 'Guideline']).optional(),
-    includeSuperseded: z.enum(['true', 'false']).transform((value) => value === 'true').optional(),
+    includeSuperseded: z
+      .enum(['true', 'false'])
+      .transform((value) => value === 'true')
+      .optional(),
     code: z.string().trim().max(30).optional(),
   }),
 });
@@ -16,6 +20,8 @@ export const publishDocumentSchema = z.object({
   query: z.object({}).optional(),
   params: z.object({}).optional(),
   body: z.object({
+    expectedVersion: z.number().int().min(0).optional(),
+    publicationReason: z.string().trim().min(3).max(500).optional(),
     code: z
       .string()
       .trim()

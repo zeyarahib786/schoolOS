@@ -11,10 +11,14 @@ import { listAuditLogSchema } from './audit.validation';
 export const list = asyncHandler(async (req: Request, res: Response) => {
   const query = listAuditLogSchema.shape.query.parse(req.query);
   const result = await listAuditLog(query);
-  sendSuccess(res, 200, result.items, { pagination: {
-    page: query.page, limit: query.limit, total: result.total,
-    totalPages: Math.ceil(result.total / query.limit),
-  } });
+  sendSuccess(res, 200, result.items, {
+    pagination: {
+      page: query.page,
+      limit: query.limit,
+      total: result.total,
+      totalPages: Math.ceil(result.total / query.limit),
+    },
+  });
 });
 
 export const recordExport = asyncHandler(async (req: Request, res: Response) => {

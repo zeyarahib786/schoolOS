@@ -13,6 +13,7 @@ import {
   decideAbsenceRequestSchema,
 } from './attendance.validation';
 
+import { saveRegisterSchema } from './attendance.validation';
 const router = Router();
 
 router.use(requireAuth);
@@ -26,11 +27,7 @@ router.put(
 );
 router.get('/absence-requests', validate(listAbsenceRequestsSchema), controller.listAbsenceRequests);
 router.post('/absence-requests', validate(createAbsenceRequestSchema), controller.createAbsenceRequest);
-router.post(
-  '/absence-requests/:id/cancel',
-  validate(absenceRequestIdParamSchema),
-  controller.cancelAbsenceRequest,
-);
+router.post('/absence-requests/:id/cancel', validate(absenceRequestIdParamSchema), controller.cancelAbsenceRequest);
 router.post(
   '/absence-requests/:id/decision',
   requireRole('Administrator', 'Principal', 'Teacher'),
@@ -51,4 +48,10 @@ router.put(
   controller.save,
 );
 
+router.put(
+  '/register',
+  requireRole('Administrator', 'Principal', 'Teacher'),
+  validate(saveRegisterSchema),
+  controller.register,
+);
 export default router;

@@ -10,6 +10,8 @@ export interface IClassSection extends Document {
   teacherStaffId?: Types.ObjectId;
   representativeStudentId?: Types.ObjectId;
   capacity: number;
+  room: string;
+  status: 'Active' | 'Archived';
   createdAt: Date;
   updatedAt: Date;
 }
@@ -21,14 +23,13 @@ const classSectionSchema = new Schema<IClassSection>(
     stream: { type: String, enum: CLASS_STREAMS, required: true, default: 'General', index: true },
     teacherStaffId: { type: Schema.Types.ObjectId, ref: 'Staff', index: true },
     representativeStudentId: { type: Schema.Types.ObjectId, ref: 'Student' },
+    room: { type: String, trim: true, maxlength: 60, default: '' },
+    status: { type: String, enum: ['Active', 'Archived'], default: 'Active' },
     capacity: { type: Number, required: true, min: 1, max: 100, default: 30 },
   },
   { timestamps: true },
 );
 
-classSectionSchema.index(
-  { grade: 1, section: 1 },
-  { unique: true, collation: { locale: 'en', strength: 2 } },
-);
+classSectionSchema.index({ grade: 1, section: 1 }, { unique: true, collation: { locale: 'en', strength: 2 } });
 
 export const ClassSection = model<IClassSection>('ClassSection', classSectionSchema);

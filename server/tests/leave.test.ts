@@ -48,10 +48,10 @@ describe('Leave API', () => {
     expect(res.status).toBe(401);
   });
 
-  it('rejects a leave request from a user with NO linked staff record', async () => {
+  it('rejects a leave request from a non-staff role', async () => {
     const parent = await registerAndLogin('Parent', 'parent1@alnoor.ae');
     const res = await requestLeave(parent.token, '2026-07-06', '2026-07-08');
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(403);
   });
 
   it('a linked Teacher requests leave; the stored day count is the INCLUSIVE calendar count', async () => {
@@ -224,7 +224,10 @@ describe('Leave API', () => {
     const teacher = await registerAndLogin('Teacher', 'teacher12@alnoor.ae');
     const staffId = await createStaff(admin.token, 'EMP-813', teacher.userId);
     const submitted = await request(app).post('/api/v1/leave').set('Authorization', `Bearer ${admin.token}`).send({
-      staffId, fromDate: '2026-09-06', toDate: '2026-09-07', reason: 'Annual leave - HR entered',
+      staffId,
+      fromDate: '2026-09-06',
+      toDate: '2026-09-07',
+      reason: 'Annual leave - HR entered',
     });
     expect(submitted.status).toBe(201);
     expect(submitted.body.data.staff.toString()).toBe(staffId);
@@ -237,7 +240,10 @@ describe('Leave API', () => {
     await createStaff(admin.token, 'EMP-814', teacherA.userId);
     const otherStaffId = await createStaff(admin.token, 'EMP-815', teacherB.userId);
     const submitted = await request(app).post('/api/v1/leave').set('Authorization', `Bearer ${teacherA.token}`).send({
-      staffId: otherStaffId, fromDate: '2026-09-06', toDate: '2026-09-07', reason: 'Not mine',
+      staffId: otherStaffId,
+      fromDate: '2026-09-06',
+      toDate: '2026-09-07',
+      reason: 'Not mine',
     });
     expect(submitted.status).toBe(403);
   });

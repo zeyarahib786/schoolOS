@@ -56,6 +56,20 @@ export interface IStudent extends Document {
   attendancePct: number;
   gpa: number;
   status: 'Active' | 'Inactive' | 'Alumni';
+  translations?: {
+    en?: { name?: string; guardianName?: string };
+    ar?: { name?: string; guardianName?: string };
+    ur?: { name?: string; guardianName?: string };
+    hi?: { name?: string; guardianName?: string };
+  };
+  enrollmentHistory: Array<{
+    from: string;
+    to: string;
+    reason: string;
+    effectiveDate: Date;
+    changedAt: Date;
+    changedBy: Types.ObjectId;
+  }>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -75,6 +89,22 @@ const studentDocumentSchema = new Schema(
 
 const studentSchema = new Schema<IStudent>(
   {
+    enrollmentHistory: {
+      type: [
+        new Schema(
+          {
+            from: String,
+            to: String,
+            reason: String,
+            effectiveDate: Date,
+            changedAt: Date,
+            changedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+          },
+          { _id: false },
+        ),
+      ],
+      default: [],
+    },
     refId: { type: String, required: true, unique: true, trim: true },
     name: { type: String, required: true, trim: true, maxlength: 120 },
     grade: { type: String, required: true, trim: true, index: true },
@@ -82,7 +112,7 @@ const studentSchema = new Schema<IStudent>(
     roll: { type: String, required: true, trim: true },
     guardianName: { type: String, required: true, trim: true },
     guardianUserId: { type: Schema.Types.ObjectId, ref: 'User', index: true },
-    studentUserId: { type: Schema.Types.ObjectId, ref: 'User', index: true },
+    studentUserId: { type: Schema.Types.ObjectId, ref: 'User' },
     phone: { type: String, required: true, trim: true },
     dateOfBirth: { type: Date },
     nationality: { type: String, trim: true, maxlength: 80 },
@@ -103,10 +133,26 @@ const studentSchema = new Schema<IStudent>(
     attendancePct: { type: Number, min: 0, max: 100, default: 100 },
     gpa: { type: Number, min: 0, max: 4, default: 0 },
     status: { type: String, enum: ['Active', 'Inactive', 'Alumni'], default: 'Active', index: true },
+    translations: {
+      type: Map,
+      of: new Schema(
+        {
+          name: { type: String, trim: true },
+          guardianName: { type: String, trim: true },
+        },
+        { _id: false },
+      ),
+      default: {},
+    },
   },
   { timestamps: true },
 );
 
 studentSchema.index({ name: 'text', refId: 'text' });
+
+studentSchema.index(
+  { studentUserId: 1 },
+  { name: 'student_portal_unique', unique: true, partialFilterExpression: { studentUserId: { $type: 'objectId' } } },
+);
 
 export const Student = model<IStudent>('Student', studentSchema);

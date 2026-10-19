@@ -19,7 +19,7 @@ export async function listWallets(query: ListWalletsQuery, requester: Authentica
   const authorizedStudentIds =
     requester.role === 'Administrator' || requester.role === 'Principal' || requester.role === 'Accountant'
       ? []
-      : await repo.findAuthorizedStudentIds(requester.id);
+      : await repo.findAuthorizedStudentIds(requester.id, requester.role);
 
   const { items, total } = await repo.findManyWallets(query, (base) =>
     scopeWalletFilter(base, requester, authorizedStudentIds),
@@ -34,8 +34,17 @@ export async function topUp(input: TopUpInput, requester: AuthenticatedUser): Pr
   if (!canManageWallet(requester.role))
     throw ApiError.forbidden('Only Administrator, Principal, or Accountant may top up a wallet');
   const student = await requireActiveStudent(input.studentId);
-  const wallet = await repo.topUpWallet(input.studentId, input.amount, input.description);
-  await logAudit(`Topped up cafeteria wallet for ${student.refId} by AED ${input.amount}`, 'Cafeteria', requester.id);
+  const wallet = await repo.recordWalletMovement(
+    input.studentId,
+    input.amount,
+    input.description,
+    'TopUp',
+    requester.id,
+    input.requestId,
+    input.method,
+    input.reference,
+  );
+  await logAudit(`Topped up cafeteria wallet for ${student.refId} by ${input.amount}`, 'Cafeteria', requester.id);
   return wallet;
 }
 
@@ -43,24 +52,48 @@ export async function purchase(input: PurchaseInput, requester: AuthenticatedUse
   if (!canManageWallet(requester.role))
     throw ApiError.forbidden('Only Administrator, Principal, or Accountant may record a purchase');
   const student = await requireActiveStudent(input.studentId);
-  const updated = await repo.purchaseIfSufficientBalance(input.studentId, input.amount, input.description);
+  const updated = await repo.recordWalletMovement(
+    input.studentId,
+    input.amount,
+    input.description,
+    'Purchase',
+    requester.id,
+    input.requestId,
+    input.method,
+    input.reference,
+  );
   if (!updated) throw ApiError.conflict('Insufficient wallet balance for this purchase');
-  await logAudit(`Recorded cafeteria purchase for ${student.refId} of AED ${input.amount}`, 'Cafeteria', requester.id);
+  await logAudit(`Recorded cafeteria purchase for ${student.refId} of ${input.amount}`, 'Cafeteria', requester.id);
   return updated;
 }
 
 export async function listTransactions(query: { page: number; limit: number }, requester: AuthenticatedUser) {
-  const unrestricted = requester.role === 'Administrator' || requester.role === 'Principal' || requester.role === 'Accountant';
-  const studentIds = unrestricted ? null : (await repo.findAuthorizedStudentIds(requester.id)).map(String);
+  const unrestricted =
+    requester.role === 'Administrator' || requester.role === 'Principal' || requester.role === 'Accountant';
+  const studentIds = unrestricted
+    ? null
+    : (await repo.findAuthorizedStudentIds(requester.id, requester.role)).map(String);
   const { items, total } = await repo.findTransactions(studentIds, query.page, query.limit);
-  return { items, pagination: { page: query.page, limit: query.limit, total, totalPages: Math.ceil(total / query.limit) } };
+  return {
+    items,
+    pagination: { page: query.page, limit: query.limit, total, totalPages: Math.ceil(total / query.limit) },
+  };
 }
 
 export async function listAllergyPlans(query: { page: number; limit: number }, requester: AuthenticatedUser) {
   const unrestricted = requester.role === 'Administrator' || requester.role === 'Principal';
-  const studentIds = unrestricted ? null : (await repo.findAuthorizedStudentIds(requester.id)).map(String);
+  const studentIds = unrestricted
+    ? null
+    : (await repo.findAuthorizedStudentIds(requester.id, requester.role)).map(String);
   const { items, total } = await repo.findAllergyPlans(studentIds, query.page, query.limit);
-  return { items, pagination: { page: query.page, limit: query.limit, total, totalPages: Math.ceil(total / query.limit) } };
+  return {
+    items: items.map((item) => {
+      const row = item.toObject();
+      if (!unrestricted) row.history = [];
+      return row;
+    }),
+    pagination: { page: query.page, limit: query.limit, total, totalPages: Math.ceil(total / query.limit) },
+  };
 }
 
 export async function saveAllergyPlan(input: SaveAllergyPlanInput, requester: AuthenticatedUser) {
@@ -73,13 +106,19 @@ export async function saveAllergyPlan(input: SaveAllergyPlanInput, requester: Au
 }
 
 export function listMenu() {
-  return repo.listMenu();
+  return repo.listMenu().then((rows) =>
+    rows.map((item) => {
+      const row = item.toObject();
+      row.history = [];
+      return row;
+    }),
+  );
 }
 
 export async function saveMenuItem(input: SaveMenuItemInput, requester: AuthenticatedUser) {
   if (requester.role !== 'Administrator' && requester.role !== 'Principal')
     throw ApiError.forbidden('Only Administrator or Principal may update the cafeteria menu');
-  const menu = await repo.saveMenuItem(input);
+  const menu = await repo.saveMenuItem(input, requester.id);
   await logAudit(`Updated ${input.day} ${input.meal} cafeteria menu`, 'Cafeteria', requester.id);
   return menu;
 }

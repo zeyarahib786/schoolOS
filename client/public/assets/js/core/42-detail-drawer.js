@@ -1,12 +1,12 @@
 /* ---- Reusable record detail drawer ---- */
-function dRows(rows){return rows.map(r=>`<div class="lrow" style="justify-content:space-between;gap:14px"><span class="muted" style="font-size:12.5px">${r[0]}</span><span style="font-weight:600;color:var(--slate-900);font-size:13px;text-align:right">${r[1]}</span></div>`).join('')}
+function dRows(rows){return rows.map(r=>`<div class="lrow" style="justify-content:space-between;gap:14px"><span class="muted" style="font-size:12.5px">${r[0]}</span><span ${/^(?:Holder reference|Contact email|Actor email|Phone|Email|Serial|Event reference|Reference)$/i.test(String(r[0]))?'data-i18n-skip="true"':''} style="font-weight:600;color:var(--slate-900);font-size:13px;text-align:start">${r[1]}</span></div>`).join('')}
 function detailDrawer(o){
   const c=o.color||avc(o.title);
   const stats=(o.stats&&o.stats.length)?`<div class="grid cols-2" style="gap:12px;margin-bottom:6px">${o.stats.map(s=>miniStat(s[0],s[1],s[2]||'blue')).join('')}</div>`:'';
   const secs=(o.sections||[]).map(sec=>`<h4 style="font-size:13px;margin:18px 0 8px;color:var(--slate-500);text-transform:uppercase;letter-spacing:.05em">${sec.h}</h4>${sec.rows?`<div class="card pad" style="box-shadow:none">${dRows(sec.rows)}</div>`:sec.html||''}`).join('');
   const foot=(o.footer||[]).map(f=>`<button class="btn ${f[2]?'primary':''}" onclick="${f[1]}">${f[0]}</button>`).join('');
   return `<div class="dh"><span class="avatar" style="width:46px;height:46px;font-size:16px;background:${c}22;color:${darken(c,0.4)}">${o.badge||initials(o.title)}</span>
-    <div style="flex:1"><h3 style="font-size:17px">${o.title}</h3><div class="muted" style="font-size:12.5px">${o.sub||''}</div></div>
+    <div style="flex:1"><h3 ${o.personTitle?'data-school-person-display':o.recordTitle?'data-i18n-skip="true"':''} style="font-size:17px">${o.title}</h3><div class="muted" style="font-size:12.5px">${o.sub||''}</div></div>
     <button class="iconbtn" onclick="closeDrawer()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
   <div class="db">${stats}${secs}</div>
   ${foot?`<div class="df">${foot}</div>`:''}`;
@@ -122,18 +122,18 @@ function staffAttendanceDaysThisMonth(name){const a=STAFF_ATTENDANCE[name];const
  if(a.status==='Remote')return{present:base,absent:0,note:'Remote - counted present'};
  return{present:base-1,absent:1,note:'1 late/absence this month'};}
 function payrollAttendanceCol(name){const d=staffAttendanceDaysThisMonth(name);return d.present+'/'+(d.present+d.absent)+' days'}
-function payDetail(name){const p=PAYRUN.find(x=>x.name===name);const att=staffAttendanceDaysThisMonth(name);return detailDrawer({title:p.name,sub:p.dept+' · Term 2 payroll',color:'#0E7C39',
+function payDetail(name,id){const p=PAYRUN.find(x=>id?x.id===id:x.name===name);const att=staffAttendanceDaysThisMonth(name);return detailDrawer({title:p.name,sub:p.dept+' · '+payrollPeriodLabel(p.month),color:'#0E7C39',
   stats:[['Gross',aed(p.gross),'blue'],['Deductions',aed(p.ded),'amber'],['Net pay',aed(p.gross-p.ded),'green'],['Status',p.status,'green']],
-  sections:[{h:'Breakdown',rows:[['Basic salary',aed(Math.round(p.gross*0.6))],['Allowances',aed(Math.round(p.gross*0.4))],['Deductions','−'+aed(p.ded)],['Net pay',aed(p.gross-p.ded)]]},
+  sections:[{h:'Breakdown',rows:[['Basic salary',aed(p.basicSalary??0)],['Allowances',aed(p.allowances??0)],['Deductions','−'+aed(p.ded)],['Net pay',aed(p.gross-p.ded)]]},
    {h:'Attendance this month',rows:[['Days present',String(att.present)],['Days absent/late',String(att.absent)],['Note',att.note],['Impact on deductions',att.absent>0?'Included in deductions above':'No attendance-related deduction']]}],
-  footer:[['Download payslip',"downloadPayslip('"+name.replace(/'/g,"\\'")+"')",true]]})}
-function downloadPayslip(name){const p=PAYRUN.find(x=>x.name===name);if(!p)return;const net=p.gross-p.ded;
+  footer:[['Download payslip',"downloadPayslip('"+name.replace(/'/g,"\\'")+"','"+(p.id||'')+"')",true]]})}
+function downloadPayslip(name,id){const p=PAYRUN.find(x=>id?x.id===id:x.name===name);if(!p)return;const net=p.gross-p.ded;
  const html='<html><head><meta charset="utf-8"><title>Payslip - '+p.name+'</title></head><body style="font-family:Arial,sans-serif;padding:40px;max-width:600px;margin:0 auto">'
-  +'<h2 style="color:#0E7C39">Al Noor International</h2><p style="color:#666">Payslip - Term 2</p><hr>'
+  +'<h2 style="color:#0E7C39">Al Noor International</h2><p style="color:#666">Payslip - '+payrollPeriodLabel(p.month)+'</p><hr>'
   +'<table style="width:100%;margin-top:20px"><tr><td><b>Employee</b></td><td style="text-align:right">'+p.name+'</td></tr>'
   +'<tr><td><b>Department</b></td><td style="text-align:right">'+p.dept+'</td></tr>'
-  +'<tr><td><b>Basic salary</b></td><td style="text-align:right">'+aed(Math.round(p.gross*0.6))+'</td></tr>'
-  +'<tr><td><b>Allowances</b></td><td style="text-align:right">'+aed(Math.round(p.gross*0.4))+'</td></tr>'
+  +'<tr><td><b>Basic salary</b></td><td style="text-align:right">'+aed(p.basicSalary??0)+'</td></tr>'
+  +'<tr><td><b>Allowances</b></td><td style="text-align:right">'+aed(p.allowances??0)+'</td></tr>'
   +'<tr><td><b>Deductions</b></td><td style="text-align:right">-'+aed(p.ded)+'</td></tr>'
   +'<tr><td style="padding-top:10px"><b>Net pay</b></td><td style="text-align:right;padding-top:10px"><b>'+aed(net)+'</b></td></tr></table>'
   +'<p style="margin-top:30px;color:#666;font-size:12px">This is a system-generated payslip.</p></body></html>';
@@ -244,16 +244,8 @@ function routeLiveProgress(route){if(!route.stops||route.stops.length<2)return{p
  const a=route.stops[segI],b=route.stops[segI+1];
  const lat=a.lat+(b.lat-a.lat)*t,lng=a.lng+(b.lng-a.lng)*t;
  return{pct:Math.round(pct*100),lat,lng,nextStop:b.name,stopsLeft:route.stops.length-1-segI};}
-function transportLiveMap(){
- return detailDrawer({title:'Live transport map',sub:ROUTES.filter(r=>r.status!=='Depot').length+' buses on road - positions computed from each route\'s stop schedule',color:'#2563EB',badge:ic('trans',18),
-  sections:[{h:'Buses on road',html:'<div class="card pad" style="box-shadow:none">'+ROUTES.map(r=>{const live=routeLiveProgress(r);const onRoad=r.status!=='Depot';
-    return '<div class="lrow" style="border-bottom:1px solid var(--line-soft);padding:9px 0;align-items:flex-start"><span class="kp-ic" style="width:30px;height:30px;background:var(--surface-3);color:var(--slate-500)">'+ic('trans',15)+'</span>'+
-     '<div style="flex:1"><div style="font-weight:600;color:var(--slate-900);font-size:13px">'+r.r+' - '+r.bus+'</div>'+
-     '<div class="muted" style="font-size:11px">'+(onRoad?live.stopsLeft+' stop(s) remaining - next: '+(live.nextStop||'Arriving')+' - '+live.pct+'% of route':'At depot - not yet dispatched')+'</div></div>'+
-     (onRoad?'<a class="btn sm" target="_blank" href="https://www.google.com/maps?q='+live.lat.toFixed(5)+','+live.lng.toFixed(5)+'" onclick="logAudit(\'Viewed live location - '+r.r.replace(/'/g,"\\'")+'\',\'Transport\')">'+ic('trans',12)+' View live location</a>':chip('Depot','gray'))+
-     '</div>';}).join('')+'</div>'},
-   {h:'Note',rows:[['Data source','Simulated from each route\'s scheduled stops - real deployment reads a GPS device feed keyed by the gpsId on each route'],['Fallback','Manual check-in by driver if GPS signal lost']]}],
-  footer:[['Close','closeDrawer()',true]]})}
+function transportLiveMap(){return detailDrawer({title:'Transport location',sub:'GPS telemetry is not connected',sections:[{h:'Location source',rows:[['GPS feed','Not configured'],['Operations','Route status is recorded by school staff. Scheduled stops do not establish a live vehicle position.']]}],footer:[['View transport',"closeDrawer();go('transport')",true],['Close','closeDrawer()']]});}
+
 window.printLatestBadge=function(){if(!VISITORS.length){toast('No visitors to badge');return}printBadgeFor(VISITORS[0].name)};
 window.printBadgeFor=function(name){const v=VISITORS.find(x=>x.name===name);if(v)v.badge=true;logAudit('Printed visitor badge - '+name,'Visitors');closeDrawer();render();toast('Badge printed - '+name)};
 window.checkOutVisitor=function(name){const v=VISITORS.find(x=>x.name===name);if(v){v.status='Checked out';v.out='Today'}logAudit('Visitor checked out - '+name,'Visitors');closeDrawer();render();toast(name+' checked out')};
@@ -297,7 +289,7 @@ const EXAMSCHEMES=[{id:'UT3',name:'Unit Test 3',term:'Term 2',classes:['9-B','10
 function examGrade(avg){const sc=EXAMSCHEMES[0].gradeScale;for(const[m,g] of sc)if(avg>=m)return g;return 'D'}
 function subjKey(name){return String(name||'').toLowerCase().replace(/[^a-z]/g,'').slice(0,3)||'sub'}
 function schemeSubjKeys(){return EXAMSCHEMES[0].subjects.map(subjKey)}
-function resultAvg(r){const keys=schemeSubjKeys();const vals=keys.map(k=>r[k]||0);return vals.length?Math.round(vals.reduce((a,b)=>a+b,0)/vals.length):0}
+function resultAvg(r){if(Number.isFinite(r.averagePercent))return Math.round(r.averagePercent);const keys=schemeSubjKeys();const vals=keys.map(k=>r[k]||0);return vals.length?Math.round(vals.reduce((a,b)=>a+b,0)/vals.length):0}
 function recomputeRanks(){EXAMRESULTS.slice().sort((a,b)=>resultAvg(b)-resultAvg(a)).forEach((r,i)=>{r.rank=i+1;r.grade=examGrade(resultAvg(r))})}
 function manageSubjectsForm(){openDrawer(manageSubjectsDrawer())}
 function manageSubjectsDrawer(){const sch=EXAMSCHEMES[0];
@@ -355,20 +347,20 @@ function parentDetail(id){const s=STUDENTS.find(x=>x.id===id);const er=(typeof E
 function admChecklist(){return ADM_DOCS.map(d=>({key:d.key,label:d.label,req:d.req,done:false,file:null}))}
 function admInit(a){if(!a.docs||!a.docs[0]||!('key' in a.docs[0])){a.docs=admChecklist();const si=STAGES.indexOf(a.stage);a.docs.forEach((d,i)=>{d.done=i<=si+1;});}return a}
 function admDocsDone(a){admInit(a);return a.docs.filter(d=>d.req).every(d=>d.done)}
-function findAdmDoc(name,key){const a=ADMISSIONS.find(x=>x.name===name);if(!a)return null;admInit(a);return a.docs.find(d=>d.key===key)||null}
+function findAdmDoc(name,key){const a=ADMISSIONS.find(x=>(x.mongoId===name||x.name===name));if(!a)return null;admInit(a);return a.docs.find(d=>d.key===key)||null}
 window.admDocPick=function(input,name,key){const f=input.files&&input.files[0];docReadFile(f,file=>{const d=findAdmDoc(name,key);if(d){d.file=file;d.done=true;}openDrawer(admissionDetail(name));toast('Attached · '+file.name)})};
 window.admDocDrop=function(e,name,key){e.preventDefault();const el=e.currentTarget;el&&el.classList.remove('drag');const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];docReadFile(f,file=>{const d=findAdmDoc(name,key);if(d){d.file=file;d.done=true;}openDrawer(admissionDetail(name));toast('Attached · '+file.name)})};
 window.admDocDownload=function(name,key){const d=findAdmDoc(name,key);if(d&&d.file)dlUrl(d.file.url,d.file.name)};
 window.admDocView=function(name,key){const d=findAdmDoc(name,key);if(d&&d.file)docPreview(Object.assign({label:d.label},d.file))};
 window.admDocRemove=function(name,key){const d=findAdmDoc(name,key);if(d){d.file=null;d.done=false;openDrawer(admissionDetail(name));toast('Document removed')}};
 window.admDocMark=function(name,key){const d=findAdmDoc(name,key);if(d){d.done=true;openDrawer(admissionDetail(name));toast('Marked as received')}};
-window.advanceAdmission=function(name){const a=ADMISSIONS.find(x=>x.name===name);const si=STAGES.indexOf(a.stage);const next=STAGES[si+1];if(!next)return;
+window.advanceAdmission=function(name){const a=ADMISSIONS.find(x=>(x.mongoId===name||x.name===name));const si=STAGES.indexOf(a.stage);const next=STAGES[si+1];if(!next)return;
   if((next==='Offer'||next==='Enrolled')&&!admDocsDone(a)){toast('Blocked — required documents must be verified before '+next);openDrawer(admissionDetail(name));return}
   a.hist=a.hist||[];a.hist.unshift([a.stage+' → '+next,'Today · '+state.role]);logAudit('Admission advanced · '+name+' → '+next,'Admissions');
   if(next==='Enrolled'){a.stage='Enrolled';const sid=enrollStudent(a);render();closeDrawer();toast(a.name+' enrolled · '+sid);return}
   a.stage=next;render();openDrawer(admissionDetail(name));toast(a.name+' moved to '+next)}
-window.waitlistAdmission=function(name){const a=ADMISSIONS.find(x=>x.name===name);if(!a)return;a.prevStage=a.stage;a.stage='Waitlisted';a.hist=a.hist||[];a.hist.unshift(['Moved to waitlist','Today · '+state.role]);logAudit('Waitlisted · '+name,'Admissions');closeDrawer();render();toast(name+' · waitlisted — seat capacity review')};
-window.restoreAdmission=function(name){const a=ADMISSIONS.find(x=>x.name===name);if(!a)return;a.stage=a.prevStage||'Application';a.outcome=null;a.hist=a.hist||[];a.hist.unshift(['Restored to pipeline · '+a.stage,'Today · '+state.role]);logAudit('Restored to pipeline · '+name,'Admissions');render();toast(name+' restored to '+a.stage)};
+window.waitlistAdmission=function(name){const a=ADMISSIONS.find(x=>(x.mongoId===name||x.name===name));if(!a)return;a.prevStage=a.stage;a.stage='Waitlisted';a.hist=a.hist||[];a.hist.unshift(['Moved to waitlist','Today · '+state.role]);logAudit('Waitlisted · '+name,'Admissions');closeDrawer();render();toast(name+' · waitlisted — seat capacity review')};
+window.restoreAdmission=function(name){const a=ADMISSIONS.find(x=>(x.mongoId===name||x.name===name));if(!a)return;a.stage=a.prevStage||'Application';a.outcome=null;a.hist=a.hist||[];a.hist.unshift(['Restored to pipeline · '+a.stage,'Today · '+state.role]);logAudit('Restored to pipeline · '+name,'Admissions');render();toast(name+' restored to '+a.stage)};
 window.rejectAdmission=function(name){state._admActive=name;formDrawer('Decline application',name+' · a reason is required and the record is kept for audit',[
   {label:'Reason',key:'reason',opts:['Seats full for grade','Documents not provided','Assessment outcome','Chose another school','Guardian withdrew','Duplicate application','Other']},
   {label:'Outcome',key:'outcome',half:true,opts:['Rejected','Withdrawn','Deferred to next intake']},
@@ -378,32 +370,38 @@ window.saveAdmDecline=function(v){const a=ADMISSIONS.find(x=>x.name===state._adm
   a.prevStage=a.stage;a.stage='Closed';a.outcome=v.outcome||'Rejected';a.declineReason=v.reason||'—';a.hist=a.hist||[];a.hist.unshift([a.outcome+' — '+(v.reason||''),'Today · '+state.role]);
   logAudit((v.outcome||'Rejected')+' application · '+a.name+' — '+(v.reason||''),'Admissions');closeDrawer();render();toast(a.name+' · '+(a.outcome)+((v.notify||'').startsWith('Yes')?' — guardian notified':''));return false};
 function enrollStudent(a){const id=nextNum(STUDENTS,'ANS');const roll=STUDENTS.filter(s=>s.grade.split(' · ')[0]===a.grade).length+1;
-  STUDENTS.push({id,name:a.name,grade:a.grade+' · A',gender:'—',roll,guardian:a.guardian||'—',phone:a.phone||'—',fee:'Due',att:100,gpa:0,status:'Active'});
+  STUDENTS.push({id,name:a.name,grade:a.grade+' · A',gender:'—',roll,guardian:studentEscape(a.guardian||'—'),phone:studentEscape(a.phone||'—'),fee:'Due',att:100,gpa:0,status:'Active'});
   INVOICES.push({id:nextNum(INVOICES,'INV'),student:a.name,term:'Term 2 · admission',amt:8400,due:dateShort(),status:'Due'});
   return id}
 window.createEnquiry=function(v){const name=((v.first_name||'').trim()+' '+(v.last_name||'').trim()).trim()||(v.applicant||'').trim();if(!name){toast('Applicant name is required');return false}
   ADMISSIONS.push({name,grade:v.grade||'Grade 1',stage:'Application',date:'Today',src:v.source||'Website',dob:v.dob||'',guardian:v.guardian||'',phone:v.phone||'',docs:docsFromBuffer(ADM_DOCS)});
   docResetBuffer();closeDrawer();render();toast('Application created · '+name+' added to pipeline');openDrawer(admissionDetail(name));return false}
-function admissionDetail(name){const a=admInit(ADMISSIONS.find(x=>x.name===name));const si=STAGES.indexOf(a.stage);const next=STAGES[si+1];const enrolled=a.stage==='Enrolled';
+function admissionDetail(name){const a=admInit(ADMISSIONS.find(x=>(x.mongoId===name||x.name===name)));const si=STAGES.indexOf(a.stage);const next=STAGES[si+1];const enrolled=a.stage==='Enrolled';
   const pipeline=`<div class="card pad" style="box-shadow:none">${STAGES.map((s,i)=>`<div class="lrow" style="border:0;padding:7px 0"><span style="width:18px;height:18px;border-radius:50%;display:grid;place-items:center;flex:none;background:${i<=si?'var(--brand)':'var(--line)'};color:#fff;font-size:10px">${i<=si?'✓':i+1}</span><span style="font-size:13px;color:${i<=si?'var(--slate-900)':'var(--slate-400)'};font-weight:${i===si?'700':'500'}">${s}</span></div>`).join('')}</div>`;
   let footer;
-  if(enrolled){const stu=STUDENTS.find(s=>s.name===a.name);footer=[stu?['Open student record','closeDrawer();go(\'students\');setTimeout(()=>openDrawer(studentProfile(\''+stu.id+'\')),120)']:['Download enrolment pack','toast(\'Enrolment pack ready\')'],['Download enrolment pack','toast(\'Enrolment pack ready\')',true]];}
-  else if(a.stage==='Offer'){footer=[['Decline','rejectAdmission(\''+name+'\')'],['Enrol as student','advanceAdmission(\''+name+'\')',true]];}
-  else if(a.stage==='Waitlisted'||a.stage==='Closed'){footer=[['Restore to pipeline','restoreAdmission(\''+name+'\')',true]];}
+  if(enrolled){const stu=STUDENTS.find(s=>s.name===a.name);footer=[stu?['Open student record','closeDrawer();go(\'students\');setTimeout(()=>openDrawer(studentProfile(\''+stu.id+'\')),120)']:['Close','closeDrawer()'],['Close','closeDrawer()',true]];}
+  else if(a.stage==='Offer'){footer=[['Enrol as student','advanceAdmission(\''+name+'\')',true]];}
+  else if(a.stage==='Closed'){footer=[['Close','closeDrawer()',true]];}
+  else if(a.stage==='Waitlisted'){footer=[['Restore to pipeline','restoreAdmission(\''+name+'\')',true]];}
   else {footer=[['Decline','rejectAdmission(\''+name+'\')'],['Waitlist','waitlistAdmission(\''+name+'\')'],['Advance to '+next,'advanceAdmission(\''+name+'\')',true]];}
-  return detailDrawer({title:a.name,sub:'Applicant · '+a.grade,color:enrolled?'#17A24A':'#2563EB',
+  return detailDrawer({recordTitle:true,title:studentEscape(a.name),sub:'Applicant · '+studentEscape(a.grade),color:enrolled?'#17A24A':'#2563EB',
     stats:[['Stage',a.stage,enrolled?'green':'blue'],['Grade',a.grade,'blue'],['Source',a.src,'amber'],['Enquiry',a.date,'blue']],
     sections:[
-      {h:'Applicant & guardian',rows:[['Date of birth',a.dob||'—'],['Guardian',a.guardian||'—'],['Contact',a.phone||'—']]},
+      {h:'Applicant & guardian',rows:[['Date of birth',a.dob||'—'],['Guardian',studentEscape(a.guardian||'—')],['Contact',studentEscape(a.phone||'—')]]},
       {h:'Documents · '+a.docs.filter(d=>d.done).length+'/'+a.docs.length+(a.docs.filter(d=>d.req&&!d.done).length?' · '+a.docs.filter(d=>d.req&&!d.done).length+' required pending':''),html:docRecordHtml(a.docs,'admDoc',name)},
       {h:'Pipeline',html:pipeline},
-      {h:'Stage history',html:(a.hist&&a.hist.length)?('<div class="card pad" style="box-shadow:none;padding:6px 12px">'+a.hist.map(e=>'<div class="lrow" style="border-bottom:1px solid var(--line-soft);padding:8px 0"><div style="flex:1;font-size:12.5px;color:var(--slate-700)">'+e[0]+'</div><span class="muted" style="font-size:11px">'+e[1]+'</span></div>').join('')+'</div>'):'<div class="muted" style="font-size:12.5px">No transitions yet — every stage move is recorded here with actor and timestamp.</div>'}],
+      {h:'Stage history',html:(a.hist&&a.hist.length)?('<div class="card pad" style="box-shadow:none;padding:6px 12px">'+a.hist.map(e=>'<div class="lrow" style="border-bottom:1px solid var(--line-soft);padding:8px 0"><div style="flex:1;font-size:12.5px;color:var(--slate-700)">'+studentEscape(e[0])+'</div><span class="muted" style="font-size:11px">'+studentEscape(e[1])+'</span></div>').join('')+'</div>'):'<div class="muted" style="font-size:12.5px">No transitions yet — every stage move is recorded here with actor and timestamp.</div>'}],
     footer})}
 function miniStat(l,v,c){return `<div class="card pad" style="box-shadow:none;padding:13px"><div class="muted" style="font-size:11.5px;font-weight:600">${l}</div><div style="font-family:var(--ff-display);font-weight:700;font-size:20px;color:var(--slate-900);margin-top:3px">${v}</div><div style="height:4px;border-radius:3px;background:var(--${c==='green'?'brand':c==='red'?'red':c==='amber'?'amber':'blue'});margin-top:8px;width:40px;opacity:.85"></div></div>`}
 window.addStudent=function(v){const name=((v.first_name||'').trim()+' '+(v.last_name||'').trim()).trim()||(v.name||'').trim();if(!name){toast('Student name is required');return false}
   const id=(v.admission_no&&v.admission_no.trim())?v.admission_no.trim():nextNum(STUDENTS,'ANS');
   const grade=v.grade||'Grade 1 · A';
-  STUDENTS.push({id,name,grade,gender:v.gender==='Female'?'F':v.gender==='Male'?'M':'—',roll:STUDENTS.filter(s=>s.grade.split(' · ')[0]===grade.split(' · ')[0]).length+1,guardian:v.guardian||'—',phone:v.phone||'—',fee:'Due',att:100,gpa:0,status:'Active',docs:docsFromBuffer(STUDENT_DOCS)});
+  const trans=(typeof generateStudentTranslations==='function')?generateStudentTranslations(name,v.guardian):null;
+  if(trans&&typeof I18N!=='undefined'){
+    if(name)I18N[name]={ar:trans.ar.name,ur:trans.ur.name,hi:trans.hi.name};
+    if(v.guardian&&v.guardian!=='—')I18N[v.guardian]={ar:trans.ar.guardianName,ur:trans.ur.guardianName,hi:trans.hi.guardianName};
+  }
+  STUDENTS.push({id,name,grade,gender:v.gender==='Female'?'F':v.gender==='Male'?'M':'—',roll:STUDENTS.filter(s=>s.grade.split(' · ')[0]===grade.split(' · ')[0]).length+1,guardian:v.guardian||'—',phone:v.phone||'—',fee:'Due',att:100,gpa:0,status:'Active',docs:docsFromBuffer(STUDENT_DOCS),translations:trans||undefined});
   docResetBuffer();closeDrawer();render();toast(name+' enrolled · '+id);return false}
 function staffOnboardForm(){docResetBuffer();formDrawer('Add employee','Staff onboarding · new hire',[
   {section:'Personal details',icon:'staff'},
@@ -424,14 +422,14 @@ function staffOnboardForm(){docResetBuffer();formDrawer('Add employee','Staff on
   {note:'Attach the required joining documents. Passport / Emirates ID, degree certificate and a photo are mandatory before the hire can be activated. Others can be added later from the employee record.'},
   {doccap:STAFF_DOCS}
   ],'Start onboarding','','createStaff')}
-function admissionApplyForm(){docResetBuffer();formDrawer('New application','Admissions · 2025–26 intake',[
+function admissionApplyForm(){docResetBuffer();formDrawer('New application','Admissions · '+studentEscape(SCHOOLOS_ADAPTER.settings?.academicYear||'current'),[
   {section:'Applicant details',icon:'admiss'},
   {label:'First name',key:'first_name',req:true,half:true},{label:'Last name',key:'last_name',half:true},
   {label:'Date of birth',type:'date',key:'dob',half:true},{label:'Gender',key:'gender',opts:['Male','Female'],ph:'Select',half:true},
   {label:'Nationality',key:'nationality',half:true},{label:'Grade applying for',key:'grade',opts:['KG 1','KG 2','Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6','Grade 7','Grade 8','Grade 9','Grade 10','Grade 11','Grade 12'],half:true},
   {section:'Guardian & family',icon:'parents'},
   {label:'Guardian name',key:'guardian',req:true,half:true},{label:'Relationship',key:'relationship',opts:['Father','Mother','Guardian','Other'],ph:'Select',half:true},
-  {label:'Guardian phone',type:'tel',key:'phone',half:true},{label:'Guardian email',type:'email',key:'email',half:true},
+  {label:'Guardian phone',type:'tel',key:'phone',req:true,half:true},{label:'Guardian email',type:'email',key:'email',half:true},
   {section:'Application details',icon:'reports'},
   {label:'Source',key:'source',opts:['Website','Walk-in','Referral','Agent','Event'],half:true},{label:'Previous school',key:'prev_school',half:true},
   {label:'Notes',area:true,key:'notes',ph:'Sibling in school, special requirements, etc.',aiContext:'crm-lead-note',maxlen:400},
@@ -443,11 +441,11 @@ function studentAddForm(){if(!guardWrite('Adding a student'))return;docResetBuff
   {section:'Student details',icon:'students'},
   {label:'First name',key:'first_name',req:true,half:true},{label:'Last name',key:'last_name',half:true},
   {label:'Date of birth',type:'date',key:'dob',half:true},{label:'Gender',key:'gender',opts:['Male','Female'],ph:'Select',half:true},
-  {label:'Nationality',key:'nationality',half:true},{label:'Grade & section',key:'grade',opts:['KG 1 · A','KG 2 · B','Grade 1 · A','Grade 2 · A','Grade 3 · B','Grade 4 · A','Grade 5 · A','Grade 6 · A','Grade 7 · B','Grade 8 · A','Grade 9 · B','Grade 10 · A','Grade 11 · C','Grade 12 · A'],half:true},
+  {label:'Nationality',key:'nationality',half:true},{label:'Grade & section',key:'grade',req:true,ph:'e.g. Grade 7 · A',half:true},
   {label:'Admission number',key:'admission_no',ph:'Auto-generated if blank'},
   {section:'Guardian & family',icon:'parents'},
   {label:'Guardian name',key:'guardian',req:true,half:true},{label:'Relationship',key:'relationship',opts:['Father','Mother','Guardian','Other'],ph:'Select',half:true},
-  {label:'Guardian phone',type:'tel',key:'phone',half:true},{label:'Guardian email',type:'email',key:'email',half:true},
+  {label:'Guardian phone',type:'tel',key:'phone',req:true,half:true},{label:'Guardian email',type:'email',key:'email',half:true},
   {label:'Emergency contact',type:'tel',key:'emergency',half:true},{label:'Preferred language',key:'pref_language',half:true},
   {label:'Home address',area:true,key:'address'},
   {section:'Academic background',icon:'exam'},

@@ -23,10 +23,26 @@ export const createAnnouncementSchema = z.object({
 
 export const changeAnnouncementStatusSchema = z.object({
   params: z.object({ id: z.string().regex(/^[a-f\d]{24}$/i) }),
-  body: z.object({ status: z.enum(['Pending approval', 'Published', 'Draft']) }),
+  body: z.object({
+    status: z.enum(['Pending approval', 'Published', 'Draft']),
+    expectedUpdatedAt: z.string().datetime().optional(),
+    reviewNote: z.string().trim().max(300).optional(),
+  }),
   query: z.object({}).optional(),
 });
 
 export type ListAnnouncementsQuery = z.infer<typeof listAnnouncementsSchema>['query'];
 export type CreateAnnouncementInput = z.infer<typeof createAnnouncementSchema>['body'];
 export type ChangeAnnouncementStatusInput = z.infer<typeof changeAnnouncementStatusSchema>['body'];
+
+export const updateAnnouncementSchema = z.object({
+  params: z.object({ id: z.string().regex(/^[a-f\d]{24}$/i) }),
+  query: z.object({}).optional(),
+  body: createAnnouncementSchema.shape.body.omit({ status: true }).extend({ expectedUpdatedAt: z.string().datetime() }),
+});
+export const audiencePreviewSchema = z.object({
+  query: z.object({ audience: z.enum(['All', 'Staff', 'Parents', 'Students']) }),
+  params: z.object({}).optional(),
+  body: z.object({}).optional(),
+});
+export type UpdateAnnouncementInput = z.infer<typeof updateAnnouncementSchema>['body'];

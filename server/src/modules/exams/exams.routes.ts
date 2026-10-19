@@ -13,6 +13,8 @@ import {
   publishExamSchema,
   generateReportCardsSchema,
   notifyResultSchema,
+  updateExamSchema,
+  saveExamRegisterSchema,
 } from './exams.validation';
 
 const router = Router();
@@ -26,11 +28,36 @@ router.post(
   validate(createExamSchema),
   controller.createExam,
 );
-router.get('/:id/summary', validate(examIdParamSchema), controller.getSummary);
-router.post('/:id/publish', requireRole('Administrator', 'Principal', 'Teacher'), validate(publishExamSchema), controller.publishExam);
-router.post('/:id/reopen', requireRole('Administrator', 'Principal', 'Teacher'), validate(publishExamSchema), controller.reopenExam);
-router.post('/:id/report-cards', requireRole('Administrator', 'Principal', 'Teacher'), validate(generateReportCardsSchema), controller.generateReportCards);
-router.post('/:id/results/:studentId/notify', requireRole('Administrator', 'Principal', 'Teacher'), validate(notifyResultSchema), controller.notifyGuardian);
+router.get(
+  '/:id/summary',
+  requireRole('Administrator', 'Principal', 'Teacher'),
+  validate(examIdParamSchema),
+  controller.getSummary,
+);
+router.post(
+  '/:id/publish',
+  requireRole('Administrator', 'Principal', 'Teacher'),
+  validate(publishExamSchema),
+  controller.publishExam,
+);
+router.post(
+  '/:id/reopen',
+  requireRole('Administrator', 'Principal', 'Teacher'),
+  validate(publishExamSchema),
+  controller.reopenExam,
+);
+router.post(
+  '/:id/report-cards',
+  requireRole('Administrator', 'Principal', 'Teacher'),
+  validate(generateReportCardsSchema),
+  controller.generateReportCards,
+);
+router.post(
+  '/:id/results/:studentId/notify',
+  requireRole('Administrator', 'Principal', 'Teacher'),
+  validate(notifyResultSchema),
+  controller.notifyGuardian,
+);
 router.post(
   '/:id/subjects',
   requireRole('Administrator', 'Principal', 'Teacher'),
@@ -52,4 +79,16 @@ router.post(
   controller.recordResult,
 );
 
+router.patch(
+  '/:id',
+  requireRole('Administrator', 'Principal', 'Teacher'),
+  validate(updateExamSchema),
+  controller.update,
+);
+router.put(
+  '/:id/register',
+  requireRole('Administrator', 'Principal', 'Teacher'),
+  validate(saveExamRegisterSchema),
+  controller.register,
+);
 export default router;

@@ -6,3 +6,5 @@ reports and setup documents, accessibility scripts, and the prior manifest.
 
 This archive is intentionally not part of the production build. The reusable React feature source
 has also been merged into `client/src/features`, `client/src/components`, and `client/src/lib`.
+
+For maintained setup, deployment, and testing instructions, start with the [project README](../README.md). Historical reports in this archive describe earlier versions and do not certify the current deployed application.

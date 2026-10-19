@@ -11,7 +11,14 @@ export interface IExpenseClaim extends Document {
   amount: number;
   description: string;
   expenseDate: Date;
-  status: 'Pending' | 'Approved' | 'Rejected';
+  status: 'Pending' | 'Approved' | 'Rejected' | 'Paid' | 'Cancelled';
+  submittedBy?: Types.ObjectId;
+  vendor?: string;
+  receiptReference?: string;
+  paidDate?: Date;
+  paymentMethod?: string;
+  paymentReference?: string;
+  history: { at: Date; by: Types.ObjectId; action: string; reason: string }[];
   reviewedBy?: Types.ObjectId;
   reviewNotes?: string;
   createdAt: Date;
@@ -25,7 +32,19 @@ const expenseClaimSchema = new Schema<IExpenseClaim>(
     amount: { type: Number, required: true, min: 0.01 },
     description: { type: String, required: true, trim: true, maxlength: 500 },
     expenseDate: { type: Date, required: true },
-    status: { type: String, enum: ['Pending', 'Approved', 'Rejected'], default: 'Pending', index: true },
+    status: {
+      type: String,
+      enum: ['Pending', 'Approved', 'Rejected', 'Paid', 'Cancelled'],
+      default: 'Pending',
+      index: true,
+    },
+    submittedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    vendor: { type: String, trim: true, maxlength: 200 },
+    receiptReference: { type: String, trim: true, maxlength: 200 },
+    paidDate: Date,
+    paymentMethod: { type: String, enum: ['Cash', 'Bank transfer', 'Cheque'] },
+    paymentReference: { type: String, maxlength: 200 },
+    history: [{ at: Date, by: { type: Schema.Types.ObjectId, ref: 'User' }, action: String, reason: String }],
     reviewedBy: { type: Schema.Types.ObjectId, ref: 'User' },
     reviewNotes: { type: String, trim: true, maxlength: 500 },
   },

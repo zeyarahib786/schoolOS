@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { asyncHandler } from '../../middleware/errorHandler';
 import { sendSuccess } from '../../utils/apiResponse';
 import { ApiError } from '../../utils/ApiError';
+import { listBookingsSchema } from './facilities.validation';
 import * as service from './facilities.service';
 
 function requireUser(req: Request) {
@@ -21,7 +22,7 @@ export const addFacility = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const listBookings = asyncHandler(async (req: Request, res: Response) => {
-  const result = await service.listBookings(req.query as unknown as Parameters<typeof service.listBookings>[0]);
+  const result = await service.listBookings(listBookingsSchema.shape.query.parse(req.query));
   sendSuccess(res, 200, result.items, { pagination: result.pagination });
 });
 
@@ -29,4 +30,11 @@ export const createBooking = asyncHandler(async (req: Request, res: Response) =>
   const requester = requireUser(req);
   const booking = await service.createBooking(req.body, requester);
   sendSuccess(res, 201, booking);
+});
+
+export const review = asyncHandler(async (req: Request, res: Response) => {
+  sendSuccess(res, 200, await service.reviewFacility(req.params.id, req.body, requireUser(req)));
+});
+export const cancel = asyncHandler(async (req: Request, res: Response) => {
+  sendSuccess(res, 200, await service.cancelBooking(req.params.id, req.body, requireUser(req)));
 });

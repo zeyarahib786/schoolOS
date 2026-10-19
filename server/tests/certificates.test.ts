@@ -11,6 +11,8 @@ async function registerAndLogin(role: 'Administrator' | 'Teacher' | 'Parent', em
 }
 
 async function createStudent(token: string, refId: string, guardianUserId?: string) {
+  if (guardianUserId)
+    token = (await registerAndLogin('Administrator', 'qa-cert-link-' + refId.toLowerCase() + '@example.invalid')).token;
   const res = await request(app).post('/api/v1/students').set('Authorization', `Bearer ${token}`).send({
     refId,
     name: 'Fatima Al Hashimi',
@@ -43,12 +45,14 @@ describe('Certificates API', () => {
 
   it('does not issue a certificate or allocate a reference for a missing student', async () => {
     const admin = await registerAndLogin('Administrator', 'cert-missing-student@alnoor.ae');
-    const missing = await request(app).post('/api/v1/certificates')
+    const missing = await request(app)
+      .post('/api/v1/certificates')
       .set('Authorization', `Bearer ${admin.token}`)
       .send({ studentId: '507f1f77bcf86cd799439011', type: 'Bonafide' });
     expect(missing.status).toBe(404);
     const studentId = await createStudent(admin.token, 'ANS-CERT-AFTER-MISSING');
-    const issued = await request(app).post('/api/v1/certificates')
+    const issued = await request(app)
+      .post('/api/v1/certificates')
       .set('Authorization', `Bearer ${admin.token}`)
       .send({ studentId, type: 'Bonafide' });
     expect(issued.status).toBe(201);
@@ -69,15 +73,19 @@ describe('Certificates API', () => {
   it('preserves the existing Report Card and Provisional choices as distinct certificate types', async () => {
     const admin = await registerAndLogin('Administrator', 'certificate-types@alnoor.ae');
     const studentId = await createStudent(admin.token, 'ANS-5002-TYPES');
-    for (const [type, prefix] of [['ReportCard', 'RC'], ['Provisional', 'PC']] as const) {
-      const issued = await request(app).post('/api/v1/certificates')
-        .set('Authorization', `Bearer ${admin.token}`).send({ studentId, type });
+    for (const [type, prefix] of [
+      ['ReportCard', 'RC'],
+      ['Provisional', 'PC'],
+    ] as const) {
+      const issued = await request(app)
+        .post('/api/v1/certificates')
+        .set('Authorization', `Bearer ${admin.token}`)
+        .send({ studentId, type });
       expect(issued.status).toBe(201);
       expect(issued.body.data.type).toBe(type);
       expect(issued.body.data.certNumber).toMatch(new RegExp(`^${prefix}-\\d{4}-0001$`));
     }
-    const listed = await request(app).get('/api/v1/certificates')
-      .set('Authorization', `Bearer ${admin.token}`);
+    const listed = await request(app).get('/api/v1/certificates').set('Authorization', `Bearer ${admin.token}`);
     expect(listed.status).toBe(200);
     expect(listed.body.data.map((item: { type: string }) => item.type)).toEqual(
       expect.arrayContaining(['ReportCard', 'Provisional']),
@@ -88,41 +96,48 @@ describe('Certificates API', () => {
     const admin = await registerAndLogin('Administrator', 'cert-approver@alnoor.ae');
     const parent = await registerAndLogin('Parent', 'cert-family@alnoor.ae');
     const studentId = await createStudent(admin.token, 'ANS-CERT-APPROVAL', parent.userId);
-    const requested = await request(app).post('/api/v1/certificates')
+    const requested = await request(app)
+      .post('/api/v1/certificates')
       .set('Authorization', `Bearer ${admin.token}`)
       .send({ studentId, type: 'Bonafide', status: 'Pending', purpose: 'School transfer file' });
     expect(requested.status).toBe(201);
     expect(requested.body.data.status).toBe('Pending');
     expect(requested.body.data.certNumber).toMatch(/^REQ-[A-F0-9]{12}$/);
 
-    const familyBefore = await request(app).get('/api/v1/certificates')
-      .set('Authorization', `Bearer ${parent.token}`);
+    const familyBefore = await request(app).get('/api/v1/certificates').set('Authorization', `Bearer ${parent.token}`);
     expect(familyBefore.body.data).toHaveLength(0);
-    const familyDecision = await request(app).post(`/api/v1/certificates/${requested.body.data._id}/decision`)
-      .set('Authorization', `Bearer ${parent.token}`).send({ decision: 'Issued' });
+    const familyDecision = await request(app)
+      .post(`/api/v1/certificates/${requested.body.data._id}/decision`)
+      .set('Authorization', `Bearer ${parent.token}`)
+      .send({ decision: 'Issued' });
     expect(familyDecision.status).toBe(403);
 
-    const approved = await request(app).post(`/api/v1/certificates/${requested.body.data._id}/decision`)
-      .set('Authorization', `Bearer ${admin.token}`).send({ decision: 'Issued' });
+    const approved = await request(app)
+      .post(`/api/v1/certificates/${requested.body.data._id}/decision`)
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({ decision: 'Issued' });
     expect(approved.status).toBe(200);
     expect(approved.body.data.status).toBe('Issued');
     expect(approved.body.data.certNumber).toMatch(/^BF-\d{4}-0001$/);
-    const repeated = await request(app).post(`/api/v1/certificates/${requested.body.data._id}/decision`)
-      .set('Authorization', `Bearer ${admin.token}`).send({ decision: 'Issued' });
+    const repeated = await request(app)
+      .post(`/api/v1/certificates/${requested.body.data._id}/decision`)
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({ decision: 'Issued' });
     expect(repeated.status).toBe(409);
-    const familyAfter = await request(app).get('/api/v1/certificates')
-      .set('Authorization', `Bearer ${parent.token}`);
+    const familyAfter = await request(app).get('/api/v1/certificates').set('Authorization', `Bearer ${parent.token}`);
     expect(familyAfter.body.data).toHaveLength(1);
 
-    const second = await request(app).post('/api/v1/certificates')
+    const second = await request(app)
+      .post('/api/v1/certificates')
       .set('Authorization', `Bearer ${admin.token}`)
       .send({ studentId, type: 'Character', status: 'Pending' });
-    const rejected = await request(app).post(`/api/v1/certificates/${second.body.data._id}/decision`)
-      .set('Authorization', `Bearer ${admin.token}`).send({ decision: 'Rejected' });
+    const rejected = await request(app)
+      .post(`/api/v1/certificates/${second.body.data._id}/decision`)
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({ decision: 'Rejected' });
     expect(rejected.status).toBe(200);
     expect(rejected.body.data.status).toBe('Rejected');
-    const familyFinal = await request(app).get('/api/v1/certificates')
-      .set('Authorization', `Bearer ${parent.token}`);
+    const familyFinal = await request(app).get('/api/v1/certificates').set('Authorization', `Bearer ${parent.token}`);
     expect(familyFinal.body.data).toHaveLength(1);
   });
 

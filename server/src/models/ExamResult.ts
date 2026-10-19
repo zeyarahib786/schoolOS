@@ -13,6 +13,7 @@ export interface IExamResult extends Document {
   student: Types.ObjectId;
   scores: IExamScore[];
   recordedBy: Types.ObjectId;
+  corrections: Array<{ reason: string; changedAt: Date; changedBy: Types.ObjectId; previousScores: IExamScore[] }>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -33,6 +34,17 @@ const examResultSchema = new Schema<IExamResult>(
       type: [examScoreSchema],
       required: true,
       validate: { validator: (v: IExamScore[]) => v.length > 0, message: 'At least one subject score is required' },
+    },
+    corrections: {
+      type: [
+        {
+          reason: String,
+          changedAt: Date,
+          changedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+          previousScores: [examScoreSchema],
+        },
+      ],
+      default: [],
     },
     recordedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },

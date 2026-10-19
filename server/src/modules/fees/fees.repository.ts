@@ -1,3 +1,4 @@
+import { schoolToday } from '../attendance/attendance.dates';
 import { FilterQuery } from 'mongoose';
 import { Invoice, IInvoice } from '../../models/Invoice';
 import { InvoicePayment, IInvoicePayment } from '../../models/InvoicePayment';
@@ -11,7 +12,12 @@ export async function findMany(
 ): Promise<{ items: IInvoice[]; total: number }> {
   let filter: FilterQuery<IInvoice> = {};
   if (query.studentId) filter.student = query.studentId;
-  if (query.status) filter.status = query.status;
+  if (query.status === 'Paid') filter.status = 'Paid';
+  else if (query.status) {
+    filter.status = { $ne: 'Paid' };
+    filter.dueDate =
+      query.status === 'Overdue' ? { $lt: new Date(await schoolToday()) } : { $gte: new Date(await schoolToday()) };
+  }
   filter = applyOwnershipScope(filter);
 
   const skip = (query.page - 1) * query.limit;
@@ -45,7 +51,10 @@ export function updateAfterPayment(
   id: string,
   input: { paidAmount: number; status: 'Pending' | 'Paid' | 'Overdue'; paymentMethod: string; paidDate?: Date },
 ): Promise<IInvoice | null> {
-  return Invoice.findByIdAndUpdate(id, { $set: input }, { new: true, runValidators: true }).populate('student', 'name refId grade guardianUserId guardianEmail');
+  return Invoice.findByIdAndUpdate(id, { $set: input }, { new: true, runValidators: true }).populate(
+    'student',
+    'name refId grade guardianUserId guardianEmail',
+  );
 }
 
 export function createPayment(input: {
@@ -83,7 +92,9 @@ export async function findPayments(
 }
 
 export function findOldestUnpaidByStudent(studentId: string): Promise<IInvoice | null> {
-  return Invoice.findOne({ student: studentId, status: { $ne: 'Paid' } }).sort({ dueDate: 1 }).populate('student', 'name refId grade guardianUserId guardianEmail');
+  return Invoice.findOne({ student: studentId, status: { $ne: 'Paid' } })
+    .sort({ dueDate: 1 })
+    .populate('student', 'name refId grade guardianUserId guardianEmail');
 }
 
 export function findInvoicesByIds(ids: string[]) {
@@ -91,13 +102,18 @@ export function findInvoicesByIds(ids: string[]) {
 }
 
 export function findReminderCandidates() {
-  return Invoice.find({ status: { $ne: 'Paid' } }).sort({ dueDate: 1 }).populate('student', 'name refId grade guardianUserId guardianEmail');
+  return Invoice.find({ status: { $ne: 'Paid' } })
+    .sort({ dueDate: 1 })
+    .populate('student', 'name refId grade guardianUserId guardianEmail');
 }
 
 export function findAuthorizedStudentIds(userId: string, role: Role) {
-  const filter = role === 'Parent' ? { guardianUserId: userId }
-    : role === 'Student' ? { studentUserId: userId }
-    : { _id: { $in: [] } };
+  const filter =
+    role === 'Parent'
+      ? { guardianUserId: userId }
+      : role === 'Student'
+        ? { studentUserId: userId }
+        : { _id: { $in: [] } };
   return Student.find(filter)
     .select('_id')
     .then((students) => students.map((s) => s._id));

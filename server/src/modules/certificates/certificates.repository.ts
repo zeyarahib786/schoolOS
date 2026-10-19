@@ -1,4 +1,5 @@
-import { FilterQuery, Types } from 'mongoose';
+import { ApiError } from '../../utils/ApiError';
+import mongoose, { FilterQuery, Types } from 'mongoose';
 import { Certificate, ICertificate } from '../../models/Certificate';
 import { Counter } from '../../models/Counter';
 import { Student } from '../../models/Student';
@@ -51,9 +52,13 @@ export async function issue(input: IssueCertificateInput, issuedBy: string): Pro
   if (input.status === 'Pending') {
     const id = new Types.ObjectId();
     return Certificate.create({
-      _id: id, certNumber: `REQ-${id.toString().slice(-12).toUpperCase()}`,
-      student: input.studentId, type: input.type, purpose: input.purpose,
-      status: 'Pending', requestedBy: issuedBy,
+      _id: id,
+      certNumber: `REQ-${id.toString().slice(-12).toUpperCase()}`,
+      student: input.studentId,
+      type: input.type,
+      purpose: input.purpose,
+      status: 'Pending',
+      requestedBy: issuedBy,
     });
   }
   const year = new Date().getFullYear();
@@ -76,32 +81,97 @@ export async function findById(id: string): Promise<ICertificate | null> {
 }
 
 export async function decide(
-  id: string, decision: 'Issued' | 'Rejected', decisionBy: string, type: string,
+  id: string,
+  decision: 'Issued' | 'Rejected',
+  decisionBy: string,
+  type: string,
+  expectedUpdatedAt?: string,
+  reason?: string,
 ): Promise<ICertificate | null> {
   const now = new Date();
   if (decision === 'Rejected') {
     return Certificate.findOneAndUpdate(
-      { _id: id, status: 'Pending' },
-      { $set: { status: 'Rejected', decisionBy, decisionAt: now } },
+      { _id: id, status: 'Pending', ...(expectedUpdatedAt ? { updatedAt: new Date(expectedUpdatedAt) } : {}) },
+      {
+        $set: { status: 'Rejected', decisionBy, decisionAt: now, decisionReason: reason || 'Office decision recorded' },
+      },
       { new: true },
     );
   }
   const seq = await nextSequence(type, now.getFullYear());
   return Certificate.findOneAndUpdate(
-    { _id: id, status: 'Pending' },
-    { $set: {
-      status: 'Issued', certNumber: formatCertNumber(type, now.getFullYear(), seq),
-      issuedBy: decisionBy, issuedDate: now, decisionBy, decisionAt: now,
-    } },
+    { _id: id, status: 'Pending', ...(expectedUpdatedAt ? { updatedAt: new Date(expectedUpdatedAt) } : {}) },
+    {
+      $set: {
+        status: 'Issued',
+        certNumber: formatCertNumber(type, now.getFullYear(), seq),
+        issuedBy: decisionBy,
+        issuedDate: now,
+        decisionBy,
+        decisionAt: now,
+        decisionReason: reason || 'Office decision recorded',
+      },
+    },
     { new: true },
   );
 }
 
 export function findAuthorizedStudentIds(userId: string, role: Role) {
-  const filter = role === 'Parent' ? { guardianUserId: userId }
-    : role === 'Student' ? { studentUserId: userId }
-    : { _id: { $in: [] } };
+  const filter =
+    role === 'Parent'
+      ? { guardianUserId: userId }
+      : role === 'Student'
+        ? { studentUserId: userId }
+        : { _id: { $in: [] } };
   return Student.find(filter)
     .select('_id')
     .then((students) => students.map((s) => s._id));
+}
+
+export async function createPendingRequest(input: IssueCertificateInput, requester: string, role?: string) {
+  const session = await mongoose.startSession();
+  let created: ICertificate | null = null;
+  try {
+    await session.withTransaction(async () => {
+      const student = await Student.findOneAndUpdate(
+        {
+          _id: input.studentId,
+          ...(role === 'Parent'
+            ? { guardianUserId: requester }
+            : role === 'Student'
+              ? { studentUserId: requester }
+              : {}),
+        },
+        { $inc: { __v: 1 } },
+        { session },
+      );
+      if (!student) throw ApiError.forbidden('Student ownership changed or the student is unavailable');
+      const existing = await Certificate.exists({
+        student: input.studentId,
+        type: input.type,
+        status: 'Pending',
+      }).session(session);
+      if (existing) throw ApiError.conflict('A pending request already exists for this document type');
+      const id = new Types.ObjectId();
+      created = (
+        await Certificate.create(
+          [
+            {
+              _id: id,
+              certNumber: 'REQ-' + id.toString().slice(-12).toUpperCase(),
+              student: input.studentId,
+              type: input.type,
+              purpose: input.purpose,
+              requestedBy: requester,
+              status: 'Pending',
+            },
+          ],
+          { session },
+        )
+      )[0];
+    });
+    return created;
+  } finally {
+    await session.endSession();
+  }
 }

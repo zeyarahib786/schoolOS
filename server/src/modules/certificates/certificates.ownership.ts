@@ -17,11 +17,8 @@ export function scopeCertificateFilter(
   if (base.status === 'Pending' || base.status === 'Rejected') {
     return { ...base, student: { $in: [] } };
   }
-  return {
-    ...base,
-    student: { $in: authorizedStudentIds },
-    $or: [{ status: 'Issued' }, { status: { $exists: false } }],
-  };
+  const scope = { student: { $in: authorizedStudentIds }, $or: [{ status: 'Issued' }, { status: { $exists: false } }] };
+  return Object.keys(base).length ? { $and: [base, scope] } : scope;
 }
 
 export function canIssueCertificates(role: Role): boolean {

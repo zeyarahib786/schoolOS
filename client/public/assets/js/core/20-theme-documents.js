@@ -18,7 +18,7 @@ function setAccent(a){applyAccent(a);saveTheme();render();toast('Accent · '+(AC
 function toggleTheme(){const d=document.documentElement.getAttribute('data-theme')==='dark';setThemeMode(d?'light':'dark')}
 /* ---- downloadable documents (offline, print-ready) ---- */
 function downloadDoc(filename,html){try{const blob=new Blob([html],{type:'text/html;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url)},120);toast('Downloaded · '+filename)}catch(e){toast('Document ready')}}
-function docShell(title,meta,body){const today=new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'});
+function docShell(title,meta,body){const today=new Date().toLocaleDateString((typeof schoolLocale==='function'?schoolLocale():'en-GB'),{day:'2-digit',month:'long',year:'numeric'});
   return `<!doctype html><html><head><meta charset="utf-8"><title>${title} · Solvagence SchoolOS</title>
   <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Segoe UI',system-ui,-apple-system,Arial,sans-serif;color:#0C1015;background:#eef1f6;padding:32px}
   .sheet{max-width:780px;margin:0 auto;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 8px 40px rgba(16,24,40,.12)}
@@ -66,7 +66,7 @@ function certBody(type,name,cls){const m={
   return m[type]||`This is to certify that <b>${name}</b> is associated with Al Noor International School. Document type: ${type}.`}
 function certificateHTML(name,type,ref,cls){return docShell(type,'Official Document'+(ref?' · '+ref:''),`
   <p style="font-size:14px;line-height:1.85;color:#1D2939;margin:8px 0 22px">${certBody(type,name,cls)}</p>
-  <div class="grid"><div class="f"><span>Reference</span><b>${ref||'—'}</b></div><div class="f"><span>Date of issue</span><b>${new Date().toLocaleDateString('en-GB')}</b></div></div>
+  <div class="grid"><div class="f"><span>Reference</span><b>${ref||'—'}</b></div><div class="f"><span>Date of issue</span><b>${new Date().toLocaleDateString((typeof schoolLocale==='function'?schoolLocale():'en-GB'))}</b></div></div>
   <div class="note">Verify this document's authenticity by quoting the reference number to the school registrar.</div>
   <div class="sign"><div><div class="ln"></div>Registrar</div><div><div class="ln"></div>Principal</div></div>`)}
 function downloadCertificate(name,type,ref,cls){

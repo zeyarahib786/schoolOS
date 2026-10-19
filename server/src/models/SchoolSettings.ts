@@ -18,6 +18,7 @@ export interface ISchoolSettings extends Document<string> {
   principal: string;
   address: string;
   disabledModules: string[];
+  revision: number;
   updatedAt: Date;
   createdAt: Date;
 }
@@ -25,6 +26,7 @@ export interface ISchoolSettings extends Document<string> {
 const schoolSettingsSchema = new Schema<ISchoolSettings>(
   {
     _id: { type: String, required: true },
+    revision: { type: Number, default: 0 },
     schoolName: { type: String, required: true, trim: true, maxlength: 160 },
     academicYear: {
       type: String,
@@ -49,6 +51,7 @@ export const SchoolSettings = model<ISchoolSettings>('SchoolSettings', schoolSet
  * rather than a 404 that every client would have to special-case. */
 export const DEFAULT_SETTINGS = {
   _id: SETTINGS_ID,
+  revision: 0,
   schoolName: 'Al Noor International School',
   academicYear: '2026-2027',
   timezone: 'Asia/Dubai',

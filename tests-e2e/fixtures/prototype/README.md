@@ -1,3 +1,11 @@
+# Historical prototype fixture
+
+This directory preserves a static comparison fixture. It is not the current production frontend. The setup, route counts, migration instructions, and QA figures below describe the historical prototype release and have not been re-certified against the current API or deployment.
+
+Use the [current project README](../../../README.md) and [testing guide](../../../docs/testing/README.md) for maintained instructions.
+
+---
+
 # Solvagence SchoolOS — Modular Frontend (MERN-ready)
 
 Open `index.html` directly — no build step or server required.

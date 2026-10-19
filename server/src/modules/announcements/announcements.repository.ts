@@ -34,6 +34,10 @@ export function findById(id: string): Promise<IAnnouncement | null> {
   return Announcement.findById(id).exec();
 }
 
-export function transition(id: string, from: IAnnouncement['status'], to: IAnnouncement['status']): Promise<IAnnouncement | null> {
+export function transition(
+  id: string,
+  from: IAnnouncement['status'],
+  to: IAnnouncement['status'],
+): Promise<IAnnouncement | null> {
   return Announcement.findOneAndUpdate({ _id: id, status: from }, { $set: { status: to } }, { new: true }).exec();
 }

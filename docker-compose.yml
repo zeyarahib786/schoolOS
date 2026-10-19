@@ -3,11 +3,11 @@ services:
     image: mongo:7
     restart: unless-stopped
     # --replSet: the Facilities & Bookings module uses a real MongoDB transaction to prevent
-    # double-booking (see docs/openapi.yaml's note on POST /facilities/bookings) - transactions
+    # double-booking (see docs/reference/openapi.yaml's note on POST /facilities/bookings) - transactions
     # require a replica set, which a plain standalone mongod will reject outright.
     command: ["--replSet", "rs0", "--bind_ip_all"]
     ports:
-      - "27017:27017"
+      - "127.0.0.1:27017:27017"
     volumes:
       - mongo-data:/data/db
     healthcheck:
@@ -37,11 +37,13 @@ services:
       mongo-init-replica:
         condition: service_completed_successfully
     environment:
-      NODE_ENV: production
+      # This profile is solely for the local fictional dataset, never a real school.
+      NODE_ENV: test
+      LOG_LEVEL: info
       MONGO_URI: mongodb://mongo:27017/schoolos
-      # Required by env validation but unused by the seed - any 32+ char values satisfy the guard.
-      JWT_ACCESS_SECRET: seed-only-not-used-for-auth-0123456789abcdef
-      JWT_REFRESH_SECRET: seed-only-not-used-for-auth-fedcba9876543210
+      # Reuse validated configuration; seed execution does not start the API.
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?set a real 32+ char secret in .env}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?set a different real 32+ char secret in .env}
     command: ["node", "dist/seed/seed.js"]
     restart: "no"
 
@@ -51,7 +53,7 @@ services:
       target: production
     restart: unless-stopped
     ports:
-      - "4000:4000"
+      - "127.0.0.1:4000:4000"
     environment:
       NODE_ENV: production
       PORT: 4000
@@ -70,7 +72,7 @@ services:
       mongo-init-replica:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:4000/health',r=>process.exit(r.statusCode===200?0:1))"]
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:4000/ready',r=>process.exit(r.statusCode===200?0:1))"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -86,7 +88,7 @@ services:
         VITE_API_BASE_URL: /api/v1
     restart: unless-stopped
     ports:
-      - "8080:80"
+      - "127.0.0.1:8080:80"
     depends_on:
       - api
 

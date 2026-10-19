@@ -22,16 +22,22 @@ export const createSurveySchema = z.object({
   query: z.object({}).optional(),
   params: z.object({}).optional(),
   body: z.object({
+    audience: z.enum(['All', 'Staff', 'Parents', 'Students']).default('All'),
     title: z.string().trim().min(2).max(160),
     description: z.string().trim().min(1).max(1000),
     questions: z
       .array(
         z.object({
           questionText: z.string().trim().min(1).max(300),
-          options: z.array(z.string().trim().min(1).max(120)).min(2, 'Each question needs at least 2 options'),
+          options: z
+            .array(z.string().trim().min(1).max(120))
+            .min(2, 'Each question needs at least 2 options')
+            .max(20)
+            .refine((v) => new Set(v).size === v.length, 'Options must be unique'),
         }),
       )
-      .min(1, 'A survey needs at least one question'),
+      .min(1, 'A survey needs at least one question')
+      .max(30),
     scheduledAt: z.string().date().optional(),
   }),
 });

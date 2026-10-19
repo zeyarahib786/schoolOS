@@ -1,3 +1,10 @@
+import { teacherScope } from '../lms/lms.teaching.service';
+import { getSettings } from '../settings/settings.repository';
+import { schoolToday } from './attendance.dates';
+import mongoose from 'mongoose';
+import { AbsenceRequest } from '../../models/AbsenceRequest';
+import { Attendance } from '../../models/Attendance';
+import { SaveRegisterInput } from './attendance.validation';
 import { ApiError } from '../../utils/ApiError';
 import * as repo from './attendance.repository';
 import { User } from '../../models/User';
@@ -20,7 +27,7 @@ const ABSENCE_REVIEW_ROLES = ['Administrator', 'Principal', 'Teacher'] as const;
 
 function dayStart(value?: string): Date {
   const d = value ? new Date(value) : new Date();
-  d.setHours(0, 0, 0, 0);
+  d.setUTCHours(0, 0, 0, 0);
   return d;
 }
 
@@ -29,12 +36,13 @@ function daysInclusive(from: Date, to: Date): number {
 }
 
 function canReviewAbsence(role: AuthenticatedUser['role']): boolean {
-  return ABSENCE_REVIEW_ROLES.includes(role as typeof ABSENCE_REVIEW_ROLES[number]);
+  return ABSENCE_REVIEW_ROLES.includes(role as (typeof ABSENCE_REVIEW_ROLES)[number]);
 }
 
 async function assertCanUseStudentForAbsence(studentId: string, requester: AuthenticatedUser) {
-  const student = await Student.findById(studentId).select('name refId grade guardianUserId');
+  const student = await Student.findById(studentId).select('name refId grade guardianUserId status');
   if (!student) throw ApiError.notFound('Student not found');
+  if (student.status !== 'Active') throw ApiError.conflict('Absence requests require an active student');
   if (canReviewAbsence(requester.role)) return student;
   if (requester.role === 'Parent' && student.guardianUserId?.toString() === requester.id) return student;
   throw ApiError.notFound('Student not found');
@@ -67,7 +75,8 @@ export async function markAttendance(input: MarkAttendanceInput, requester: Auth
     throw ApiError.forbidden('Only Administrator, Principal, or Teacher may mark attendance');
   }
 
-  const date = new Date(input.date);
+  await validateStudents(input);
+  const date = dayStart(input.date);
   const studentIds = input.entries.map((e) => e.studentId);
   const existing = await repo.findExistingForEntries(date, input.session, studentIds);
   if (existing.length > 0) {
@@ -104,7 +113,8 @@ export async function saveRegister(input: MarkAttendanceInput, requester: Authen
     throw ApiError.forbidden('Only Administrator, Principal, or Teacher may save attendance');
   }
 
-  const date = new Date(input.date);
+  await validateStudents(input);
+  const date = dayStart(input.date);
   const records = input.entries.map((e) => ({
     student: e.studentId,
     date,
@@ -124,23 +134,24 @@ export async function saveRegister(input: MarkAttendanceInput, requester: Authen
 }
 
 export async function listStaffAttendance(query: ListStaffAttendanceQuery, requester: AuthenticatedUser) {
-  if (!STAFF_ATTENDANCE_ROLES.includes(requester.role as typeof STAFF_ATTENDANCE_ROLES[number])) {
+  if (!STAFF_ATTENDANCE_ROLES.includes(requester.role as (typeof STAFF_ATTENDANCE_ROLES)[number])) {
     throw ApiError.forbidden('Only staff users may view staff attendance');
   }
-  const date = dayStart(query.date);
-  const unrestricted = requester.role === 'Administrator' || requester.role === 'Principal' || requester.role === 'Accountant';
+  const date = dayStart(query.date || (await schoolToday()));
+  const unrestricted =
+    requester.role === 'Administrator' || requester.role === 'Principal' || requester.role === 'Accountant';
   const filter = unrestricted ? { date } : { date, user: requester.id };
   const items = await repo.findStaffAttendance(filter);
   return { items, date: date.toISOString().slice(0, 10) };
 }
 
 export async function markStaffAttendance(input: MarkStaffAttendanceInput, requester: AuthenticatedUser) {
-  if (!STAFF_ATTENDANCE_ROLES.includes(requester.role as typeof STAFF_ATTENDANCE_ROLES[number])) {
+  if (!STAFF_ATTENDANCE_ROLES.includes(requester.role as (typeof STAFF_ATTENDANCE_ROLES)[number])) {
     throw ApiError.forbidden('Only staff users may mark staff attendance');
   }
   const user = await User.findById(requester.id).select('name');
   if (!user) throw ApiError.notFound('User not found');
-  const date = dayStart(input.date);
+  const date = dayStart(input.date || (await schoolToday()));
   const entry = await repo.saveStaffAttendance({
     userId: requester.id,
     name: user.name,
@@ -172,6 +183,15 @@ export async function createAbsenceRequest(input: CreateAbsenceRequestInput, req
   const days = daysInclusive(fromDate, toDate);
   if (days < 1) throw ApiError.badRequest('To date must be on or after from date');
   if (days > 60) throw ApiError.badRequest('Absence requests cannot exceed 60 days');
+  if (
+    await AbsenceRequest.exists({
+      student: input.studentId,
+      status: { $in: ['Pending', 'Approved'] },
+      fromDate: { $lte: toDate },
+      toDate: { $gte: fromDate },
+    })
+  )
+    throw ApiError.conflict('An overlapping pending or approved absence request already exists');
   const created = await repo.createAbsenceRequest({
     student: input.studentId,
     requestedBy: requester.id,
@@ -195,34 +215,130 @@ export async function cancelAbsenceRequest(id: string, requester: AuthenticatedU
   if (!canReviewAbsence(requester.role) && request.requestedBy.toString() !== requester.id) {
     throw ApiError.notFound('Absence request not found');
   }
-  const updated = await repo.updateAbsenceRequestStatus(id, { status: 'Cancelled', decidedAt: new Date() });
+  const updated = await AbsenceRequest.findOneAndUpdate(
+    { _id: id, status: 'Pending' },
+    { $set: { status: 'Cancelled', decidedAt: new Date() } },
+    { new: true },
+  );
+  if (!updated) throw ApiError.conflict('Request was already reviewed');
   await logAudit('Cancelled absence request', 'Attendance', requester.id);
   return updated;
 }
 
 export async function decideAbsenceRequest(id: string, input: DecideAbsenceRequestInput, requester: AuthenticatedUser) {
-  if (!canReviewAbsence(requester.role)) throw ApiError.forbidden('Only Administrator, Principal, or Teacher may review absence requests');
-  const request = await repo.findAbsenceRequestById(id);
-  if (!request) throw ApiError.notFound('Absence request not found');
-  if (request.status !== 'Pending') throw ApiError.conflict('Only pending absence requests can be reviewed');
-  const updated = await repo.updateAbsenceRequestStatus(id, {
-    status: input.decision,
-    decidedBy: requester.id,
-    decisionNote: input.note,
-    decidedAt: new Date(),
-  });
-  if (input.decision === 'Approved') {
-    const studentId = request.student._id.toString();
-    const records = [];
-    for (let d = dayStart(request.fromDate.toISOString()); d <= request.toDate; d.setDate(d.getDate() + 1)) {
-      const date = new Date(d);
-      records.push(
-        { student: studentId, date, session: 'AM' as const, status: 'Excused' as const, markedBy: requester.id, notes: `Approved absence request ${request._id}` },
-        { student: studentId, date, session: 'PM' as const, status: 'Excused' as const, markedBy: requester.id, notes: `Approved absence request ${request._id}` },
+  if (!canReviewAbsence(requester.role)) throw ApiError.forbidden('Only teaching staff may review absence requests');
+  const session = await mongoose.startSession();
+  let updated;
+  try {
+    await session.withTransaction(async () => {
+      const request = await AbsenceRequest.findById(id).session(session);
+      if (!request) throw ApiError.notFound('Absence request not found');
+      if (request.status !== 'Pending') throw ApiError.conflict('Only pending requests can be reviewed');
+      updated = await AbsenceRequest.findOneAndUpdate(
+        { _id: id, status: 'Pending' },
+        {
+          $set: {
+            status: input.decision,
+            decidedBy: requester.id,
+            decisionNote: input.note || '',
+            decidedAt: new Date(),
+          },
+        },
+        { new: true, session },
       );
-    }
-    await repo.bulkUpsert(records);
+      if (!updated) throw ApiError.conflict('Request was already reviewed');
+      if (input.decision === 'Approved') {
+        for (
+          const d = dayStart(request.fromDate.toISOString());
+          d <= request.toDate;
+          d.setUTCDate(d.getUTCDate() + 1)
+        ) {
+          for (const period of ['AM', 'PM'] as const) {
+            const key = { student: request.student, date: new Date(d), session: period };
+            const existing = await Attendance.findOne(key).session(session);
+            if (!existing || existing.status === 'Absent')
+              await Attendance.updateOne(
+                key,
+                { $set: { status: 'Excused', markedBy: requester.id, notes: `Approved absence request ${id}` } },
+                { upsert: true, session },
+              );
+          }
+        }
+      }
+    });
+  } finally {
+    await session.endSession();
   }
-  await logAudit(`${input.decision} absence request`, 'Attendance', requester.id, input.decision === 'Approved' ? 'Warning' : 'Info');
+  await logAudit(`${input.decision} absence request`, 'Attendance', requester.id);
   return updated;
+}
+
+async function validateStudents(input: MarkAttendanceInput) {
+  const ids = input.entries.map((e) => e.studentId);
+  if (new Set(ids).size !== ids.length) throw ApiError.badRequest('Duplicate students in register');
+  if ((await Student.countDocuments({ _id: { $in: ids }, status: 'Active' })) !== ids.length)
+    throw ApiError.badRequest('Register must contain existing active students');
+}
+export async function saveCheckedRegister(input: SaveRegisterInput, requester: AuthenticatedUser) {
+  if (!canMarkAttendance(requester.role)) throw ApiError.forbidden('Only teaching staff may save registers');
+  if (input.date > (await schoolToday())) throw ApiError.badRequest('Future registers cannot be marked');
+  await validateStudents(input);
+  if (input.notifyGuardians && input.date !== (await schoolToday()))
+    throw ApiError.badRequest('Parent alerts are available only for today’s register');
+  if (input.notifyGuardians && requester.role === 'Teacher') {
+    const scopes = await teacherScope(requester),
+      year = (await getSettings()).academicYear;
+    const allowed = scopes.filter((s) => s.academicYear === year).map((s) => s.grade);
+    if (await Student.exists({ _id: { $in: input.entries.map((e) => e.studentId) }, grade: { $nin: allowed } }))
+      throw ApiError.forbidden('Parent alerts require an assigned class in the current academic year');
+  }
+  const session = await mongoose.startSession();
+  let changed = 0;
+  try {
+    await session.withTransaction(async () => {
+      changed = 0;
+      for (const e of input.entries) {
+        const key = { student: e.studentId, date: dayStart(input.date), session: input.session };
+        const existing = await Attendance.findOne(key).session(session);
+        if ((existing?.updatedAt.toISOString() || null) !== e.expectedUpdatedAt)
+          throw ApiError.conflict('Register changed by another user. Reload before saving');
+        if (existing && (existing.status !== e.status || (existing.notes || '') !== (e.notes || ''))) {
+          if (!input.correctionReason) throw ApiError.badRequest('Provide a reason for correcting saved attendance');
+          changed++;
+        }
+        if (
+          !existing ||
+          existing.status !== e.status ||
+          (existing.notes || '') !== (e.notes || '') ||
+          input.notifyGuardians
+        )
+          await Attendance.updateOne(
+            key,
+            {
+              $set: {
+                status: e.status,
+                notes: e.notes || '',
+                markedBy: requester.id,
+                ...(input.notifyGuardians && ['Absent', 'Late'].includes(e.status)
+                  ? { alertRequestedAt: new Date(), alertProcessedAt: null, alertChannel: input.notificationChannel }
+                  : {}),
+              },
+            },
+            { upsert: true, session },
+          );
+      }
+    });
+  } catch (error) {
+    if ((error as { code?: number }).code === 11000) throw ApiError.conflict('Register changed. Reload before saving');
+    throw error;
+  } finally {
+    await session.endSession();
+  }
+  await logAudit(
+    `Saved ${input.entries.length} ${input.session} records on ${input.date}${changed ? `; corrected ${changed}: ${input.correctionReason}` : ''}`,
+    'Attendance',
+    requester.id,
+    changed ? 'Warning' : 'Info',
+  );
+  return { markedCount: input.entries.length, correctedCount: changed };
 }

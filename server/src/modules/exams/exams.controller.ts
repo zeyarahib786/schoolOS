@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { asyncHandler } from '../../middleware/errorHandler';
 import { sendSuccess } from '../../utils/apiResponse';
 import { ApiError } from '../../utils/ApiError';
+import { listExamsSchema, listResultsSchema } from './exams.validation';
 import * as service from './exams.service';
 
 function requireUser(req: Request) {
@@ -10,7 +11,7 @@ function requireUser(req: Request) {
 }
 
 export const listExams = asyncHandler(async (req: Request, res: Response) => {
-  const result = await service.listExams(req.query as unknown as Parameters<typeof service.listExams>[0]);
+  const result = await service.listExams(listExamsSchema.shape.query.parse(req.query));
   sendSuccess(res, 200, result.items, { pagination: result.pagination });
 });
 
@@ -28,7 +29,7 @@ export const addSubject = asyncHandler(async (req: Request, res: Response) => {
 
 export const removeSubject = asyncHandler(async (req: Request, res: Response) => {
   const requester = requireUser(req);
-  const exam = await service.removeSubject(req.params.id, decodeURIComponent(req.params.subject), requester);
+  const exam = await service.removeSubject(req.params.id, req.params.subject, requester);
   sendSuccess(res, 200, exam);
 });
 
@@ -39,10 +40,7 @@ export const getSummary = asyncHandler(async (req: Request, res: Response) => {
 
 export const listResults = asyncHandler(async (req: Request, res: Response) => {
   const requester = requireUser(req);
-  const result = await service.listResults(
-    req.query as unknown as Parameters<typeof service.listResults>[0],
-    requester,
-  );
+  const result = await service.listResults(listResultsSchema.shape.query.parse(req.query), requester);
   sendSuccess(res, 200, result.items, { pagination: result.pagination });
 });
 
@@ -71,3 +69,10 @@ export const generateReportCards = asyncHandler(async (req: Request, res: Respon
   const result = await service.generateReportCards(req.params.id, req.body, requireUser(req));
   sendSuccess(res, 200, result);
 });
+
+export const update = asyncHandler(async (req: Request, res: Response) =>
+  sendSuccess(res, 200, await service.updateExam(req.params.id, req.body, requireUser(req))),
+);
+export const register = asyncHandler(async (req: Request, res: Response) =>
+  sendSuccess(res, 200, await service.saveExamRegister(req.params.id, req.body, requireUser(req))),
+);

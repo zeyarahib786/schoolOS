@@ -26,6 +26,6 @@ export const generate = asyncHandler(async (req: Request, res: Response) => {
 
 export const markPaid = asyncHandler(async (req: Request, res: Response) => {
   const requester = requireUser(req);
-  const payslip = await service.markPayslipPaid(req.params.id, requester);
+  const payslip = await service.markPayslipPaid(req.params.id, req.body, requester);
   sendSuccess(res, 200, payslip);
 });

@@ -1,0 +1,7 @@
+const assert=require('assert');
+require('../helpers/browser.cjs')('reports',async({role,step,evaluate,waitFor,cdp})=>{
+ const manage=['Administrator','Principal'].includes(role);
+ await step('Reports uses actual ledger values and management role restrictions',async()=>{await evaluate("go('reports')");if(manage){await waitFor(()=>evaluate('reportsWorkspaceState().loaded'),'report loaded');assert(await evaluate('reportsWorkspaceState().data.fees.billed===1500'));assert(await evaluate("document.getElementById('view').textContent.includes('Calculation basis')"));assert(await evaluate("reportsWorkspaceState().data.students.byStatus.some(r=>r._id==='Active'&&r.count===31)"));}else{assert(await evaluate("document.getElementById('view').textContent.includes('restricted to Administrator and Principal')"));assert(await evaluate('reportsWorkspaceState().data===null'));}});
+ if(manage)await step('Fresh report summary export and source links work',async()=>{await evaluate('reportsWorkspaceLoad()');await waitFor(()=>evaluate('!reportsWorkspaceState().loading'),'refreshed');assert(await evaluate('reportsWorkspaceState().data.generatedAt.length>0'));await evaluate('reportsWorkspaceExport()');await evaluate("go('fees')");assert(await evaluate("state.module==='fees'"));await evaluate("go('reports')");});
+ await step('Report role view fits mobile width',async()=>{await cdp('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});assert(await evaluate('document.documentElement.scrollWidth<=window.innerWidth+2'));});
+});

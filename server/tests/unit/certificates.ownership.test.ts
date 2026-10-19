@@ -15,7 +15,7 @@ describe('scopeCertificateFilter', () => {
     }
   });
 
-  it("scopes a Parent to only issued certificates for their linked children", () => {
+  it('scopes a Parent to only issued certificates for their linked children', () => {
     const filter = scopeCertificateFilter({}, makeUser('parent-id', 'Parent'), [childId]);
     expect(filter).toEqual({
       student: { $in: [childId] },

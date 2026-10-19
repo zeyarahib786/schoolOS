@@ -39,7 +39,11 @@ export function upsertPayslip(
 }
 
 export function markPaid(id: string): Promise<IPayslip | null> {
-  return Payslip.findOneAndUpdate({ _id: id, status: 'Processed' }, { status: 'Paid', paidDate: new Date() }, { new: true });
+  return Payslip.findOneAndUpdate(
+    { _id: id, status: 'Processed' },
+    { status: 'Paid', paidDate: new Date() },
+    { new: true },
+  );
 }
 
 export function findById(id: string): Promise<IPayslip | null> {
@@ -57,5 +61,5 @@ export function findOwnStaffId(userId: string) {
 }
 
 export function findStaffById(id: string) {
-  return Staff.findById(id).select('_id refId name status');
+  return Staff.findById(id).select('_id refId name status designation');
 }

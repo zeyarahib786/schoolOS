@@ -39,16 +39,38 @@ export const remove = asyncHandler(async (req: Request, res: Response) => {
 
 export const uploadDocument = asyncHandler(async (req: Request, res: Response) => {
   const filename = decodeURIComponent(String(req.headers['x-file-name'] || 'document'));
-  const document = await documents.uploadDocument(req.params.id, req.params.key as documents.StaffDocumentKey, filename, String(req.headers['content-type'] || ''), req.body as Buffer, requireUser(req));
+  const document = await documents.uploadDocument(
+    req.params.id,
+    req.params.key as documents.StaffDocumentKey,
+    filename,
+    String(req.headers['content-type'] || ''),
+    req.body as Buffer,
+    requireUser(req),
+  );
   sendSuccess(res, 201, document);
 });
 export const downloadDocument = asyncHandler(async (req: Request, res: Response) => {
-  const result = await documents.getDocument(req.params.id, req.params.key as documents.StaffDocumentKey, requireUser(req));
-  res.setHeader('Content-Type', result.document.contentType); res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(result.document.filename)}`); res.setHeader('Content-Length', result.document.size); result.stream.on('error', (error) => res.destroy(error)); result.stream.pipe(res);
+  const result = await documents.getDocument(
+    req.params.id,
+    req.params.key as documents.StaffDocumentKey,
+    requireUser(req),
+  );
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.setHeader('Content-Type', result.document.contentType);
+  res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(result.document.filename)}`);
+  res.setHeader('Content-Length', result.document.size);
+  result.stream.on('error', (error) => res.destroy(error));
+  result.stream.pipe(res);
 });
 export const deleteDocument = asyncHandler(async (req: Request, res: Response) => {
-  await documents.deleteDocument(req.params.id, req.params.key as documents.StaffDocumentKey, requireUser(req)); sendSuccess(res, 200, { message: 'Staff document deleted' });
+  await documents.deleteDocument(req.params.id, req.params.key as documents.StaffDocumentKey, requireUser(req));
+  sendSuccess(res, 200, { message: 'Staff document deleted' });
 });
 export const toggleOnboarding = asyncHandler(async (req: Request, res: Response) => {
-  const staff = await documents.toggleOnboarding(req.params.id, req.params.key, requireUser(req)); sendSuccess(res, 200, staff);
+  const staff = await documents.toggleOnboarding(req.params.id, req.params.key, requireUser(req));
+  sendSuccess(res, 200, staff);
+});
+
+export const linkAccount = asyncHandler(async (req: Request, res: Response) => {
+  sendSuccess(res, 200, await service.linkStaffAccount(req.params.id, req.body, requireUser(req)));
 });

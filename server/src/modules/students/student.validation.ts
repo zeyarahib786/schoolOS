@@ -20,7 +20,10 @@ export const studentIdParamSchema = z.object({
 
 export const studentDocumentParamSchema = z.object({
   body: z.any(),
-  params: z.object({ id: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid student id'), key: z.enum(['id', 'birth', 'photo']) }),
+  params: z.object({
+    id: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid student id'),
+    key: z.enum(['id', 'birth', 'photo']),
+  }),
   query: z.object({}),
 });
 
@@ -28,7 +31,12 @@ export const createStudentSchema = z.object({
   query: z.object({}).optional(),
   params: z.object({}).optional(),
   body: z.object({
-    refId: z.string().trim().min(1).max(30),
+    refId: z
+      .string()
+      .trim()
+      .min(1)
+      .max(30)
+      .transform((v) => v.toUpperCase()),
     name: z.string().trim().min(2).max(120),
     grade: z.string().trim().min(1).max(60),
     gender: z.enum(['Male', 'Female']),
@@ -50,7 +58,11 @@ export const createStudentSchema = z.object({
     nationality: z.string().trim().max(80).optional(),
     guardianRelationship: z.enum(['Father', 'Mother', 'Guardian', 'Other']).optional(),
     guardianEmail: z.string().trim().email().max(254).optional(),
-    emergencyContact: z.string().trim().regex(/^\+?[0-9 ]{7,20}$/, 'Invalid emergency contact').optional(),
+    emergencyContact: z
+      .string()
+      .trim()
+      .regex(/^\+?[0-9 ]{7,20}$/, 'Invalid emergency contact')
+      .optional(),
     preferredLanguage: z.string().trim().max(60).optional(),
     address: z.string().trim().max(500).optional(),
     previousSchool: z.string().trim().max(160).optional(),
@@ -64,15 +76,73 @@ export const createStudentSchema = z.object({
     attendancePct: z.number().min(0).max(100).optional(),
     gpa: z.number().min(0).max(4).optional(),
     status: z.enum(['Active', 'Inactive', 'Alumni']).optional(),
+    translations: z
+      .record(
+        z.object({
+          name: z.string().trim().optional(),
+          guardianName: z.string().trim().optional(),
+        }),
+      )
+      .optional(),
   }),
 });
 
 export const updateStudentSchema = z.object({
   query: z.object({}).optional(),
   params: z.object({ id: z.string().regex(/^[a-f0-9]{24}$/i, 'Invalid student id') }),
-  body: createStudentSchema.shape.body.partial(),
+  body: createStudentSchema.shape.body.partial().extend({
+    clearFields: z
+      .array(
+        z.enum([
+          'guardianEmail',
+          'emergencyContact',
+          'address',
+          'medicalNotes',
+          'allergies',
+          'dateOfBirth',
+          'nationality',
+          'preferredLanguage',
+          'previousSchool',
+          'previousGrade',
+          'languages',
+          'bloodGroup',
+        ]),
+      )
+      .max(12)
+      .optional(),
+  }),
 });
 
 export type CreateStudentInput = z.infer<typeof createStudentSchema>['body'];
 export type UpdateStudentInput = z.infer<typeof updateStudentSchema>['body'];
 export type ListStudentsQuery = z.infer<typeof listStudentsSchema>['query'];
+
+export const importStudentsSchema = z.object({
+  params: z.object({}).optional(),
+  query: z.object({}).optional(),
+  body: z.object({
+    students: z
+      .array(createStudentSchema.shape.body.omit({ guardianUserId: true, studentUserId: true }))
+      .min(1)
+      .max(200),
+  }),
+});
+export const enrollmentSchema = z.object({
+  params: studentIdParamSchema.shape.params,
+  query: z.object({}).optional(),
+  body: z.object({
+    status: z.enum(['Active', 'Inactive', 'Alumni']),
+    reason: z.string().trim().min(5).max(500),
+    effectiveDate: z.coerce.date().refine((d) => d.getTime() <= Date.now(), 'Effective date cannot be in the future'),
+  }),
+});
+export const accountsSchema = z.object({
+  params: studentIdParamSchema.shape.params,
+  query: z.object({}).optional(),
+  body: z
+    .object({
+      parentEmail: z.string().trim().email().max(254).nullable().optional(),
+      studentEmail: z.string().trim().email().max(254).nullable().optional(),
+    })
+    .refine((v) => Object.keys(v).length > 0, 'Choose an account to link or unlink'),
+});

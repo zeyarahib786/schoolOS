@@ -1,0 +1,41 @@
+const assert = require('assert');
+const fs = require('fs/promises');
+const os = require('os');
+const path = require('path');
+const crypto = require('crypto');
+const root=path.resolve(__dirname,'../../server');
+const {MongoMemoryReplSet} = require(root+'/node_modules/mongodb-memory-server');
+const {mongo} = require(root+'/node_modules/mongoose');
+const {backupDatabase,restoreDatabase,backupKey} = require(root+'/dist/utils/databaseBackup');
+(async () => {
+  const started=Date.now(),dir=await fs.mkdtemp(path.join(os.tmpdir(),'schoolos-backup-drill-'));
+  const replica=await MongoMemoryReplSet.create({replSet:{count:1,storageEngine:'wiredTiger'}});
+  const database='schoolos_backup_fixture', uri=replica.getUri(database), client=new mongo.MongoClient(uri);
+  try {
+    await client.connect();
+    const db=client.db(database),studentId=new mongo.ObjectId();
+    await db.collection('students').insertOne({_id:studentId,refId:'BACKUP-QA-001',name:'طالب تجريبي',joined:new Date('2026-09-01'),balance:new mongo.Decimal128('123.45')});
+    await db.collection('students').createIndex({refId:1},{unique:true});
+    await db.collection('attendance').insertOne({studentId,date:new Date('2026-10-12'),status:'Present'});
+    await db.collection('certificatepdfs').insertOne({studentId,bytes:new mongo.Binary(Buffer.from('%PDF fictional bytes')),sha256:'fictional'});
+    const bucket=new mongo.GridFSBucket(db);
+    await new Promise((resolve,reject)=>{const stream=bucket.openUploadStream('fictional-document.txt');stream.once('finish',resolve);stream.once('error',reject);stream.end(Buffer.from('Fictional uploaded document'));});
+    const key=backupKey(crypto.randomBytes(32).toString('base64')),archive=path.join(dir,'fixture.enc');
+    const manifest=await backupDatabase({uri,database,key,archive,writesPaused:true});
+    assert.strictEqual((await fs.stat(archive)).mode&0o777,0o600);
+    await restoreDatabase({uri,database:'schoolos_restore_verified',key,archive});
+    const restored=client.db('schoolos_restore_verified');
+    assert.strictEqual((await restored.collection('students').findOne()).name,'طالب تجريبي');
+    assert.strictEqual((await restored.collection('certificatepdfs').findOne()).bytes.value().toString(),'%PDF fictional bytes');
+    let uploaded=Buffer.alloc(0);for await(const chunk of new mongo.GridFSBucket(restored).openDownloadStreamByName('fictional-document.txt'))uploaded=Buffer.concat([uploaded,chunk]);
+    assert.strictEqual(uploaded.toString(),'Fictional uploaded document');
+    await assert.rejects(restoreDatabase({uri,database:'schoolos_restore_verified',key,archive}),/completely empty/);
+    await assert.rejects(restoreDatabase({uri,database:'schoolos',key,archive}),/schoolos_restore_/);
+    await assert.rejects(restoreDatabase({uri,database:'schoolos_restore_wrong_key',key:crypto.randomBytes(32),archive}));
+    assert.strictEqual((await client.db('schoolos_restore_wrong_key').listCollections().toArray()).length,0);
+    await assert.rejects(backupDatabase({uri,database,key,archive:path.join(dir,'unsafe.enc'),writesPaused:false}),/Stop all writers/);
+    const corrupted=Buffer.from(await fs.readFile(archive));corrupted[30]^=1;await fs.writeFile(path.join(dir,'tampered.enc'),corrupted);await fs.copyFile(archive+'.json',path.join(dir,'tampered.enc.json'));
+    await assert.rejects(restoreDatabase({uri,database:'schoolos_restore_tampered',key,archive:path.join(dir,'tampered.enc')}),/checksum/);
+    console.log(JSON.stringify({status:'passed',checks:10,collections:Object.keys(manifest.collections).length,elapsedMs:Date.now()-started,coverage:['BSON types','Arabic text','unique indexes','immutable PDF bytes','GridFS upload','wrong-key rejection before writes','tamper detection','nonempty target refusal','production-name refusal','writer pause requirement']}));
+  } finally {await client.close();await replica.stop();await fs.rm(dir,{recursive:true,force:true});}
+})().catch(error=>{console.error(error.message);process.exitCode=1;});

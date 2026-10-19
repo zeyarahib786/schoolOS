@@ -11,6 +11,10 @@
   );
   var SESSION_KEY = "schoolos.client.session.v1";
   var refreshInFlight = null;
+  var sessionGeneration = 0;
+  function assertCurrentSession(generation) {
+    if (generation !== sessionGeneration) throw new Error(typeof schoolApiError === "function" ? schoolApiError("Your session has changed. Please try again.", "UNAUTHORIZED") : "Your session has changed. Please try again.");
+  }
 
   function withTimeout(promise, ms) {
     return Promise.race([
@@ -24,9 +28,23 @@
   }
 
   function errorMessage(payload, fallback) {
-    return payload && payload.error && payload.error.message
-      ? payload.error.message
-      : fallback;
+    var error = payload && payload.error;
+    var message = error && error.message ? error.message : fallback;
+    if (
+      error &&
+      error.code === "VALIDATION_ERROR" &&
+      error.details &&
+      error.details.fieldErrors
+    ) {
+      var details = Object.values(error.details.fieldErrors).reduce(function (
+        all,
+        rows,
+      ) {
+        return all.concat(rows || []);
+      }, []);
+      if (details.length) message += ": " + details.slice(0, 3).join("; ");
+    }
+    return typeof schoolApiError==='function'?schoolApiError(message,error&&error.code):message;
   }
 
   function saveSession() {
@@ -41,6 +59,9 @@
   }
 
   function clearSession() {
+    sessionGeneration++;
+    if(typeof schoolPersonNames!=="undefined")schoolPersonNames.clear();
+    refreshInFlight = null;
     adapter.token = null;
     adapter.refreshToken = null;
     adapter.user = null;
@@ -78,6 +99,7 @@
   }
 
   function refreshAccessToken() {
+    var generation = sessionGeneration;
     if (!adapter.refreshToken)
       return Promise.reject(
         new Error("Your session has expired. Please sign in again."),
@@ -95,6 +117,7 @@
               return null;
             })
             .then(function (body) {
+              assertCurrentSession(generation);
               if (!r.ok)
                 throw new Error(
                   errorMessage(
@@ -109,13 +132,14 @@
             });
         })
         .finally(function () {
-          refreshInFlight = null;
+          if (generation === sessionGeneration) refreshInFlight = null;
         });
     }
     return refreshInFlight;
   }
 
   function api(path, opts, retried) {
+    var generation = sessionGeneration;
     opts = opts || {};
     opts.headers = Object.assign(
       { "Content-Type": "application/json" },
@@ -123,6 +147,7 @@
     );
     if (adapter.token) opts.headers.Authorization = "Bearer " + adapter.token;
     return fetch(cfg.base + path, opts).then(function (r) {
+      assertCurrentSession(generation);
       if (
         r.status === 401 &&
         !retried &&
@@ -130,6 +155,7 @@
         path !== "/auth/refresh"
       ) {
         return refreshAccessToken().then(function () {
+          assertCurrentSession(generation);
           return api(path, opts, true);
         });
       }
@@ -139,18 +165,22 @@
           return null;
         })
         .then(function (body) {
+          assertCurrentSession(generation);
           if (!r.ok)
             throw new Error(errorMessage(body, path + " -> " + r.status));
+          if(typeof schoolRegisterResponseNames==="function")schoolRegisterResponseNames(path,body);
           return body;
         });
     });
   }
 
   function apiAll(path) {
+    var generation = sessionGeneration;
     var separator = path.indexOf("?") >= 0 ? "&" : "?";
     function page(number, collected) {
       return api(path + separator + "page=" + number + "&limit=100").then(
         function (res) {
+          assertCurrentSession(generation);
           var rows = res.data || [];
           var pagination = res.meta && res.meta.pagination;
           var all = collected.concat(rows);
@@ -163,10 +193,13 @@
     return page(1, []);
   }
 
-  function apiBlob(path) {
+  function apiBlob(path, retried) {
+    var generation = sessionGeneration;
     var headers = {};
     if (adapter.token) headers.Authorization = "Bearer " + adapter.token;
     return fetch(cfg.base + path, { headers: headers }).then(function (r) {
+      assertCurrentSession(generation);
+      if(r.status===401&&!retried&&adapter.refreshToken)return refreshAccessToken().then(function(){assertCurrentSession(generation);return apiBlob(path,true)});
       if (!r.ok)
         return r
           .json()
@@ -174,9 +207,10 @@
             return null;
           })
           .then(function (body) {
+            assertCurrentSession(generation);
             throw new Error(errorMessage(body, "Download failed"));
           });
-      return r.blob();
+      return r.blob().then(function(blob){assertCurrentSession(generation);return blob;});
     });
   }
 
@@ -209,13 +243,28 @@
 
   /* ---- mappers: API entity -> the EXACT row shape each module renders ---- */
   function mapStudent(s) {
+    if (s.translations && s.name && typeof I18N !== "undefined") {
+      I18N[s.name] = Object.assign({}, I18N[s.name], {
+        ar: s.translations.ar && s.translations.ar.name,
+        ur: s.translations.ur && s.translations.ur.name,
+        hi: s.translations.hi && s.translations.hi.name,
+      });
+      if (s.guardianName && s.translations.ar && s.translations.ar.guardianName) {
+        I18N[s.guardianName] = Object.assign({}, I18N[s.guardianName], {
+          ar: s.translations.ar.guardianName,
+          ur: s.translations.ur && s.translations.ur.guardianName,
+          hi: s.translations.hi && s.translations.hi.guardianName,
+        });
+      }
+    }
     return {
       id: s.refId,
       mongoId: s._id,
       name: s.name,
+      translations: s.translations || undefined,
       grade: s.grade,
       gender: s.gender === "Female" ? "F" : s.gender === "Male" ? "M" : "—",
-      roll: parseInt(s.roll, 10) || 0,
+      roll: String(s.roll || ""),
       guardian: s.guardianName || "—",
       phone: s.phone || "—",
       dob: s.dateOfBirth ? String(s.dateOfBirth).slice(0, 10) : "",
@@ -238,9 +287,13 @@
         typeof s.attendancePct === "number" ? Math.round(s.attendancePct) : 0,
       gpa: typeof s.gpa === "number" ? s.gpa : 0,
       attendanceRecords: s.attendanceRecords || 0,
+      attendanceEligibleRecords: s.attendanceEligibleRecords ?? s.attendanceRecords ?? 0,
       assessmentResults: s.assessmentResults || 0,
       invoiceRecords: s.invoiceRecords || 0,
       status: s.status || "Active",
+      guardianUserId: s.guardianUserId || null,
+      studentUserId: s.studentUserId || null,
+      enrollmentHistory: s.enrollmentHistory || [],
     };
   }
   function mapStaff(s) {
@@ -285,6 +338,7 @@
     return {
       id: s.refId,
       mongoId: s._id,
+      updatedAt:s.updatedAt,
       name: s.name,
       email: s.email || "",
       role: s.designation || "—",
@@ -302,7 +356,7 @@
   function mapInvoice(inv) {
     var due = "—";
     try {
-      due = new Date(inv.dueDate).toLocaleDateString("en-GB", {
+      due = new Date(inv.dueDate).toLocaleDateString((typeof schoolLocale==='function'?schoolLocale():'en-GB'), {
         day: "2-digit",
         month: "short",
       });
@@ -315,6 +369,7 @@
       studentId: (inv.student && inv.student._id) || inv.studentId || null,
       studentRef: (inv.student && inv.student.refId) || null,
       term: inv.term,
+      currency: inv.currency, dueDate:String(inv.dueDate||"").slice(0,10),
       amt: inv.amount,
       paid: inv.paidAmount || 0,
       balance:
@@ -331,13 +386,14 @@
       student = p.student || {};
     return {
       id: p._id,
-      receipt: "RCP-" + String(p._id).slice(-5).toUpperCase(),
+      receipt: "RCP-" + String(p._id).toUpperCase(),
       invoiceId: invoice._id || p.invoice,
       invoiceRef: invoice.refId || "—",
       student: student.name || "Unknown student",
       studentId: student._id || p.student,
       method: p.paymentMethod,
       amount: p.amount,
+      currency:p.currency,
       paidAt: p.paidAt || p.createdAt,
       date: short(p.paidAt || p.createdAt),
       reference: p.reference || "",
@@ -373,6 +429,7 @@
     var student = a.student || {};
     return {
       id: a._id,
+      updatedAt: a.updatedAt,
       studentId: student._id || a.student,
       refId: student.refId || "",
       student: student.name || "Unknown student",
@@ -397,6 +454,8 @@
     var to = String(r.toDate || "").slice(0, 10);
     return {
       requestId: r._id,
+      requestedById: r.requestedBy && (r.requestedBy._id || r.requestedBy),
+      decisionNote: r.decisionNote || "",
       studentId: student.refId || String(student._id || r.student || ""),
       studentMongoId: student._id || r.student || null,
       studentName: student.name || "Unknown student",
@@ -415,7 +474,7 @@
 
   function short(d) {
     try {
-      return new Date(d).toLocaleDateString("en-GB", {
+      return new Date(d).toLocaleDateString((typeof schoolLocale==='function'?schoolLocale():'en-GB'), {
         day: "2-digit",
         month: "short",
       });
@@ -486,7 +545,7 @@
     var dt = new Date(e.date);
     return {
       d: String(dt.getDate()),
-      mon: dt.toLocaleString("en-GB", { month: "short" }).toUpperCase(),
+      mon: dt.toLocaleString((typeof schoolLocale==='function'?schoolLocale():'en-GB'), { month: "short" }).toUpperCase(),
       t: e.title,
       tag: e.audience,
       c: "green",
@@ -588,6 +647,8 @@
   function mapAnn(a) {
     return {
       mongoId: a._id,
+      authorId: a.publishedBy && (a.publishedBy._id || a.publishedBy),
+      updatedAt: a.updatedAt, pinned: a.pinned, reviewNote: a.reviewNote || "",
       t: a.title,
       by: (a.publishedBy && a.publishedBy.name) || "School Office",
       tm: short(a.createdAt),
@@ -603,7 +664,7 @@
     var zone = (adapter.settings && adapter.settings.timezone) || "UTC";
     var time = "—";
     try {
-      time = new Date(a.createdAt).toLocaleString("en-GB", {
+      time = new Date(a.createdAt).toLocaleString((typeof schoolLocale==='function'?schoolLocale():'en-GB'), {
         timeZone: zone,
         dateStyle: "medium",
         timeStyle: "short",
@@ -850,6 +911,7 @@
         .replace(" · ", "-"),
       type: type,
       note: b.description,
+      updatedAt:b.updatedAt,
       pts: (points > 0 ? "+" : "") + points,
       date: short(b.createdAt),
       c: type === "Merit" ? "green" : type === "Detention" ? "amber" : "red",
@@ -873,6 +935,8 @@
       reason: v.reason,
       action: v.treatment,
       time: hhmm(v.createdAt),
+      createdAt: v.createdAt, updatedAt:v.updatedAt, visitDate:v.visitDate,
+      followUpDate:v.followUpDate, followUpNote:v.followUpNote,
       status: v.outcome === "Under observation" ? "Open" : "Resolved",
       outcome: v.outcome,
       severity: v.severity || "Routine",
@@ -881,7 +945,7 @@
       parentContacted: Boolean(v.parentContacted),
       contactTime: v.parentContactedAt ? hhmm(v.parentContactedAt) : null,
       staff: recorder.name || "Clinic staff",
-      consent: true,
+      consent: null,
     };
   }
   function mapWallet(w) {
@@ -950,6 +1014,7 @@
   function mapCurriculumUnit(unit) {
     return {
       mongoId: unit._id,
+      grade: unit.grade || "All grades", academicYear: unit.academicYear || "Legacy", updatedAt: unit.updatedAt,
       subject: unit.subject,
       title: unit.title,
       term: unit.term,
@@ -967,6 +1032,8 @@
     return {
       mongoId: row._id,
       cls: row.className,
+      room: row.room || "", status: row.status || "Active", updatedAt: row.updatedAt,
+      teacherStaffId: row.teacherStaffId && (row.teacherStaffId._id || row.teacherStaffId),
       rep:
         row.representativeStudentId && row.representativeStudentId.name
           ? row.representativeStudentId.name
@@ -996,6 +1063,8 @@
     connected: false,
     live: {},
     api: api,
+    apiAll: apiAll,
+    apiBlob: apiBlob,
     hydrate: hydrate,
   };
   window.SCHOOLOS_ADAPTER = adapter; // introspection hook for tests and debugging
@@ -1021,10 +1090,16 @@
     if (!adapter.user || typeof baseEnterApp !== "function") return;
     syncReactSession();
     baseEnterApp(adapter.user.role);
+    if(typeof schoolInboxRefresh==="function")schoolInboxRefresh();
     installLmsWorkflow();
     var name = document.querySelector(".sb-user .ut .n");
     var avatar = document.querySelector(".sb-user .ua");
-    if (name) name.textContent = adapter.user.name;
+    if (name) {
+      name.textContent = adapter.user.name;
+      name.setAttribute('data-school-name',adapter.user.name);
+      name.setAttribute('data-school-name-translations',JSON.stringify(adapter.user.translations||{}));
+      if(typeof localizeView==='function')localizeView(name);
+    }
     if (avatar)
       avatar.textContent = adapter.user.name
         .split(/\s+/)
@@ -1051,6 +1126,8 @@
       return;
     }
     setLoginBusy(true, "Signing in…");
+    clearSession();
+    var loginGeneration = sessionGeneration;
     api("/auth/login", {
       method: "POST",
       body: JSON.stringify({ email: email.trim(), password: password }),
@@ -1063,6 +1140,7 @@
         return hydrate();
       })
       .then(function () {
+        assertCurrentSession(loginGeneration);
         installSettingsWorkflow();
         installAuditWorkflow();
         adapter.connected = true;
@@ -1096,16 +1174,19 @@
         setLoginBusy(false, "");
       })
       .catch(function (e) {
+        if (loginGeneration !== sessionGeneration) return;
         clearSession();
         setLoginBusy(false, e.message || "Unable to sign in.");
       });
   };
 
   window.lockApp = function () {
+    var logoutGeneration = sessionGeneration;
     var logout = adapter.token
       ? api("/auth/logout", { method: "POST" }).catch(function () {})
       : Promise.resolve();
     logout.finally(function () {
+      if (logoutGeneration !== sessionGeneration) return;
       clearSession();
       if (typeof baseLockApp === "function") baseLockApp();
     });
@@ -1194,11 +1275,13 @@
           (res.data || []).map(mapInvoice),
         );
       }),
+      (adapter.user && ["Administrator","Principal","Accountant"].includes(adapter.user.role) ? api("/fees/heads") : Promise.resolve({data:[]})).then(function(res){adapter.feeHeads=res.data||[];}),
       apiAll("/fees/payments").then(function (res) {
         adapter.feePayments = (res.data || []).map(mapFeePayment);
         adapter.live.feePayments = true;
       }),
       apiAll("/certificates").then(function (res) {
+        adapter.certificates = res.data || [];
         adapter.live.certificates = replaceInPlace(
           typeof CERTS !== "undefined" ? CERTS : null,
           (res.data || []).map(mapCertificate),
@@ -1387,9 +1470,7 @@
             grouped[unit.subject].units += 1;
             if (unit.completedDate) grouped[unit.subject].done += 1;
           });
-          var subjects = defaults.map(function (item) {
-            return item.sub;
-          });
+          var subjects = [];
           Object.keys(grouped).forEach(function (subject) {
             if (subjects.indexOf(subject) < 0) subjects.push(subject);
           });
@@ -1403,7 +1484,7 @@
               var counts = grouped[subject] || { units: 0, done: 0 };
               return {
                 sub: subject,
-                grades: old.grades || "School-wide",
+                grades: Array.from(new Set(rows.filter(function (u) { return u.subject === subject; }).map(function (u) { return u.grade; }))).join(", "),
                 units: counts.units,
                 done: counts.done,
                 c: old.c || (index % 2 ? "green" : "blue"),
@@ -1423,8 +1504,8 @@
         adapter.admissionIds = {};
         adapter.admissionStatus = {};
         rows.forEach(function (r) {
-          adapter.admissionIds[r.applicantName] = r._id;
-          adapter.admissionStatus[r.applicantName] = r.status;
+          adapter.admissionIds[r.applicantName] = r._id;adapter.admissionIds[r._id] = r._id;
+          adapter.admissionStatus[r.applicantName] = r.status;adapter.admissionStatus[r._id] = r.status;
         });
       }),
       listJob("/leave", "LEAVE", mapLeave),
@@ -1486,6 +1567,8 @@
             month: p.month,
             name: staff.name || "Unknown employee",
             dept: staff.designation || "-",
+            basicSalary: p.basicSalary,
+            allowances: p.allowances,
             gross: p.basicSalary + p.allowances,
             ded: p.deductions,
             status: p.status,
@@ -1547,8 +1630,8 @@
               filled: group.filled,
               rooms: group.rooms,
               floors: Object.keys(group.floors).length,
-              warden: old.warden || "Not assigned",
-              assist: old.assist || "Not assigned",
+              warden: Array.from(new Set(rooms.filter(function (r) { return r.block === block; }).map(function (r) { return r.warden; }).filter(Boolean))).join(", ") || "Not configured",
+              assist: "Not configured",
               c: old.c || (index % 2 ? "green" : "blue"),
             };
           });
@@ -1573,10 +1656,10 @@
               block: room.block,
               guardian: previous.guardian || "—",
               phone: previous.phone || "—",
-              fee: previous.fee || "Paid",
+              fee: "Not linked",
               medical: previous.medical || "—",
-              joined: previous.joined || "Today",
-              roll: previous.roll || "Present",
+              joined: "Not recorded",
+              roll: "Unmarked",
             });
           });
         });
@@ -1633,46 +1716,69 @@
       }),
     );
     jobs.push(
-      apiAll("/lms/assignments").then(function (res) {
-        var rows = res.data || [],
-          courses = arr("COURSES") || [];
-        adapter.lmsAssignments = rows;
-        courses.forEach(function (c) {
-          var m = String(c.cls || "").match(/^(\d+)-([A-Za-z]+)$/),
-            grade = m
-              ? "Grade " + m[1] + " · " + m[2]
-              : String(c.cls || "").trim(),
-            own = rows.filter(function (a) {
-              return a.subject === c.t && a.grade === grade;
-            });
-          if (own.length)
-            c._serverAssignments = own.map(function (a) {
+      apiAll("/lms/courses")
+        .then(function (res) {
+          replaceInPlace(
+            arr("COURSES"),
+            (res.data || []).map(function (c) {
               return {
-                mongoId: a._id,
-                title: a.title,
-                type: "Assignment",
-                due: short(a.dueDate),
-                status: new Date(a.dueDate) > new Date() ? "Open" : "Closed",
-                maxScore: a.maxScore,
-                submissions: 0,
-                total: 0,
-                graded: 0,
-                myStatus: "Not submitted",
-                myGrade: null,
+                mongoId: c._id,
+                t: c.title,
+                teacher: c.teacher,
+                cls: c.grade, subject:c.subject,
+                prog: 0,
+                due: "Not started",
+                assignments: [],
+                _serverAssignments: [],
               };
-            });
-        });
-        adapter.live.lmsAssignments = true;
-      }),
+            }),
+          );
+          return apiAll("/lms/assignments");
+        })
+        .then(function (res) {
+          var rows = res.data || [],
+            courses = arr("COURSES") || [];
+          adapter.lmsAssignments = rows;
+          courses.forEach(function (c) {
+            var m = String(c.cls || "").match(/^(\d+)-([A-Za-z]+)$/),
+              grade = m
+                ? "Grade " + m[1] + " · " + m[2]
+                : String(c.cls || "").trim(),
+              own = rows.filter(function (a) {
+                return (a.course === c.mongoId || (!a.course && a.subject === c.subject && a.grade === grade));
+              });
+            if (own.length)
+              c._serverAssignments = own.map(function (a) {
+                return {
+                  mongoId: a._id,
+                  title: a.title,
+                  type: "Assignment",
+                  due: short(a.dueDate),
+                  status: a.status === "Published" ? "Open" : a.status,
+                  maxScore: a.maxScore,
+                  submissions: 0,
+                  total: 0,
+                  graded: 0,
+                  myStatus: "Not submitted",
+                  myGrade: null,
+                };
+              });
+          });
+          adapter.live.lmsAssignments = true;
+        }),
     );
     jobs.push(
-      apiAll("/timetable").then(function (res) {
+      apiAll("/timetable").then(async function (res) {
         var slots = res.data || [];
         adapter.timetableSlots = slots;
         var store = arr("TTDATA");
         var classes = arr("TTCLASSES");
         var getData = arr("ttData");
         if (!store || !classes || typeof getData !== "function") return;
+        const classResult=await apiAll('/classes');
+        classes.length=0;
+        (classResult.data||[]).filter(row=>row.status!=='Archived').forEach(row=>{if(row.className&&!classes.includes(row.className))classes.push(row.className)});
+        Object.keys(store).forEach(key=>delete store[key]);
 
         slots.forEach(function (slot) {
           if (classes.indexOf(slot.grade) < 0) classes.push(slot.grade);
@@ -1734,89 +1840,16 @@
         adapter.live.timetable = true;
       }),
     );
-    jobs.push(
-      studentJob
-        .then(function () {
-          return apiAll("/exams");
-        })
-        .then(function (res) {
-          var exams = res.data || [];
-          var familyRole =
-            adapter.user &&
-            ["Parent", "Student"].indexOf(adapter.user.role) >= 0;
-          var targetStudent =
-            familyRole && typeof STUDENTS !== "undefined" && STUDENTS[0];
-          var candidates = familyRole
-            ? exams.filter(function (row) {
-                return row.locked;
-              })
-            : exams.slice(0, 1);
-          function loadCandidate(index) {
-            var candidate = candidates[index];
-            if (!candidate) return Promise.resolve(null);
-            return apiAll(
-              "/exams/results?examId=" + encodeURIComponent(candidate._id),
-            ).then(function (resultRes) {
-              var rows = resultRes.data || [];
-              var matching =
-                targetStudent &&
-                rows.some(function (row) {
-                  var studentId =
-                    row.student && (row.student._id || row.student);
-                  return String(studentId) === String(targetStudent.mongoId);
-                });
-              if (familyRole && targetStudent && !matching) {
-                if (index + 1 < candidates.length)
-                  return loadCandidate(index + 1);
-                return { exam: candidates[0], results: [] };
-              }
-              return { exam: candidate, results: rows };
-            });
-          }
-          return loadCandidate(0).then(function (selected) {
-            if (!selected) return;
-            var exam = selected.exam;
-            adapter.examId = exam._id;
-            adapter.exam = exam;
-            if (typeof EXAMSCHEMES !== "undefined" && EXAMSCHEMES[0]) {
-              Object.assign(EXAMSCHEMES[0], {
-                id: exam._id,
-                name: exam.name,
-                term: exam.term,
-                subjects: exam.subjects.slice(),
-                maxMarks: exam.maxMarks,
-                passMark: exam.passMark,
-                locked: Boolean(exam.locked),
-                status: exam.locked ? "Published" : "Draft",
-              });
-            }
-            var results = selected.results.map(function (result) {
-              var student = result.student || {};
-              var row = {
-                studentId: student._id || result.student,
-                name: student.name || "Unknown student",
-                cls: student.grade || "-",
-                grade: result.grade,
-                rank: 0,
-              };
-              (result.scores || []).forEach(function (score) {
-                row[subjKey(score.subject)] = score.marks;
-              });
-              return row;
-            });
-            results.sort(function (a, b) {
-              return resultAvg(b) - resultAvg(a);
-            });
-            results.forEach(function (row, index) {
-              row.rank = index + 1;
-            });
-            adapter.live.examResults = replaceInPlace(
-              typeof EXAMRESULTS !== "undefined" ? EXAMRESULTS : null,
-              results,
-            );
-          });
-        }),
-    );
+    jobs.push(studentJob.then(function(){return Promise.all([apiAll("/exams"),apiAll("/exams/results")]);}).then(function(res){
+      adapter.exams=res[0].data||[];adapter.examResults=res[1].data||[];adapter.live.examResults=true;
+      var family=adapter.user&&["Parent","Student"].includes(adapter.user.role);
+      var candidates=adapter.exams.filter(function(e){return !family||e.locked;});
+      var selected=candidates.find(function(e){return adapter.examResults.some(function(r){return r.exam===e._id;});})||candidates[0];
+      adapter.exam=selected||null;adapter.examId=selected&&selected._id;
+      if(selected&&typeof EXAMSCHEMES!=="undefined")Object.assign(EXAMSCHEMES[0],{id:selected._id,name:selected.name,term:selected.term,subjects:selected.subjects.slice(),maxMarks:selected.maxMarks,passMark:selected.passMark,locked:selected.locked,status:selected.locked?"Published":"Draft"});
+      var rows=selected?adapter.examResults.filter(function(r){return r.exam===selected._id;}).map(function(r){var row={studentId:r.student._id,name:r.student.name,cls:r.student.grade,grade:r.grade,averagePercent:r.averagePercent,rank:0};r.scores.forEach(function(s){row[subjKey(s.subject)]=s.marks;});return row;}):[];
+      rows.sort(function(a,b){return b.averagePercent-a.averagePercent;});rows.forEach(function(r,i){r.rank=i+1;});replaceInPlace(typeof EXAMRESULTS!=="undefined"?EXAMRESULTS:null,rows);
+    }));
     jobs.push(
       api("/surveys?limit=100").then(function (res) {
         var surveys = res.data || [];
@@ -1940,6 +1973,9 @@
           var value = String(v[key] || "").trim();
           if (value) payload[optional[key]] = value;
         });
+        if (typeof generateStudentTranslations === "function") {
+          payload.translations = generateStudentTranslations(payload.name, payload.guardianName);
+        }
         return payload;
       },
       after: function (v, result) {
@@ -2013,18 +2049,49 @@
           return { _skip: "complete all required student fields" };
         if (!phoneOk(body.phone))
           return { _skip: "enter a valid guardian phone number" };
-        if (String(v.email || "").trim())
-          body.guardianEmail = String(v.email).trim();
-        if (String(v.emergency || "").trim()) {
-          if (!phoneOk(v.emergency))
-            return { _skip: "enter a valid emergency contact" };
-          body.emergencyContact = String(v.emergency).trim();
+        var optional = {
+          dob: "dateOfBirth",
+          nationality: "nationality",
+          relationship: "guardianRelationship",
+          email: "guardianEmail",
+          emergency: "emergencyContact",
+          pref_language: "preferredLanguage",
+          address: "address",
+          prev_school: "previousSchool",
+          prev_grade: "previousGrade",
+          languages: "languages",
+          blood_group: "bloodGroup",
+          allergies: "allergies",
+          medical: "medicalNotes",
+        };
+        body.clearFields = [];
+        Object.keys(optional).forEach(function (key) {
+          if (!Object.prototype.hasOwnProperty.call(v, key)) return;
+          var value = String(v[key] || "").trim();
+          if (value) body[optional[key]] = value;
+          else if (key !== "relationship") body.clearFields.push(optional[key]);
+        });
+        if (body.emergencyContact && !phoneOk(body.emergencyContact))
+          return { _skip: "enter a valid emergency contact" };
+        if (typeof generateStudentTranslations === "function") {
+          body.translations = generateStudentTranslations(body.name, body.guardianName);
         }
-        if (String(v.address || "").trim())
-          body.address = String(v.address).trim();
-        if (String(v.medical || "").trim())
-          body.medicalNotes = String(v.medical).trim();
         return body;
+      },
+    },
+    addCourse: {
+      path: "/lms/courses",
+      refresh: true,
+      payload: function (v) {
+        return {
+          title: String(v.course_title || "").trim(),
+          teacher:
+            state.role === "Teacher"
+              ? myTeacherName()
+              : (v.teacher || "-").trim(),
+          grade: (v.class || "-").trim(),
+          startDate: v.start_date || undefined,
+        };
       },
     },
     createStaff: {
@@ -2048,6 +2115,47 @@
           phone: phoneOk(v.phone) ? v.phone.trim() : "+971 500000000",
           joinedDate: new Date().toISOString().slice(0, 10),
         };
+      },
+      after: function (_v, result) {
+        var uploads =
+          typeof DOC_BUFFER === "undefined"
+            ? []
+            : Object.keys(DOC_BUFFER).map(function (key) {
+                var file = DOC_BUFFER[key];
+                var comma = String(file.url || "").indexOf(",");
+                var binary = atob(String(file.url || "").slice(comma + 1));
+                var bytes = new Uint8Array(binary.length);
+                for (var i = 0; i < binary.length; i += 1)
+                  bytes[i] = binary.charCodeAt(i);
+                return api(
+                  "/staff/" +
+                    result.data._id +
+                    "/documents/" +
+                    encodeURIComponent(key),
+                  {
+                    method: "PUT",
+                    headers: {
+                      "Content-Type": file.type,
+                      "X-File-Name": encodeURIComponent(file.name),
+                    },
+                    body: bytes,
+                  },
+                );
+              });
+        return Promise.allSettled(uploads)
+          .then(function (results) {
+            var failed = results.find(function (r) {
+              return r.status === "rejected";
+            });
+            if (failed) throw failed.reason;
+          })
+          .catch(function (error) {
+            return api("/staff/" + result.data._id, { method: "DELETE" })
+              .catch(function () {})
+              .then(function () {
+                throw error;
+              });
+          });
       },
     },
     createTicket: {
@@ -2242,25 +2350,6 @@
         };
       },
     },
-    addClass: {
-      path: "/classes",
-      refresh: true,
-      payload: function (v) {
-        var teacher = String(v.teacher || "").trim();
-        var teacherStaffId = adapter.staffIds && adapter.staffIds[teacher];
-        return {
-          grade: String(v.grade || "")
-            .replace(/^KG([12])$/, "KG $1")
-            .trim(),
-          section: String(v.section || "")
-            .trim()
-            .toUpperCase(),
-          stream: v.stream || "General",
-          teacherStaffId: teacherStaffId || undefined,
-          capacity: parseInt(v.cap || 30, 10) || 30,
-        };
-      },
-    },
     addVehicle: {
       path: "/transport/vehicles",
       refresh: true,
@@ -2270,32 +2359,6 @@
           capacity: parseInt(v.capacity || 40, 10) || 40,
           driverName: (v.driver || "").trim() || "Driver on file",
           driverPhone: "+971 500000000",
-        };
-      },
-    },
-    recordPayment: {
-      path: "/fees/payments",
-      refresh: true,
-      payload: function (v) {
-        var m =
-          ["Card", "Bank transfer", "Cash", "Cheque", "Online portal"].indexOf(
-            v.method,
-          ) >= 0
-            ? v.method
-            : "Cash";
-        var selected = (v.student_pick || v.new_student_name || "").trim();
-        var ref = selected.split(" - ").pop();
-        var sid =
-          (adapter.studentIdsByRef && adapter.studentIdsByRef[ref]) ||
-          studentIdFor(selected.split(" - ")[0]);
-        var amount = parseFloat(v.amount_aed || 0) || 0;
-        if (!sid) return { _skip: "student not on server yet" };
-        if (!amount) return { _skip: "enter a payment amount" };
-        return {
-          studentId: sid,
-          amount: amount,
-          paymentMethod: m,
-          reference: String(v.reference || "").trim() || undefined,
         };
       },
     },
@@ -2333,32 +2396,6 @@
           author: (v.author || "").trim() || "Unknown",
           category: v.category || "General",
           totalCopies: parseInt(v.copies || 1, 10) || 1,
-        };
-      },
-    },
-    postAnnouncement: {
-      path: "/announcements",
-      refresh: true,
-      payload: function (v) {
-        var aud =
-          v.audience === "Staff only"
-            ? "Staff"
-            : v.audience === "All"
-              ? "All"
-              : null;
-        if (!aud)
-          return {
-            _skip:
-              "this audience cannot be targeted yet; choose All or Staff only",
-          };
-        if (v.lang && v.lang !== "English")
-          return { _skip: "Arabic translation is not configured" };
-        return {
-          title: (v.title || "").trim(),
-          body: (v.message || "").trim(),
-          audience: aud,
-          pinned: /high|urgent/i.test(v.priority || ""),
-          status: v.action === "Save as draft" ? "Draft" : "Pending approval",
         };
       },
     },
@@ -2458,19 +2495,6 @@
           amount: parseFloat(v.amount || 0) || 0,
           description: (v.description || "").trim(),
           expenseDate: v.date || new Date().toISOString().slice(0, 10),
-        };
-      },
-    },
-    saveMeetingSlot: {
-      path: "/meetings",
-      payload: function (v) {
-        var tid =
-          adapter.staffIds && adapter.staffIds[(v.teacher || "").trim()];
-        if (!tid) return { _skip: "teacher not on server yet" };
-        return {
-          teacherStaffId: tid,
-          date: v.date,
-          startTime: (v.time || "09:00").slice(0, 5),
         };
       },
     },
@@ -2685,24 +2709,7 @@
         };
       },
     },
-    submitAbsenceRequest: {
-      path: "/attendance/absence-requests",
-      refresh: true,
-      payload: function (v) {
-        var st =
-          typeof myAbsenceStudent === "function" ? myAbsenceStudent() : null;
-        var sid =
-          st && (st.mongoId || studentIdFor(st.id) || studentIdFor(st.name));
-        if (!sid) return { _skip: "student is not available on the server" };
-        return {
-          studentId: sid,
-          fromDate: v.from,
-          toDate: v.to,
-          type: v.type || "Other",
-          note: String(v.note || "").trim(),
-        };
-      },
-    },
+
   };
 
   function installSettingsWorkflow() {
@@ -2733,7 +2740,7 @@
         disabledModules: disabled,
       });
       settingsSaving = true;
-      api("/settings", { method: "PUT", body: JSON.stringify(next) })
+      api("/settings", { method: "PUT", body: JSON.stringify(Object.assign({},next,{expectedRevision:adapter.settings.revision||0})) })
         .then(function (res) {
           adapter.settings = res.data;
           state.modules[id] = !state.modules[id];
@@ -2787,7 +2794,7 @@
           ? Number(value)
           : String(value || "").trim();
       settingsSaving = true;
-      api("/settings", { method: "PUT", body: JSON.stringify(next) })
+      api("/settings", { method: "PUT", body: JSON.stringify(Object.assign({},next,{expectedRevision:adapter.settings.revision||0})) })
         .then(function (res) {
           adapter.settings = res.data;
           CFG.currency = res.data.currency || "AED";
@@ -2837,43 +2844,7 @@
     };
   }
 
-  function installAnnouncementWorkflow() {
-    [
-      ["submitAnnForApproval", "Pending approval"],
-      ["approveAnn", "Published"],
-      ["rejectAnn", "Draft"],
-    ].forEach(function (entry) {
-      window[entry[0]] = function (index) {
-        var row = typeof ANN !== "undefined" && ANN[index];
-        if (!row || !row.mongoId) {
-          toast("Not saved — announcement is not available on the server");
-          return false;
-        }
-        api("/announcements/" + encodeURIComponent(row.mongoId) + "/status", {
-          method: "PATCH",
-          body: JSON.stringify({ status: entry[1] }),
-        })
-          .then(function () {
-            return hydrate();
-          })
-          .then(function () {
-            closeDrawer();
-            render();
-            toast(
-              entry[1] === "Published"
-                ? "Announcement published in the portal"
-                : entry[1] === "Draft"
-                  ? "Returned to draft"
-                  : "Sent for approval",
-            );
-          })
-          .catch(function (error) {
-            toast("Not saved — " + error.message);
-          });
-        return false;
-      };
-    });
-  }
+  function installAnnouncementWorkflow() { /* Released Communication screen owns its versioned workflow. */ }
 
   function installCertificateWorkflow() {
     [
@@ -2943,6 +2914,16 @@
             if (typeof toast === "function") toast("Not saved — " + body._skip);
             return false;
           }
+          if (
+            (name === "addStudent" || name === "saveStudentEdit") &&
+            typeof studentConfirmDuplicates === "function" &&
+            !studentConfirmDuplicates(
+              body.name,
+              body.dateOfBirth,
+              name === "saveStudentEdit" ? state._studentEditId : null,
+            )
+          )
+            return false;
           var path =
             typeof spec.path === "function" ? spec.path(v || {}) : spec.path;
           if (!path) {
@@ -2991,6 +2972,44 @@
   }
 
   function installStudentDocuments() {
+    window.studentLoadPhoto = function (id) {
+      var target = document.getElementById("studentProfilePhoto");
+      var student = row(id);
+      var role = state.role;
+      if (
+        !target ||
+        target.dataset.studentId !== id ||
+        role === "Accountant" ||
+        !student ||
+        !student.mongoId
+      )
+        return;
+      apiBlob("/students/" + student.mongoId + "/documents/photo")
+        .then(function (blob) {
+          if (
+            !target.isConnected ||
+            state.role !== role ||
+            !/^image\//.test(blob.type)
+          )
+            return;
+          var url = URL.createObjectURL(blob),
+            img = document.createElement("img");
+          img.alt = student.name + " profile photo";
+          img.style.cssText = "width:100%;height:100%;object-fit:cover";
+          img.onload = function () {
+            URL.revokeObjectURL(url);
+            if (target.isConnected && state.role === role)
+              target.replaceChildren(img);
+          };
+          img.onerror = function () {
+            URL.revokeObjectURL(url);
+          };
+          img.src = url;
+        })
+        .catch(function () {
+          /* Keep the initials fallback if the protected photo is unavailable. */
+        });
+    };
     function row(id) {
       return (
         typeof STUDENTS !== "undefined" &&
@@ -3068,8 +3087,9 @@
             size: doc.file.size,
             type: doc.file.type,
             url: url,
+            onClose: function () { URL.revokeObjectURL(url); },
           });
-          setTimeout(function () {
+          if (action !== docPreview) setTimeout(function () {
             URL.revokeObjectURL(url);
           }, 60000);
         })
@@ -3123,7 +3143,7 @@
       return (
         typeof ADMISSIONS !== "undefined" &&
         ADMISSIONS.find(function (a) {
-          return a.name === name;
+          return a.mongoId === name || a.name === name;
         })
       );
     }
@@ -3274,7 +3294,7 @@
           var local =
             typeof ADMISSIONS !== "undefined" &&
             ADMISSIONS.find(function (a) {
-              return a.name === name;
+              return a.mongoId === name || a.name === name;
             });
           path = "/admissions/" + id + "/enroll";
           body = {
@@ -3481,7 +3501,7 @@
         }
         api("/staff/" + id, {
           method: "PATCH",
-          body: JSON.stringify({ status: "Active" }),
+          body: JSON.stringify({ status: "Active",expectedUpdatedAt:staff.updatedAt,changeReason:"Onboarding completed and activation confirmed" }),
         })
           .then(function () {
             originalActivate(refId);
@@ -3832,33 +3852,11 @@
       ["closeBehaviourCase", "Closed"],
     ].forEach(function (entry) {
       var name = entry[0],
-        status = entry[1],
         original = window[name];
       if (typeof original !== "function" || original.__apiBacked) return;
-      var update = function (studentName, date) {
-        var row =
-          typeof BEHAVIOUR !== "undefined" &&
-          BEHAVIOUR.find(function (item) {
-            return item.name === studentName && item.date === date;
-          });
-        if (!row || !row.mongoId) {
-          toast("Not saved — behaviour entry is not available on the server");
-          return;
-        }
-        api("/behaviour/" + row.mongoId + "/status", {
-          method: "PATCH",
-          body: JSON.stringify({ status: status }),
-        })
-          .then(function () {
-            original(studentName, date);
-            return hydrate();
-          })
-          .then(function () {
-            if (typeof render === "function") render();
-          })
-          .catch(function (e) {
-            toast("Not saved — " + e.message);
-          });
+      var update = function () {
+        go('behaviour');
+        toast('Open the saved entry and record a review decision');
       };
       update.__apiBacked = true;
       window[name] = update;
@@ -3896,7 +3894,7 @@
         }
         api("/health-records/" + row.mongoId, {
           method: "PATCH",
-          body: JSON.stringify(payloadFor(outcome)),
+          body: JSON.stringify(Object.assign({},payloadFor(outcome),{expectedUpdatedAt:row.updatedAt,reason:"Clinic follow-up recorded by school office"})),
         })
           .then(function () {
             original.apply(
@@ -4088,26 +4086,18 @@
           toast("Not saved — timetable period is unavailable on the server");
           return;
         }
-        var parts = cell.split("|");
-        var pool = Object.values(SUBJTEACH).filter(function (name) {
-          return name !== parts[1].replace(" (sub)", "");
-        });
-        var substitute = pool[(ri + di) % pool.length];
-        refreshAfter(
-          api("/timetable/" + id, {
-            method: "PATCH",
-            body: JSON.stringify({
-              teacherName: substitute,
-              isSubstitute: true,
-            }),
-          }).then(function () {
-            originalSubstitute(cls, ri, di);
-          }),
-        );
+        state.timetableSubstituteId=id;
+        studentFormDrawer('Assign substitute',cls,[{key:'teacherName',label:'Substitute teacher',req:true},{note:'Choose the actual covering teacher. Saving checks teacher and room conflicts on the server.'}],'Save substitute','','timetableSaveSubstitute');
       };
       assignSubstitute.__apiBacked = true;
       window.assignSub = assignSubstitute;
     }
+
+    window.timetableSaveSubstitute=async function(values){
+      if(state.timetableSubstituteSaving)return false;
+      state.timetableSubstituteSaving=true;
+      try{await api('/timetable/'+state.timetableSubstituteId,{method:'PATCH',body:JSON.stringify({teacherName:values.teacherName,isSubstitute:true})});closeDrawer();await hydrate();render();toast('Substitute assignment saved')}catch(error){toast(error.message)}finally{state.timetableSubstituteSaving=false}return false;
+    };
 
     var originalPublish = window.publishTT;
     if (typeof originalPublish === "function" && !originalPublish.__apiBacked) {
@@ -4291,7 +4281,7 @@
         var status = row.status === "Delayed" ? "On road" : "Delayed";
         api("/transport/routes/" + row.mongoId + "/operational-status", {
           method: "PATCH",
-          body: JSON.stringify({ status: status }),
+          body: JSON.stringify({ status: status,expectedUpdatedAt:row.updatedAt,reason:"Behaviour follow-up recorded",...(status==="Closed"?{actionTaken:"Case resolution confirmed by staff"}:{}) }),
         })
           .then(function () {
             originalDelay(name);
@@ -4620,253 +4610,8 @@
   }
 
   function installExamWorkflow() {
-    var originalEnterMarks = window.enterMarks;
-    var originalAddSubject = window.addExamSubject;
-    var originalRemoveSubject = window.removeExamSubject;
-    var originalLockScheme = window.lockScheme;
-    var originalUnlockScheme = window.unlockScheme;
-    var originalShareResult = window.shareResultWithGuardian;
-    var originalGenerateReportCards = window.genReportCards;
-
-    if (
-      typeof originalEnterMarks === "function" &&
-      !originalEnterMarks.__apiBacked
-    ) {
-      var enterMarks = function (values) {
-        var name = ((values && values.student) || "").trim();
-        var studentId = adapter.studentIds && adapter.studentIds[name];
-        if (!adapter.examId || !studentId) {
-          if (typeof toast === "function")
-            toast("Not saved - exam or student is not available on the server");
-          return false;
-        }
-        var subjects = (adapter.exam && adapter.exam.subjects) || [];
-        var scores = subjects.map(function (subject) {
-          return {
-            subject: subject,
-            marks: Number(values[subjKey(subject)] || 0),
-          };
-        });
-        api("/exams/results", {
-          method: "POST",
-          body: JSON.stringify({
-            examId: adapter.examId,
-            studentId: studentId,
-            scores: scores,
-          }),
-        })
-          .then(function () {
-            originalEnterMarks(values);
-            return hydrate();
-          })
-          .then(function () {
-            if (typeof render === "function") render();
-          })
-          .catch(function (e) {
-            if (typeof toast === "function") toast("Not saved - " + e.message);
-          });
-        return false;
-      };
-      enterMarks.__apiBacked = true;
-      window.enterMarks = enterMarks;
-    }
-
-    if (
-      typeof originalAddSubject === "function" &&
-      !originalAddSubject.__apiBacked
-    ) {
-      var addSubject = function (values) {
-        var subject = ((values && values.new_subject) || "").trim();
-        if (!adapter.examId || !subject) return originalAddSubject(values);
-        api("/exams/" + adapter.examId + "/subjects", {
-          method: "POST",
-          body: JSON.stringify({ subject: subject }),
-        })
-          .then(function () {
-            originalAddSubject(values);
-            return hydrate();
-          })
-          .then(function () {
-            if (typeof render === "function") render();
-          })
-          .catch(function (e) {
-            if (typeof toast === "function") toast("Not saved - " + e.message);
-          });
-        return false;
-      };
-      addSubject.__apiBacked = true;
-      window.addExamSubject = addSubject;
-    }
-
-    if (
-      typeof originalRemoveSubject === "function" &&
-      !originalRemoveSubject.__apiBacked
-    ) {
-      var removeSubject = function (subject) {
-        if (!adapter.examId) {
-          if (typeof toast === "function")
-            toast("Not saved - exam is not available on the server");
-          return;
-        }
-        api(
-          "/exams/" +
-            adapter.examId +
-            "/subjects/" +
-            encodeURIComponent(subject),
-          { method: "DELETE" },
-        )
-          .then(function () {
-            originalRemoveSubject(subject);
-            return hydrate();
-          })
-          .then(function () {
-            if (typeof render === "function") render();
-          })
-          .catch(function (e) {
-            if (typeof toast === "function") toast("Not saved - " + e.message);
-          });
-      };
-      removeSubject.__apiBacked = true;
-      window.removeExamSubject = removeSubject;
-    }
-
-    if (
-      typeof originalLockScheme === "function" &&
-      !originalLockScheme.__apiBacked
-    ) {
-      var lockScheme = function () {
-        if (!adapter.examId) {
-          if (typeof toast === "function")
-            toast("Exam is not available on the server");
-          return;
-        }
-        api("/exams/" + adapter.examId + "/publish", { method: "POST" })
-          .then(function (res) {
-            originalLockScheme();
-            return hydrate().then(function () {
-              return res;
-            });
-          })
-          .then(function (res) {
-            if (typeof toast === "function")
-              toast(
-                "Marks locked and published" +
-                  (res.data.notified
-                    ? " — " +
-                      res.data.notified +
-                      " guardian notification(s) sent"
-                    : ""),
-              );
-            if (typeof render === "function") render();
-          })
-          .catch(function (e) {
-            if (typeof toast === "function")
-              toast("Not published - " + e.message);
-          });
-      };
-      lockScheme.__apiBacked = true;
-      window.lockScheme = lockScheme;
-    }
-
-    if (
-      typeof originalUnlockScheme === "function" &&
-      !originalUnlockScheme.__apiBacked
-    ) {
-      var unlockScheme = function () {
-        if (!adapter.examId) {
-          if (typeof toast === "function")
-            toast("Exam is not available on the server");
-          return;
-        }
-        api("/exams/" + adapter.examId + "/reopen", { method: "POST" })
-          .then(function () {
-            originalUnlockScheme();
-            return hydrate();
-          })
-          .then(function () {
-            if (typeof render === "function") render();
-          })
-          .catch(function (e) {
-            if (typeof toast === "function")
-              toast("Not reopened - " + e.message);
-          });
-      };
-      unlockScheme.__apiBacked = true;
-      window.unlockScheme = unlockScheme;
-    }
-
-    if (
-      typeof originalShareResult === "function" &&
-      !originalShareResult.__apiBacked
-    ) {
-      var shareResult = function (name) {
-        var studentId = adapter.studentIds && adapter.studentIds[name];
-        if (!adapter.examId || !studentId) {
-          if (typeof toast === "function")
-            toast("Result or student is not available on the server");
-          return;
-        }
-        api(
-          "/exams/" +
-            adapter.examId +
-            "/results/" +
-            encodeURIComponent(studentId) +
-            "/notify",
-          { method: "POST" },
-        )
-          .then(function () {
-            originalShareResult(name);
-          })
-          .catch(function (e) {
-            if (typeof toast === "function") toast("Not shared - " + e.message);
-          });
-      };
-      shareResult.__apiBacked = true;
-      window.shareResultWithGuardian = shareResult;
-    }
-
-    if (
-      typeof originalGenerateReportCards === "function" &&
-      !originalGenerateReportCards.__apiBacked
-    ) {
-      var generateReportCards = function (values) {
-        if (!adapter.examId) {
-          if (typeof toast === "function")
-            toast("Exam is not available on the server");
-          return false;
-        }
-        var cls = (values && values.cls) || "All classes";
-        var payload = cls === "All classes" ? {} : { grade: cls };
-        api("/exams/" + adapter.examId + "/report-cards", {
-          method: "POST",
-          body: JSON.stringify(payload),
-        })
-          .then(function (res) {
-            return hydrate().then(function () {
-              return res;
-            });
-          })
-          .then(function (res) {
-            if (typeof closeDrawer === "function") closeDrawer();
-            if (typeof render === "function") render();
-            if (typeof toast === "function")
-              toast(
-                res.data.generated +
-                  " report card(s) generated" +
-                  (res.data.alreadyExisted
-                    ? "; " + res.data.alreadyExisted + " already existed"
-                    : ""),
-              );
-          })
-          .catch(function (e) {
-            if (typeof toast === "function")
-              toast("Not generated - " + e.message);
-          });
-        return false;
-      };
-      generateReportCards.__apiBacked = true;
-      window.genReportCards = generateReportCards;
-    }
+    window.lockScheme=examPublicationReview;window.unlockScheme=examPublicationReview;
+    window.genReportCards=window.examReportSave;
   }
 
   function installPayrollWorkflow() {
@@ -5482,6 +5227,7 @@
     });
   }
 
+  var restoreGeneration = sessionGeneration;
   Promise.resolve()
     .then(function () {
       var raw = localStorage.getItem(SESSION_KEY);
@@ -5493,15 +5239,17 @@
       return withTimeout(api("/auth/me"), 3000);
     })
     .then(function (res) {
+      assertCurrentSession(restoreGeneration);
       if (!res) return null;
       adapter.user = res.data.user;
       saveSession();
       return hydrate();
     })
-      .then(function () {
-        if (!adapter.user) return;
-        syncReactSession();
-        adapter.connected = true;
+    .then(function () {
+      assertCurrentSession(restoreGeneration);
+      if (!adapter.user) return;
+      syncReactSession();
+      adapter.connected = true;
       installSettingsWorkflow();
       installAuditWorkflow();
       installWriteThrough();
@@ -5531,6 +5279,7 @@
       enterAuthenticatedApp();
     })
     .catch(function (e) {
+      if (restoreGeneration !== sessionGeneration) return;
       clearSession();
       if (typeof baseLockApp === "function") baseLockApp();
       setLoginBusy(

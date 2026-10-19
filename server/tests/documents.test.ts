@@ -99,7 +99,9 @@ describe('Documents API', () => {
       .get('/api/v1/audit-log?module=Documents')
       .set('Authorization', `Bearer ${admin.token}`);
     expect(audit.status).toBe(200);
-    expect(audit.body.data.some((entry: { action: string }) => entry.action === 'Published document POL-003 v2')).toBe(true);
+    expect(audit.body.data.some((entry: { action: string }) => entry.action === 'Published document POL-003 v2')).toBe(
+      true,
+    );
   });
 
   it('version numbers keep incrementing across many republishes (v3 after two supersessions)', async () => {
@@ -169,32 +171,41 @@ describe('Documents API', () => {
       'X-File-Name': 'Safety%20policy.pdf',
     };
     const pdf = Buffer.from('%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF');
-    const first = await request(app).post('/api/v1/documents/file')
+    const first = await request(app)
+      .post('/api/v1/documents/file')
       .set('Authorization', `Bearer ${admin.token}`)
-      .set(headers).set('Content-Type', 'application/pdf').send(pdf);
+      .set(headers)
+      .set('Content-Type', 'application/pdf')
+      .send(pdf);
     expect(first.status).toBe(201);
     expect(first.body.data.version).toBe(1);
     expect(first.body.data.filename).toBe('Safety policy.pdf');
-    const download = await request(app).get(`/api/v1/documents/${first.body.data._id}/file`)
+    const download = await request(app)
+      .get(`/api/v1/documents/${first.body.data._id}/file`)
       .set('Authorization', `Bearer ${admin.token}`);
     expect(download.status).toBe(200);
     expect(download.headers['content-type']).toMatch(/application\/pdf/);
     expect(download.headers['content-disposition']).toContain('Safety%20policy.pdf');
     expect(download.body.equals(pdf)).toBe(true);
     const parent = await registerAndLogin('Parent', 'pdf-reader@alnoor.ae');
-    const familyDownload = await request(app).get(`/api/v1/documents/${first.body.data._id}/file`)
+    const familyDownload = await request(app)
+      .get(`/api/v1/documents/${first.body.data._id}/file`)
       .set('Authorization', `Bearer ${parent.token}`);
     expect(familyDownload.status).toBe(200);
     expect(familyDownload.body.equals(pdf)).toBe(true);
     const unauthenticated = await request(app).get(`/api/v1/documents/${first.body.data._id}/file`);
     expect(unauthenticated.status).toBe(401);
 
-    const second = await request(app).post('/api/v1/documents/file')
+    const second = await request(app)
+      .post('/api/v1/documents/file')
       .set('Authorization', `Bearer ${admin.token}`)
-      .set(headers).set('Content-Type', 'application/pdf').send(pdf);
+      .set(headers)
+      .set('Content-Type', 'application/pdf')
+      .send(pdf);
     expect(second.status).toBe(201);
     expect(second.body.data.version).toBe(2);
-    const oldFile = await request(app).get(`/api/v1/documents/${first.body.data._id}/file`)
+    const oldFile = await request(app)
+      .get(`/api/v1/documents/${first.body.data._id}/file`)
       .set('Authorization', `Bearer ${admin.token}`);
     expect(oldFile.status).toBe(200);
   });
@@ -210,27 +221,57 @@ describe('Documents API', () => {
       'X-File-Name': 'safety.pdf',
     };
     const nonPdf = Buffer.from('Not actually a PDF');
-    const forbidden = await request(app).post('/api/v1/documents/file')
+    const forbidden = await request(app)
+      .post('/api/v1/documents/file')
       .set('Authorization', `Bearer ${parent.token}`)
-      .set(headers).set('Content-Type', 'application/pdf').send(nonPdf);
+      .set(headers)
+      .set('Content-Type', 'application/pdf')
+      .send(nonPdf);
     expect(forbidden.status).toBe(403);
-    const invalid = await request(app).post('/api/v1/documents/file')
+    const invalid = await request(app)
+      .post('/api/v1/documents/file')
       .set('Authorization', `Bearer ${admin.token}`)
-      .set(headers).set('Content-Type', 'application/pdf').send(nonPdf);
+      .set(headers)
+      .set('Content-Type', 'application/pdf')
+      .send(nonPdf);
     expect(invalid.status).toBe(400);
-    const list = await request(app).get('/api/v1/documents?code=POL-011')
-      .set('Authorization', `Bearer ${admin.token}`);
+    const list = await request(app).get('/api/v1/documents?code=POL-011').set('Authorization', `Bearer ${admin.token}`);
     expect(list.body.data).toHaveLength(0);
   });
 
   it('returns 404 for a metadata-only record with no PDF', async () => {
     const admin = await registerAndLogin('Administrator', 'paper-admin@alnoor.ae');
-    const record = await request(app).post('/api/v1/documents')
+    const record = await request(app)
+      .post('/api/v1/documents')
       .set('Authorization', `Bearer ${admin.token}`)
       .send({ ...validDoc, code: 'POL-012' });
     expect(record.status).toBe(201);
-    const download = await request(app).get(`/api/v1/documents/${record.body.data._id}/file`)
+    const download = await request(app)
+      .get(`/api/v1/documents/${record.body.data._id}/file`)
       .set('Authorization', `Bearer ${admin.token}`);
     expect(download.status).toBe(404);
+  });
+  it('version-aware concurrent republication leaves one current and a complete version chain', async () => {
+    const admin = await registerAndLogin('Administrator', 'qa-doc-versions@example.invalid');
+    const create = (body: object) =>
+      request(app).post('/api/v1/documents').set('Authorization', `Bearer ${admin.token}`).send(body);
+    expect((await create({ ...validDoc, expectedVersion: 0 })).status).toBe(201);
+    const results = await Promise.all(
+      ['A', 'B'].map((description) =>
+        create({ ...validDoc, description, expectedVersion: 1, publicationReason: 'QA reviewed publication' }),
+      ),
+    );
+    expect(results.map((r) => r.status).sort()).toEqual([201, 409]);
+    const { SchoolDocument } = await import('../src/models/SchoolDocument');
+    expect(await SchoolDocument.countDocuments({ code: validDoc.code })).toBe(2);
+    expect(await SchoolDocument.countDocuments({ code: validDoc.code, isCurrent: true })).toBe(1);
+    expect((await SchoolDocument.findOne({ isCurrent: true }))?.publicationReason).toBe('QA reviewed publication');
+    const search = await request(app)
+      .get('/api/v1/documents?q=Attendance')
+      .set('Authorization', `Bearer ${admin.token}`);
+    expect(search.body.data).toHaveLength(1);
+    const literal = await request(app).get('/api/v1/documents?q=%5B').set('Authorization', `Bearer ${admin.token}`);
+    expect(literal.status).toBe(200);
+    expect(literal.body.data).toEqual([]);
   });
 });

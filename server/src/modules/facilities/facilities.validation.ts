@@ -1,8 +1,9 @@
 import { z } from 'zod';
+import { calendarDateSchema } from '../../utils/calendarDate';
 
 const objectId = z.string().regex(/^[a-f0-9]{24}$/i, 'Invalid id');
 const timeFormat = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Time must be in HH:MM 24h format');
-const dateFormat = z.string().refine((v) => !Number.isNaN(Date.parse(v)), 'Invalid date');
+const dateFormat = calendarDateSchema;
 
 export const listBookingsSchema = z.object({
   body: z.object({}).optional(),
@@ -42,3 +43,18 @@ export const createFacilitySchema = z.object({
 export type ListBookingsQuery = z.infer<typeof listBookingsSchema>['query'];
 export type CreateBookingInput = z.infer<typeof createBookingSchema>['body'];
 export type CreateFacilityInput = z.infer<typeof createFacilitySchema>['body'];
+
+export const reviewFacilitySchema = z.object({
+  params: z.object({ id: objectId }),
+  query: z.object({}).optional(),
+  body: createFacilitySchema.shape.body.extend({
+    expectedUpdatedAt: z.string().datetime(),
+    reason: z.string().trim().min(3).max(500),
+    status: z.enum(['Available', 'Maintenance']),
+  }),
+});
+export const cancelBookingSchema = z.object({
+  params: z.object({ id: objectId }),
+  query: z.object({}).optional(),
+  body: z.object({ expectedUpdatedAt: z.string().datetime(), reason: z.string().trim().min(3).max(500) }),
+});

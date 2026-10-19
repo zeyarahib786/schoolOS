@@ -86,7 +86,11 @@ describe('Expenses API', () => {
     const res = await request(app)
       .post(`/api/v1/expenses/${claim.body.data._id}/review`)
       .set('Authorization', `Bearer ${otherTeacher.token}`)
-      .send({ status: 'Approved' });
+      .send({
+        status: 'Approved',
+        expectedUpdatedAt: claim.body.data.updatedAt,
+        reviewNotes: 'Reviewed fictional receipt',
+      });
     expect(res.status).toBe(403);
   });
 
@@ -103,7 +107,7 @@ describe('Expenses API', () => {
     const res = await request(app)
       .post(`/api/v1/expenses/${claim.body.data._id}/review`)
       .set('Authorization', `Bearer ${accountant.token}`)
-      .send({ status: 'Approved', reviewNotes: 'Receipts verified' });
+      .send({ status: 'Approved', expectedUpdatedAt: claim.body.data.updatedAt, reviewNotes: 'Receipts verified' });
     expect(res.status).toBe(200);
     expect(res.body.data.status).toBe('Approved');
   });
@@ -120,7 +124,11 @@ describe('Expenses API', () => {
     const res = await request(app)
       .post(`/api/v1/expenses/${claim.body.data._id}/review`)
       .set('Authorization', `Bearer ${accountant.token}`)
-      .send({ status: 'Approved' });
+      .send({
+        status: 'Approved',
+        expectedUpdatedAt: claim.body.data.updatedAt,
+        reviewNotes: 'Reviewed fictional receipt',
+      });
     expect(res.status).toBe(403);
     expect(res.body.error.message).toContain('cannot review your own');
   });
@@ -136,12 +144,20 @@ describe('Expenses API', () => {
     await request(app)
       .post(`/api/v1/expenses/${claim.body.data._id}/review`)
       .set('Authorization', `Bearer ${admin.token}`)
-      .send({ status: 'Rejected' });
+      .send({
+        status: 'Rejected',
+        expectedUpdatedAt: claim.body.data.updatedAt,
+        reviewNotes: 'Rejected fictional receipt',
+      });
 
     const res = await request(app)
       .post(`/api/v1/expenses/${claim.body.data._id}/review`)
       .set('Authorization', `Bearer ${admin.token}`)
-      .send({ status: 'Approved' });
+      .send({
+        status: 'Approved',
+        expectedUpdatedAt: claim.body.data.updatedAt,
+        reviewNotes: 'Reviewed fictional receipt',
+      });
     expect(res.status).toBe(409);
   });
 
@@ -157,5 +173,88 @@ describe('Expenses API', () => {
     const res = await request(app).get('/api/v1/expenses').set('Authorization', `Bearer ${teacherA.token}`);
     expect(res.status).toBe(200);
     expect(res.body.data.length).toBe(1);
+  });
+  it('CONCURRENCY: only one reviewer can decide a pending saved version', async () => {
+    const admin = await registerAndLogin('Administrator', 'qa-concurrency@example.invalid');
+    const submitter = await registerAndLogin('Teacher', 'qa-submit@example.invalid');
+    await createStaff(admin.token, 'QA-CONCURRENCY', submitter.userId);
+    const claim = await request(app)
+      .post('/api/v1/expenses')
+      .set('Authorization', `Bearer ${submitter.token}`)
+      .send(validClaim);
+    const decisions = await Promise.all(
+      ['Approved', 'Rejected'].map((status) =>
+        request(app)
+          .post(`/api/v1/expenses/${claim.body.data._id}/review`)
+          .set('Authorization', `Bearer ${admin.token}`)
+          .send({ status, expectedUpdatedAt: claim.body.data.updatedAt, reviewNotes: 'Fictional receipt review' }),
+      ),
+    );
+    expect(decisions.map((r) => r.status).sort()).toEqual([200, 409]);
+    expect(decisions.find((r) => r.status === 200)?.body.data.history).toHaveLength(1);
+  });
+  it('records a referenced reimbursement only once after approval', async () => {
+    const admin = await registerAndLogin('Administrator', 'qa-payment@example.invalid');
+    const submitter = await registerAndLogin('Teacher', 'qa-payment-submit@example.invalid');
+    await createStaff(admin.token, 'QA-PAYMENT', submitter.userId);
+    const claim = await request(app)
+      .post('/api/v1/expenses')
+      .set('Authorization', `Bearer ${submitter.token}`)
+      .send(validClaim);
+    const approved = await request(app)
+      .post(`/api/v1/expenses/${claim.body.data._id}/review`)
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({
+        status: 'Approved',
+        expectedUpdatedAt: claim.body.data.updatedAt,
+        reviewNotes: 'Fictional receipt verified',
+      });
+    const body = {
+      expectedUpdatedAt: approved.body.data.updatedAt,
+      paidDate: '2026-06-15',
+      paymentMethod: 'Cash',
+      paymentReference: 'QA-CASH-001',
+      reason: 'Fictional reimbursement confirmed',
+    };
+    const paid = await request(app)
+      .post(`/api/v1/expenses/${claim.body.data._id}/pay`)
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send(body);
+    expect(paid.status).toBe(200);
+    expect(paid.body.data.status).toBe('Paid');
+    expect(paid.body.data.history).toHaveLength(2);
+    expect(
+      (
+        await request(app)
+          .post(`/api/v1/expenses/${claim.body.data._id}/pay`)
+          .set('Authorization', `Bearer ${admin.token}`)
+          .send(body)
+      ).status,
+    ).toBe(409);
+  });
+  it('allows only the submitter to cancel a pending version and rejects invalid amounts/dates', async () => {
+    const admin = await registerAndLogin('Administrator', 'qa-cancel@example.invalid');
+    const submitter = await registerAndLogin('Teacher', 'qa-cancel-submit@example.invalid');
+    await createStaff(admin.token, 'QA-CANCEL', submitter.userId);
+    const claim = await request(app)
+      .post('/api/v1/expenses')
+      .set('Authorization', `Bearer ${submitter.token}`)
+      .send(validClaim);
+    const path = `/api/v1/expenses/${claim.body.data._id}/cancel`,
+      body = { expectedUpdatedAt: claim.body.data.updatedAt, reason: 'Duplicate receipt identified' };
+    expect((await request(app).post(path).set('Authorization', `Bearer ${admin.token}`).send(body)).status).toBe(403);
+    expect(
+      (await request(app).post(path).set('Authorization', `Bearer ${submitter.token}`).send(body)).body.data.status,
+    ).toBe('Cancelled');
+    for (const invalid of [{ amount: 0.001 }, { expenseDate: '2026-02-30' }, { expenseDate: '2099-01-01' }]) {
+      expect(
+        (
+          await request(app)
+            .post('/api/v1/expenses')
+            .set('Authorization', `Bearer ${submitter.token}`)
+            .send({ ...validClaim, ...invalid })
+        ).status,
+      ).toBe(400);
+    }
   });
 });
