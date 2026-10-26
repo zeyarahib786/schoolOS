@@ -4,6 +4,9 @@ import { Role, ROLES } from '../types/roles';
 
 export interface IUser extends Document {
   _id: Types.ObjectId;
+  loginId?: string;
+  mustChangePassword: boolean;
+  temporaryPasswordExpiresAt?: Date;
   name: string;
   email: string;
   passwordHash: string;
@@ -26,6 +29,9 @@ const userSchema = new Schema<IUser>(
       trim: true,
       match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Invalid email address'],
     },
+    loginId: { type: String, unique: true, sparse: true, lowercase: true, trim: true },
+    mustChangePassword: { type: Boolean, default: false },
+    temporaryPasswordExpiresAt: Date,
     passwordHash: { type: String, required: true, select: false },
     role: { type: String, enum: ROLES, required: true },
     isActive: { type: Boolean, default: true },

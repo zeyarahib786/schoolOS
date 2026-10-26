@@ -29,7 +29,7 @@
       <div class="lx-card">
         <h2 id="lxSignin">Sign in to your workspace</h2>
         <p class="lx-card-sub" id="lxCardSub"></p>
-        <div class="lx-field"><label id="lxEmailL" for="lxEmail"></label><input class="lx-input" id="lxEmail" type="email" value="" autocomplete="username"></div>
+        <div class="lx-field"><label id="lxEmailL" for="lxEmail"></label><input class="lx-input" id="lxEmail" type="text" value="" autocomplete="username"></div>
         <div class="lx-field"><label id="lxPassL" for="lxPass"></label><input class="lx-input" id="lxPass" type="password" value="" autocomplete="current-password" onkeydown="if(event.key==='Enter')enterApp()"></div>
         <div class="lx-rolelab" id="lxRoleL"></div>
         <div class="lx-roles" id="lxRoles" role="group" aria-label="Select role"></div>
@@ -64,8 +64,8 @@
     <nav class="sb-nav" id="nav" aria-label="Main navigation"></nav>
     <div class="sb-foot">
       <div class="sb-user">
-        <div class="ua">RA</div>
-        <div class="ut"><div class="n" data-i18n-skip="true">Rashid Al Maktoum</div><div class="r" id="userRole">Administrator</div></div>
+        <button class="ua" onclick="schoolMyProfile()" title="My profile" aria-label="My profile" style="border:0;cursor:pointer">RA</button>
+        <div class="ut"><div class="n" data-i18n-skip="true">Rashid Al Maktoum</div><div class="r" id="userRole">Administrator</div><button onclick="schoolMyProfile()" style="padding:0;border:0;background:none;color:inherit;font:inherit;font-size:11px;cursor:pointer;text-decoration:underline">My profile</button></div>
         <button class="iconbtn" onclick="lockApp()" title="Sign out" aria-label="Sign out" style="width:32px;height:32px;color:#8794A3">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg>
         </button>
@@ -112,7 +112,7 @@
 <!-- Drawer -->
 <div class="scrim" id="scrim" onclick="closeDrawer()"></div>
 <div class="sb-backdrop" id="sbBackdrop" onclick="closeSidebar()"></div>
-<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-label="Details panel" aria-hidden="true"></aside>
+<aside class="drawer" id="drawer" role="region" tabindex="-1" aria-label="Details page" aria-hidden="true"></aside>
 
 <!-- Command palette -->
 <div class="cmdk" id="cmdk" onclick="if(event.target.id==='cmdk')closeCmd()">

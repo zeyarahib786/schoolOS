@@ -54,17 +54,31 @@ The five teaching priorities are implemented as reviewed workflows:
 
 ### AI setup
 
-In the ignored `server/.env`, configure:
+For Gemini free-tier development, create a key in [Google AI Studio](https://aistudio.google.com/apikey). In the ignored `server/.env`:
 
 ```dotenv
 TEACHER_AI_ENABLED=true
+TEACHER_AI_PROVIDER=gemini
+GEMINI_API_KEY=<your-server-side-gemini-key>
+TEACHER_AI_MODEL=gemini-3.8-flash
+```
+
+Model availability and free quotas are account-dependent and may change; verify [current pricing](https://ai.google.dev/gemini-api/docs/pricing) and your AI Studio quota. Free-tier testing must use fictional records and fictional submission text: unpaid Gemini inputs/outputs may be used for product improvement under the [provider terms](https://ai.google.dev/gemini-api/terms). `store:false` disables stored interaction state; it does not override those data-use terms.
+
+To use the existing OpenAI provider instead:
+
+```dotenv
+TEACHER_AI_ENABLED=true
+TEACHER_AI_PROVIDER=openai
 OPENAI_API_KEY=<your-server-side-project-key>
 TEACHER_AI_MODEL=<a-model-enabled-in-your-project-with-Responses-structured-outputs>
 ```
 
-Restart the backend after changing environment variables. Keys never enter the browser. With no configuration, the studio displays setup pending and generation returns `503 AI_NOT_CONFIGURED`; it never substitutes static text and labels it AI. Provider calls use a fixed OpenAI Responses endpoint, strict JSON schema, a 60-second timeout, bounded output and `store:false`. Model selection is explicit rather than a hardcoded claim about availability or price. See [official structured-output documentation](https://developers.openai.com/api/docs/guides/structured-outputs).
+An omitted provider defaults to OpenAI for existing installations. Invalid provider names fail closed. Credentials are provider-specific: an OpenAI key cannot configure Gemini and vice versa. There is no cross-provider fallback on errors/quota exhaustion. Switching provider does not migrate or regenerate existing private drafts; new drafts store their provider/model, while older drafts default to OpenAI.
 
-A generation reservation is saved before the provider call. The same request identity reopens the saved result; changed inputs get a new identity. Failed generations require a new request, and abandoned Generating records become Failed when the draft directory is reopened after two minutes. The per-author database quota is 30 draft reservations per rolling hour (failed requests count); simultaneous requests across processes are not a billing-grade hard limit, so also configure provider project budgets. The directory shows the latest 50 drafts. Drafts are retained in `teacheraidrafts`; no automatic retention purge is enabled.
+Restart the backend after changing environment variables. Keys never enter the browser or provider URL. The studio identifies the selected provider. With missing configuration, generation returns `503 AI_NOT_CONFIGURED`; it never substitutes static text and labels it AI. Calls use fixed HTTPS origins, refuse redirects, enforce bounded timeouts (120 seconds for Gemini; 60 seconds for OpenAI) and output, and set `store:false`. Gemini uses its [Interactions API](https://ai.google.dev/api/interactions-api), `system_instruction` and JSON `response_format`; OpenAI retains its Responses JSON-schema integration. Both paths feed the same server-side content/assessment validation and reviewed school actions. Partial, blocked, malformed and schema-invalid responses cannot become usable drafts.
+
+A generation reservation is saved before the provider call. The same request identity reopens the saved result; changed inputs get a new identity. Failed generations require a new request, and abandoned Generating records become Failed when the draft directory is reopened after three minutes. The per-author database quota is 30 draft reservations per rolling hour (failed requests count); simultaneous requests across processes are not a billing-grade hard limit, so also configure provider project budgets. The directory shows the latest 50 drafts. Drafts are retained in `teacheraidrafts`; no automatic retention purge is enabled.
 
 Matching saved curriculum units (up to 20) supply context; absence of matching curriculum is disclosed. Generated content is editable school material, not a claim of verified pedagogical accuracy. School record/source text is untrusted input and the provider has no execution tools or database access. Free-text teacher instructions and submitted student work may themselves contain personal information; teachers should avoid unnecessary personal details. This implementation does not claim anonymisation of arbitrary free text or that `store:false` removes all provider-side retention obligations. Live model quality, account access/quota and real provider delivery verification are deferred by the user.
 
@@ -79,3 +93,51 @@ Student submission forms render each question; structured `answers` are validate
 Repeatable checks: `server/tests/teacher-ai.test.ts`, `server/tests/unit/teacher-ai.test.ts`, `client/src/features/lms/__tests__/ai.test.js` and the existing six-role `tests-e2e/lms/` workflow. Integration/browser fixtures use temporary databases and deterministic intercepted provider responses, never the configured Atlas database or live AI/email/SMS accounts. These tests verify workflows and boundary behaviour, not live educational output quality.
 
 Final fixture verification for Teacher AI Studio: **131 frontend checks**, **367 backend unit checks**, **40 distinct targeted API checks** across Teacher AI/LMS/notifications/reminders, and **70 six-role LMS browser checks** passed. The final queue regression includes the current-guardian recheck before provider dispatch. Browser coverage includes Arabic controls, mobile editors, the Teacher dashboard shortcut and interactive student quiz submission. Both application builds, backend lint and OpenAPI YAML parsing passed. Live AI generation/quality and deployment remain deferred.
+
+Gemini provider verification: 375 backend unit checks, 12 Teacher AI API checks covering both protocols, 132 frontend checks, and 17 focused Teacher browser checks using a Gemini fixture passed. Both builds, backend lint and OpenAPI YAML parsing passed. Keys were never sent to a live provider during verification; account access, free quota and actual generated content remain unverified until configuration and an explicit live test.
+
+
+Live-demo findings: Gemini 3 classroom drafting now requests low thinking, and Gemini's bounded request window is 120 seconds because a real minimal request exceeded 60 seconds. OpenAI retains its 60-second limit. Abandoned reservation cleanup waits three minutes so it cannot prematurely fail an in-flight Gemini request. This improves tolerance for free-tier latency; it does not promise a response-time SLA. Parent-message review uses a separate help-note field so the InApp/Email/SMS selector is rendered by the shared form system.
+
+Live verification completed with explicitly authorised, retained fictional demo data: all six tools (the five priorities, with separate assignment/quiz actions) generated actual Gemini output. The final run passed 23 live browser checks across Teacher, Student, Parent, Principal, Accountant, Administrator and an unassigned Teacher account. A reviewed quiz grade, Arabic lesson plan, parent in-app message and numerically grounded progress summary were verified in the UI and by MongoDB read-back. A separate written-answer suggestion remains a draft for human review. Failed generation history was retained rather than reported as success. No real student data was sent to Gemini, and no external delivery request was queued. SMS remains unconfigured.
+
+Regression after the live fixes: 133 frontend tests, 376 backend unit checks, 12 isolated Teacher AI API checks and 17 focused isolated Teacher browser checks passed, along with builds and backend lint. The in-app parent-message browser fixture now exercises the real review form and send action; it no longer stops at draft generation. Demo passwords, tokens, live-run scripts and screenshots remain outside the repository under `/tmp`.
+
+### Checking a live AI quiz
+
+1. Sign in as a Teacher with an active class/subject/year teaching assignment. Open Learning (LMS) → Teacher AI Studio → Quiz.
+2. Select your assigned teaching context. Try topic `Photosynthesis`, English, Standard, 2 questions, 10 marks, with instructions `Two MCQ questions, four options each, five marks each`.
+3. Click Generate draft once and wait for completion. Review prompts, answer keys, rubrics and total marks. Generation creates a private AI draft; it does not yet create a student assignment.
+4. Choose Review and apply, confirm review, and save the assignment as Draft first. Open the coursework record, review the class and due date, then publish when ready.
+5. Sign in as a student in that class, submit the quiz, then return as the teacher to review the submission and grade. Verify the parent view using the student's linked parent account.
+
+Failed attempts retain a safe reason when available. Open the failed draft and choose **Edit and retry** to reuse its inputs with a new generation identity; click Generate explicitly. Quota failures require waiting/checking provider quota. Access/model errors require server configuration changes. Older failures cannot reveal a reason that was never stored. No automatic paid retries occur; uncertain network retries retain their original idempotency key.
+
+### Switching Teacher AI providers
+
+Supported adapters: `openai`, `gemini`, `groq`. Set the provider, its own key, and an available structured-output model in `server/.env`, then restart the backend. Keys stay on the server and are never interchangeable. No automatic provider fallback occurs. Different vendors need different API adapters; an arbitrary API key alone cannot add a new provider.
+
+Groq example:
+
+```dotenv
+TEACHER_AI_ENABLED=true
+TEACHER_AI_PROVIDER=groq
+GROQ_API_KEY=your-groq-key
+TEACHER_AI_MODEL=openai/gpt-oss-20b
+```
+
+Create the key at https://console.groq.com/keys. `openai/gpt-oss-20b` is a model hosted by Groq here; it uses the Groq key. Use a model supporting strict JSON schema: https://console.groq.com/docs/structured-outputs. Free access has account/model rate limits; check https://console.groq.com/settings/limits. A timeout does not establish that credits ran out. Teacher AI Studio shows the selected provider and safe configuration errors. Existing saved drafts remain accessible after switching.
+
+For Gemini set `TEACHER_AI_PROVIDER=gemini`, `GEMINI_API_KEY` and a Gemini model; for OpenAI use `TEACHER_AI_PROVIDER=openai`, `OPENAI_API_KEY` and an OpenAI structured-output model. Preserve unused keys if you want to switch back; only the selected provider's key is sent to its fixed endpoint.
+
+Teacher AI provider schemas mirror the application's question ID (`q1`, `q2`, …), field length, marks and array limits. MCQ answers must exactly match full option text. The server still validates returned content independently, including semantic checks that JSON schemas cannot enforce. Truncated provider responses show a response-limit message; field validation failures show safe field paths without exposing source/student content. There are no automatic regeneration calls or fabricated replacement answers.
+
+Teaching assignments use a responsive compact grid with 12 cards per page, combined teacher/class/subject search, class and subject filters, and Active/Archived status filtering. The assign-teacher form displays readable names and naturally ordered class labels while keeping MongoDB IDs exclusively as option values in API requests.
+
+## Retained Groq classroom review (24 October 2026)
+
+A new local walkthrough uses Rohan Mehta (Teacher), Fatima Al Hashimi (Student, `ANS-1042`), and her linked Parent in Grade 10 · A Mathematics. All six tools generated live Groq drafts. The reviewed practice and exit quiz were published and submitted through the UI; both have a retained 5/10 reviewed grade. A parent in-app message and notification are retained, with no external delivery request. The 40-minute lesson and progress report remain private teacher drafts and can be downloaded. The report’s checked evidence is two graded activities averaging 50%, and five recorded attendance sessions across subjects with 80% present-or-late attendance. Attendance and coursework use separate reporting periods.
+
+The walkthrough exposed and fixed missing explicit per-question answer context in AI grading, unreadable structured response presentation, task-inappropriate AI question output, failed-request retry selections, and the parent notification’s communication route. The provider now receives task-specific JSON constraints and explicit reporting-scope definitions. Human review remains mandatory: the initial lesson misused CPCTC as a similarity criterion and generated ungrounded alignment wording; the initial narrative also mislabelled cross-subject attendance. The retained lesson, parent message and progress narrative were corrected before final verification. This is evidence of working reviewed workflows, not a claim that model-generated educational content is automatically correct.
+
+Current private verification artifacts, record IDs, downloads and manual checking instructions are in `/tmp/schoolos-ai-live-review/`. Existing passwords were not changed. Live Teacher/Student/Parent/Admin/Principal visibility was checked; the existing local Accountant password did not match, so its role coverage is isolated unless valid credentials are supplied. See [repeatable LMS workflow instructions](../../../tests-e2e/lms/README.md).

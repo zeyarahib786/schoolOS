@@ -17,7 +17,7 @@ require("../students/server.cjs");
       await fetch(base + "/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+        body: JSON.stringify({role:'Administrator',
           email: "administrator@example.invalid",
           password: "LocalFixture123!",
         }),
@@ -38,7 +38,7 @@ require("../students/server.cjs");
   };
   for (const role of ['teacher','accountant','principal','administrator']) {
     await api('/staff','POST',{refId:'QA-EXP-'+role,name:'QA '+role+' staff',designation:'Teacher',department:'QA',type:'Teaching',email:role+'@example.invalid',phone:'+971501234567',joinedDate:'2020-01-01'});
-    const auth = await (await fetch(base+'/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:role+'@example.invalid',password:'LocalFixture123!'})})).json();
+    const auth = await (await fetch(base+'/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({role:role[0].toUpperCase()+role.slice(1),email:role+'@example.invalid',password:'LocalFixture123!'})})).json();
     for (let n=0;n<(role==='teacher'?25:1);n++) {
       const r=await fetch(base+'/expenses',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+auth.data.accessToken},body:JSON.stringify({category:'Travel',amount:10.25,description:n===0?'QA <img src=x> '+role+' receipt':'QA '+role+' receipt '+n,expenseDate:'2026-06-01',vendor:'Fictional vendor',receiptReference:'QA-'+role+'-'+n})});
       if(!r.ok)throw Error('Claim fixture '+await r.text());

@@ -16184,3 +16184,55 @@ Object.entries({
  'No graded coursework is available for this subject and year.':'لا تتوفر أعمال دراسية مقيّمة لهذه المادة وهذا العام.'
 }).forEach(([key,ar])=>{I18N[key]=Object.assign({},I18N[key],{ar});});
 I18N['Back']=Object.assign({},I18N['Back'],{ar:'رجوع'});
+
+Object.entries({
+ 'My profile':'ملفي الشخصي','Account details':'تفاصيل الحساب','Login ID':'معرّف الدخول','Login accounts':'حسابات الدخول',
+ 'Manage login accounts':'إدارة حسابات الدخول','Generate login':'إنشاء حساب دخول','Generate credentials':'إنشاء بيانات الدخول',
+ 'Credentials generated':'تم إنشاء بيانات الدخول','Reset credentials':'إعادة تعيين بيانات الدخول','Private handover':'تسليم خاص',
+ 'Change password':'تغيير كلمة المرور','Current password':'كلمة المرور الحالية','New password':'كلمة المرور الجديدة',
+ 'Confirm new password':'تأكيد كلمة المرور الجديدة','Set your own password':'عيّن كلمة المرور الخاصة بك',
+ 'Temporary password':'كلمة المرور المؤقتة','Confirm password':'تأكيد كلمة المرور','Save password':'حفظ كلمة المرور',
+ 'Cancel sign-in':'إلغاء تسجيل الدخول','Passwords do not match':'كلمتا المرور غير متطابقتين',
+ 'Find a school record':'البحث عن سجل مدرسي','Search name or reference':'البحث بالاسم أو الرقم المرجعي',
+ 'Parents and guardians':'الآباء وأولياء الأمور','Employee details':'تفاصيل الموظف','Guardian details':'تفاصيل ولي الأمر',
+ 'Portal role':'دور الحساب','Account email (optional)':'البريد الإلكتروني للحساب (اختياري)',
+ 'Copy credentials':'نسخ بيانات الدخول','First sign-in requires a new password.':'يتطلب تسجيل الدخول الأول كلمة مرور جديدة.',
+ 'School-managed details are read-only. Contact school administration to request a correction.':'البيانات التي تديرها المدرسة للعرض فقط. تواصل مع إدارة المدرسة لطلب تصحيح.',
+ 'Your school issued a temporary password. Set a new password to access your portal.':'أصدرت مدرستك كلمة مرور مؤقتة. عيّن كلمة مرور جديدة للوصول إلى بوابتك.',
+ 'At least 10 characters, uppercase, lowercase and a number.':'عشرة أحرف على الأقل، تتضمن حرفًا كبيرًا وحرفًا صغيرًا ورقمًا.',
+ 'Use at least 10 characters including uppercase, lowercase and a number.':'استخدم عشرة أحرف على الأقل تتضمن حرفًا كبيرًا وحرفًا صغيرًا ورقمًا.'
+}).forEach(([key,ar])=>{I18N[key]=Object.assign({},I18N[key],{ar});});
+
+Object.entries({
+ 'Class / section':'الصف / الشعبة','All classes':'جميع الصفوف','Filter by class':'التصفية حسب الصف',
+ 'Matching students':'الطلاب المطابقون','Matching guardians':'أولياء الأمور المطابقون','Employees · school-wide':'الموظفون · جميع المدرسة',
+ 'No login yet':'لم يُنشأ حساب دخول بعد','Manage secure access for your school community.':'إدارة الوصول الآمن لمجتمع مدرستك.',
+ 'Class filters apply to students and their linked guardians. Employees are school-wide.':'تُطبّق تصفية الصف على الطلاب وأولياء أمورهم المرتبطين. يُعرض الموظفون على مستوى المدرسة.',
+ 'Try another class or change your search.':'اختر صفًا آخر أو غيّر البحث.','Close details':'إغلاق التفاصيل'
+}).forEach(([key,ar])=>{I18N[key]=Object.assign({},I18N[key],{ar});});
+
+Object.entries({
+ 'Edit account details':'تعديل تفاصيل الحساب','Login email':'البريد الإلكتروني للدخول','Reason for correction':'سبب التصحيح','Save corrections':'حفظ التصحيحات','Account details corrected':'تم تصحيح تفاصيل الحساب',
+ 'You can correct school records in Students, Staff & HR and Parents. Use Edit account details to correct login name or email. School contact details and login credentials are managed separately.':'يمكنك تصحيح السجلات المدرسية في الطلاب والموظفين والموارد البشرية وأولياء الأمور. استخدم تعديل تفاصيل الحساب لتصحيح اسم الدخول أو بريده الإلكتروني. تُدار بيانات الاتصال المدرسية وبيانات الدخول بشكل منفصل.',
+ 'Correct login identity. Use Students / Staff & HR / Parents for school contact and academic records.':'صحّح بيانات هوية الدخول. استخدم الطلاب أو الموظفين والموارد البشرية أو أولياء الأمور لتعديل بيانات الاتصال والسجلات الأكاديمية.',
+ 'Changing login email signs out all sessions for this account. Login ID, role and password are unchanged.':'يؤدي تغيير البريد الإلكتروني للدخول إلى تسجيل الخروج من جميع جلسات هذا الحساب. يظل معرّف الدخول والدور وكلمة المرور دون تغيير.'
+}).forEach(([key,ar])=>{I18N[key]=Object.assign({},I18N[key],{ar});});
+
+Object.entries({
+ 'Sign-in identity':'هوية تسجيل الدخول','Sign-in method':'طريقة تسجيل الدخول',
+ 'Permanent school login ID':'معرّف الدخول المدرسي الدائم','Login ID only (recommended)':'معرّف الدخول فقط (موصى به)',
+ 'Login ID + real email':'معرّف الدخول مع بريد إلكتروني فعلي',
+ 'Student’s own email':'البريد الإلكتروني الخاص بالطالب',
+ 'Official employee email':'البريد الإلكتروني الرسمي للموظف',
+ 'Guardian’s personal email':'البريد الإلكتروني الشخصي لولي الأمر',
+ 'Not provided — use login ID':'غير متوفر — استخدم معرّف الدخول',
+ 'Use this ID with the assigned role. It stays the same when class or contact details change.':'استخدم هذا المعرّف مع الدور المخصص. يظل ثابتًا عند تغيير الصف أو بيانات الاتصال.',
+ 'Use the student’s own mailbox. Do not use a parent or guardian email. Without a student mailbox, choose Login ID only.':'استخدم صندوق البريد الخاص بالطالب. لا تستخدم بريد ولي الأمر. إذا لم يكن لدى الطالب بريد إلكتروني، اختر معرّف الدخول فقط.',
+ 'Use an existing school-issued employee mailbox. SchoolOS does not create email mailboxes.':'استخدم صندوق بريد فعليًا أصدرته المدرسة للموظف. لا ينشئ SchoolOS صناديق بريد إلكتروني.',
+ 'Use the guardian’s own personal email. The same guardian account can access their linked children.':'استخدم البريد الشخصي لولي الأمر. يمكن للحساب نفسه الوصول إلى الأبناء المرتبطين به.',
+ 'Login ID works without email. A login email must belong to this person and be unique across accounts. Contact emails stay in school records. No email is sent; temporary credentials are shared privately and expire in 7 days.':'يعمل معرّف الدخول دون بريد إلكتروني. يجب أن يكون بريد الدخول خاصًا بهذا الشخص وفريدًا بين الحسابات. تبقى عناوين الاتصال في السجلات المدرسية. لا يُرسل بريد؛ تُشارك بيانات الدخول المؤقتة بشكل خاص وتنتهي صلاحيتها خلال سبعة أيام.'
+}).forEach(([key,ar])=>{I18N[key]=Object.assign({},I18N[key],{ar});});
+
+Object.entries({'Existing own email':'البريد الإلكتروني الخاص المسجّل','Enter another email':'إدخال بريد إلكتروني آخر'}).forEach(([key,ar])=>{I18N[key]=Object.assign({},I18N[key],{ar});});
+
+Object.entries({'Search assignments':'البحث في التكليفات','Teacher, class or subject…':'المعلم أو الصف أو المادة…','No matching teaching assignments.':'لا توجد تكليفات تدريس مطابقة.'}).forEach(([key,ar])=>{I18N[key]=Object.assign({},I18N[key],{ar});});

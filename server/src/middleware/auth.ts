@@ -28,8 +28,22 @@ export async function requireAuth(req: Request, _res: Response, next: NextFuncti
   const token = header.slice('Bearer '.length);
   try {
     const payload = verifyAccessToken(token);
-    await validateAccessSession(payload);
+    const account = await validateAccessSession(payload);
     await assertGuardianPortalAccess(payload.sub, payload.role);
+    if (account?.mustChangePassword) {
+      if (account.temporaryPasswordExpiresAt && account.temporaryPasswordExpiresAt.getTime() < Date.now())
+        throw ApiError.forbidden('Temporary password expired. Contact school administration');
+      if (
+        !['/api/v1/auth/me', '/api/v1/auth/profile', '/api/v1/auth/password', '/api/v1/auth/logout'].includes(
+          req.originalUrl.split('?')[0],
+        )
+      )
+        throw new ApiError(
+          403,
+          'PASSWORD_CHANGE_REQUIRED',
+          'Change your temporary password before accessing school records',
+        );
+    }
     req.user = { id: payload.sub, role: payload.role };
     next();
   } catch (error) {

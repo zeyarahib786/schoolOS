@@ -20,3 +20,12 @@ describe('Inbox pagination race',()=>{
   const first=r.schoolInboxRefresh();r.schoolInboxState().page=2;finish({data:[{body:'Old page'}],meta:{unread:1,pagination:{total:30}}});await first;await Promise.resolve();expect(requests).toEqual(['/inbox?page=1','/inbox?page=2']);expect(r.schoolInboxState().rows).toHaveLength(0);expect(r.schoolInboxState().page).toBe(2);
  });
 });
+
+it('opens message notifications in the canonical communication workspace and correct conversation',async()=>{
+ document.body.innerHTML='<div id="schoolInboxContent"></div>';
+ const r=runtime(async()=>({data:[]}));const comm={};let opened;
+ r.schoolInboxState().rows=[{_id:'notification',module:'communication',recordId:'message'}];
+ r.schoolInboxRead=async()=>{};r.closeDrawer=()=>{};r.go=module=>{r.state.module=module;};
+ r.SCHOOLOS_ADAPTER.apiAll=async()=>({data:[{_id:'message'}]});r.commState=()=>comm;r.render=()=>{};r.commMessageDetail=async id=>{opened=id;};
+ await r.schoolInboxOpen('notification');expect(r.state.module).toBe('comm');expect(comm.tab).toBe('Inbox');expect(opened).toBe('message');
+});

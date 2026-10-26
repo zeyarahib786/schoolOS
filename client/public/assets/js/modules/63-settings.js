@@ -48,7 +48,7 @@ function complianceHtml(){const c=COMPLIANCE[CFG.country]||{};const grading=c.gr
     <div style="display:flex;align-items:flex-end"><div style="border:1px solid var(--brand-line);background:var(--brand-soft);border-radius:11px;padding:11px 14px;width:100%"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--brand-deep);font-weight:700;margin-bottom:4px">Audit trail</div><div style="font-size:13px;color:var(--brand-deep);font-weight:600">Settings changes are audited; access logging varies by module</div></div></div></div>
   <div class="muted" style="font-size:11.5px;margin-top:12px">Framework guidance shown for demonstration — confirm current statutory obligations with your compliance officer or local counsel.</div></div>`}
 M.settings=()=>`
-  <div class="page-head"><div class="ph-l"><h2>Settings</h2><p>Branding, localization, academic structure and the modular platform configuration.</p></div><div class="ph-r"><button class="btn" onclick="settingsWorkspaceRefresh()">Refresh school settings</button></div></div>
+  <div class="page-head"><div class="ph-l"><h2>Settings</h2><p>Branding, localization, academic structure and the modular platform configuration.</p></div><div class="ph-r">${window.SCHOOLOS_ADAPTER?.user?.role==='Administrator'?'<button class="btn primary" onclick="schoolAccountsOpen()">Login accounts</button>':''}<button class="btn" onclick="settingsWorkspaceRefresh()">Refresh school settings</button></div></div>
   <div class="card pad" style="margin-bottom:16px"><div class="sec-head" style="margin-bottom:4px"><h3>${ic('reports',16)} Region & localization</h3><span class="muted" style="font-size:12.5px">Adapt SchoolOS to your local market</span></div>
     <div class="muted" style="font-size:12.5px;margin-bottom:14px">Region and currency here are display previews only. Financial records keep the school's saved currency (${escHtml(window.SCHOOLOS_ADAPTER?.settings?.currency||'AED')}); amounts are never converted by this preview.</div>
     <div class="grid cols-2" style="gap:14px">
@@ -81,3 +81,117 @@ M.settings=()=>`
   </div>`;
 
 window.settingsWorkspaceRefresh=async function(){try{const a=SCHOOLOS_ADAPTER,r=(await a.api('/settings')).data;a.settings=r;a.live.settings=true;CFG.currency=r.currency;CFG.previewCurrency=r.currency;state.schoolProfile={legalName:r.schoolName,license:r.license||'',principal:r.principal||'',address:r.address||'',academicYear:r.academicYear,timezone:r.timezone,currency:r.currency,defaultAnnualLeave:r.defaultAnnualLeave};OPTIONAL.forEach(m=>{state.modules[m.id]=!(r.disabledModules||[]).includes(m.id)});renderNav();render();toast('School settings refreshed')}catch(e){toast(e.message)}};
+
+/* School-managed portal accounts and self-service identity. */
+window.schoolAccountApi=async function(path,options){return (await SCHOOLOS_ADAPTER.api('/auth'+path,options)).data;};
+window.schoolMyProfile=async function(){
+ const owner=SCHOOLOS_ADAPTER.user?._id;if(!owner)return;
+ try{const p=await schoolAccountApi('/profile');if(SCHOOLOS_ADAPTER.user?._id!==owner)return;
+ const esc=studentEscape,row=(k,v)=>'<div class="lrow"><span class="muted">'+esc(k)+'</span><strong dir="auto">'+esc(k==='Email'&&v?.endsWith('@accounts.schoolos.invalid')?'Not provided — use login ID':k==='Login ID'&&v?v.toUpperCase():(v||'Not recorded'))+'</strong></div>';
+ const schoolRecord=(record,fields)=>fields.map(([label,key])=>row(label,record[key])).join('');
+ const sections=[{h:'Account details',html:schoolRecord(p.user,[['Name','name'],['Login ID','loginId'],['Email','email'],['Role','role']])}];
+ if(p.staff)sections.push({h:'Employee details',html:schoolRecord(p.staff,[['Employee reference','refId'],['Designation','designation'],['Department','department'],['Phone','phone'],['Status','status']])});
+ if(p.guardian)sections.push({h:'Guardian details',html:schoolRecord(p.guardian,[['Reference','refId'],['Relationship','relation'],['Phone','phone'],['Portal status','portalStatus']])});
+ for(const student of p.students)sections.push({h:esc(student.name),html:schoolRecord(student,[['Admission number','refId'],['Class','grade'],['Roll number','roll'],['Enrollment','status'],['Guardian','guardianName'],['Phone','phone'],['Address','address']])});
+ if(p.teaching.length)sections.push({h:'My teaching assignments',html:p.teaching.map(t=>row(t.subject,t.grade+' · '+t.academicYear)).join('')});
+ sections.push({note:p.user.role==='Administrator'?'You can correct school records in Students, Staff & HR and Parents. Use Edit account details to correct login name or email. School contact details and login credentials are managed separately.':'School-managed details are read-only. Contact school administration to request a correction.'});
+ openDrawer(detailDrawer({title:'My profile',sub:p.user.role,sections,footer:[['Change password','schoolPasswordForm()'],...(p.user.role==='Administrator'?[['Edit account details','schoolAccountEdit(\''+p.user._id+'\')'],['Manage login accounts','schoolAccountsOpen()'],['Students',"go('students')"],['Staff & HR',"go('staff')"],['Parents',"go('parents')"]]:[])]}));
+ }catch(e){toast(e.message);}
+};
+window.schoolPasswordValid=function(value){return typeof value==='string'&&value.length>=10&&value.length<=72&&/[A-Z]/.test(value)&&/[a-z]/.test(value)&&/[0-9]/.test(value);};
+window.schoolPasswordForm=function(){studentFormDrawer('Change password','Changing your password signs out all existing sessions.',[
+ {key:'currentPassword',label:'Current password',type:'password',req:true},
+ {key:'newPassword',label:'New password',type:'password',req:true},
+ {key:'confirmPassword',label:'Confirm new password',type:'password',req:true},
+ {note:'Use at least 10 characters including uppercase, lowercase and a number.'}
+ ],'Change password','','schoolPasswordSubmit');};
+window.schoolPasswordSubmit=async function(v){if(!schoolPasswordValid(v.newPassword)){toast('Use 10–72 characters including uppercase, lowercase and a number.');return false;}if(v.newPassword!==v.confirmPassword){toast('Passwords do not match');return false;}const a=SCHOOLOS_ADAPTER;if(a.accountPasswordBusy)return false;a.accountPasswordBusy=true;
+ try{await schoolAccountApi('/password',{method:'POST',body:JSON.stringify({currentPassword:v.currentPassword,newPassword:v.newPassword})});closeDrawer();toast('Password changed. Sign in again.');lockApp();}catch(e){toast(e.message);}finally{a.accountPasswordBusy=false;}return false;};
+window.schoolAccountsOpen=async function(query,grade,options={}){
+ if(SCHOOLOS_ADAPTER.user?.role!=='Administrator')return;
+ const owner=SCHOOLOS_ADAPTER.user._id, sourceModule=state.module, anchor=document.querySelector('#drawer')?.firstElementChild, wasOpen=document.getElementById('drawer')?.classList.contains('on');
+ const prior=window.schoolAccountFilters?.owner===owner?window.schoolAccountFilters:{owner,query:'',grade:''};
+ const filters={owner,query:query===undefined?prior.query:query,grade:grade===undefined?prior.grade:grade};
+ const generation=(window.schoolAccountSearchGeneration||0)+1;window.schoolAccountSearchGeneration=generation;
+ try{const data=await schoolAccountApi('/accounts/directory?'+new URLSearchParams({q:filters.query||'',grade:filters.grade||''}));if(SCHOOLOS_ADAPTER.user?._id!==owner||window.schoolAccountSearchGeneration!==generation||state.module!==sourceModule||document.querySelector('#drawer')?.firstElementChild!==anchor||(wasOpen&&!document.getElementById('drawer').classList.contains('on')))return;
+ window.schoolAccountDirectory=data;window.schoolAccountFilters=filters;const esc=studentEscape;
+ const group=(title,kind,records)=>({h:title+' · '+records.length,html:records.length?'<div class="account-grid">'+records.map(r=>{const link=kind==='Student'?r.studentUserId:r.userId;
+ return '<article class="account-card"><div class="account-card-heading"><span class="avatar">'+esc(initials(r.name))+'</span><div><strong>'+studentNameHtml(r)+'</strong><p class="muted">'+studentIdentityHtml(r.refId)+'</p></div><span class="badge '+(link?'b-green':'b-amber')+'">'+(link?'Linked':'No login yet')+'</span></div><p class="account-context">'+esc(r.grade||r.designation||r.portalStatus||'')+'</p><button class="btn '+(link?'':'primary')+'" onclick="schoolAccount'+(link?'Reset':'Form')+'(\''+(link||r._id)+'\' '+(!link?',\''+kind+'\'':'')+')">'+(link?'Reset credentials':'Generate login')+'</button>'+(link?'<button class="btn" onclick="schoolAccountEdit(\''+link+'\')">Edit account details</button>':'')+'</article>';}).join('')+'</div>':'<div class="account-empty"><strong>No matching records.</strong><p class="muted">Try another class or change your search.</p></div>'});
+ const stats='<div class="account-summary">'+[['Matching students',data.students.length],['Matching guardians',data.guardians.length],['Employees · school-wide',data.staff.length]].map(([label,count])=>'<div><span>'+esc(label)+'</span><strong>'+count+'</strong></div>').join('')+'</div>';
+ const filterHtml='<form class="account-filters" onsubmit="event.preventDefault();schoolAccountsOpen(this.querySelector(\'input\').value,this.querySelector(\'select\').value,{replace:true})"><label><span>Search name or reference</span><input class="inp" aria-label="Search accounts" maxlength="80" placeholder="Name or admission number…" value="'+esc(filters.query||'')+'"></label><label><span>Class / section</span><select class="inp" aria-label="Filter by class" onchange="this.form.requestSubmit()"><option value="">All classes</option>'+(data.classes||[]).map(c=>'<option value="'+esc(c)+'" '+(c===filters.grade?'selected':'')+'>'+esc(c)+'</option>').join('')+'</select></label><div class="account-filter-actions"><button class="btn primary" type="submit">Search</button><button class="btn" type="button" onclick="schoolAccountsOpen(\'\',\'\',{replace:true})">Reset filters</button></div></form><p class="muted account-filter-note">Class filters apply to students and their linked guardians. Employees are school-wide.</p>'+stats;
+ openDrawer(detailDrawer({title:'Login accounts',sub:'Manage secure access for your school community.',sections:[{h:'Find a school record',html:filterHtml},group('Students','Student',data.students),group('Employees · school-wide','Staff',data.staff),group('Parents and guardians','Guardian',data.guardians),{note:'Up to 50 matches per group. Search to find more. For existing email accounts, use portal links in Students / Staff / Parents.'}],footer:[['Close','closeDrawer()']]}),{...options,onRestore:scroll=>schoolAccountsOpen(filters.query,filters.grade,{replace:true,restoreScroll:scroll})});
+ if(options.restoreScroll!==undefined){const body=document.querySelector('#drawer .db');if(body)body.scrollTop=options.restoreScroll;}
+ }catch(e){toast(e.message);}
+};
+window.schoolAccountForm=function(id,kind){
+ const records=schoolAccountDirectory[kind==='Student'?'students':kind==='Staff'?'staff':'guardians'];const record=records.find(r=>r._id===id);if(!record)return;
+ window.schoolAccountTarget={id,kind};
+ const savedEmail=(kind==='Student'?record.studentEmail:record.email)||'';
+ const emailLabel=kind==='Student'?"Student’s own email":kind==='Staff'?'Official employee email':'Guardian’s personal email';
+ const guidance=kind==='Student'?'Use the student’s own mailbox. Do not use a parent or guardian email. Without a student mailbox, choose Login ID only.':kind==='Staff'?'Use an existing school-issued employee mailbox. SchoolOS does not create email mailboxes.':'Use the guardian’s own personal email. The same guardian account can access their linked children.';
+ studentFormDrawer('Generate login',record.name+' · '+record.refId,[
+ {section:'Sign-in identity'},
+ ...(kind==='Staff'?[{key:'role',label:'Portal role',opts:record.type==='Teaching'?['Teacher','Principal','Accountant']:['Accountant','Principal'],req:true}]:[]),
+ {key:'emailMode',label:'Sign-in method',opts:['Login ID only (recommended)','Login ID + real email'],val:'Login ID only (recommended)'},
+ ...(savedEmail?[{key:'savedEmail',label:'Existing own email',opts:[savedEmail,'Enter another email'],val:savedEmail,showIf:{key:'emailMode',equals:'Login ID + real email'}}]:[]),
+ {key:'email',label:emailLabel,type:'email',req:true,val:savedEmail,showIf:{key:'emailMode',equals:'Login ID + real email'}},
+ {note:guidance},
+ {note:'Login ID works without email. A login email must belong to this person and be unique across accounts. Contact emails stay in school records. No email is sent; temporary credentials are shared privately and expire in 7 days.'}
+ ],'Generate credentials','','schoolAccountCreate');
+ const body=document.querySelector('#drawer .form-body'),esc=studentEscape;
+ body?.insertAdjacentHTML('afterbegin','<section class="account-identity-preview"><span>Permanent school login ID</span><strong dir="ltr" data-i18n-skip="true">'+esc(record.proposedLoginId||'Preview unavailable — check school reference')+'</strong><small>Use this ID with the assigned role. It stays the same when class or contact details change.</small></section>');
+ const savedSelect=body?.querySelector('[data-fkey="savedEmail"]');
+ if(savedSelect)savedSelect.addEventListener('change',()=>{const input=body.querySelector('[data-fkey="email"]');input.value=savedSelect.value===savedEmail?savedEmail:'';input.focus();});
+ if(body&&typeof localizeView==='function')localizeView(body);
+ const target={id,kind};window.schoolDrawerOptions.onRestore=()=>{window.schoolAccountTarget=target;};
+};
+window.schoolAccountCreate=async function(v){const a=SCHOOLOS_ADAPTER;if(a.accountCreateBusy)return false;const target=window.schoolAccountTarget;if(!target)return false;const owner=a.user?._id;a.accountCreateBusy=true;
+ const withEmail=v.emailMode==='Login ID + real email';if(withEmail&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.email?.trim()||'')){a.accountCreateBusy=false;toast('Enter this person’s real email or choose Login ID only.');return false;}
+ try{const result=await schoolAccountApi('/accounts',{method:'POST',body:JSON.stringify({kind:target.kind,recordId:target.id,...(v.role?{role:v.role}:{}),...(withEmail?{email:v.email.trim().toLowerCase()}: {})})});if(a.user?._id===owner)schoolAccountReceipt(result);}catch(e){toast(e.message);if(a.user?._id===owner){const body=document.querySelector('#drawer .form-body');body?.querySelector('[data-account-error]')?.remove();body?.insertAdjacentHTML('beforeend','<p role="alert" data-account-error>'+studentEscape(e.message)+'</p>');}}finally{a.accountCreateBusy=false;}return false;};
+window.schoolAccountReset=async function(id){if(!confirm('Reset this account password? All existing sessions will be revoked.'))return;
+ const a=SCHOOLOS_ADAPTER;if(a.accountResetBusy)return;a.accountResetBusy=true;const owner=a.user?._id;try{const result=await schoolAccountApi('/accounts/'+id+'/reset',{method:'POST'});if(a.user?._id===owner)schoolAccountReceipt(result);}catch(e){toast(e.message);}finally{a.accountResetBusy=false;}};
+window.schoolAccountReceipt=function(result){const esc=studentEscape;
+ openDrawer(detailDrawer({title:'Credentials generated',sub:esc(result.name)+' · '+esc(result.role),sections:[{h:'Private handover',html:'<p>Share privately with the account holder. This password cannot be retrieved after closing; generate a reset if needed.</p><div class="card pad" id="schoolCredentialReceipt" dir="ltr" data-i18n-skip="true">'+esc('Login URL: '+location.origin)+'<br>'+esc('Login ID: '+(result.loginId?result.loginId.toUpperCase():result.email))+'<br>'+esc('Sign-in role: '+result.role)+'<br>'+esc('Login email: '+(result.email?.endsWith('@accounts.schoolos.invalid')?'Not provided — use login ID':result.email))+'<br>'+esc('Temporary password: '+result.temporaryPassword)+'<br>'+esc('Expires: '+new Date(result.expiresAt).toLocaleString())+'</div><p>First sign-in requires a new password.</p><button class="btn" onclick="schoolAccountCopy()">Copy credentials</button>'}],footer:[['Done','schoolAccountsOpen(undefined,undefined,{replace:true})']]}),{replace:true});
+};
+window.schoolAccountCopy=async function(){try{await navigator.clipboard.writeText(document.getElementById('schoolCredentialReceipt').innerText);toast('Credentials copied. Share privately.');}catch{toast('Clipboard unavailable. Select and copy the credentials.');}};
+// Run before data hydration: temporary sessions can only change password or sign out.
+window.schoolAccountPasswordGate=function(){
+ if(!SCHOOLOS_ADAPTER.user?.mustChangePassword)return Promise.resolve();
+ return new Promise((resolve,reject)=>{
+ const overlay=document.createElement('div');overlay.id='schoolPasswordGate';overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');overlay.setAttribute('aria-label','Set your own password');
+ overlay.style.cssText='position:fixed;inset:0;z-index:20000;background:var(--bg,#f5f7fb);display:grid;place-items:center;padding:20px;overflow:auto';
+ overlay.innerHTML='<form class="card pad" style="width:min(100%,460px)"><h2>Set your own password</h2><p>Your school issued a temporary password. Set a new password to access your portal.</p><label>Temporary password<input class="inp" type="password" name="current" autocomplete="current-password" required></label><label>New password<input class="inp" type="password" name="next" autocomplete="new-password" minlength="10" maxlength="72" required></label><label>Confirm password<input class="inp" type="password" name="confirmation" autocomplete="new-password" required></label><p class="muted">At least 10 characters, uppercase, lowercase and a number.</p><p role="alert" id="schoolPasswordError"></p><button type="submit" class="btn primary">Save password</button> <button type="button" class="btn" data-cancel>Cancel sign-in</button></form>';
+ document.body.append(overlay);if(typeof localizeView==='function')localizeView(overlay);overlay.querySelector('input').focus();
+ const finish=message=>{overlay.remove();const password=document.getElementById('lxPass');if(password)password.value='';reject(new Error(message));};
+ overlay.querySelector('[data-cancel]').onclick=()=>finish('Sign-in cancelled.');
+ overlay.querySelector('form').onsubmit=async event=>{event.preventDefault();const form=event.currentTarget,error=overlay.querySelector('[role=alert]'),button=form.querySelector('[type=submit]');
+ if(!schoolPasswordValid(form.elements.next.value)){error.textContent='Use 10–72 characters including uppercase, lowercase and a number.';return;}
+ if(form.elements.next.value!==form.elements.confirmation.value){error.textContent='Passwords do not match';return;}button.disabled=true;
+ try{await schoolAccountApi('/password',{method:'POST',body:JSON.stringify({currentPassword:form.elements.current.value,newPassword:form.elements.next.value})});finish('Password changed. Sign in with your new password.');}catch(e){error.textContent=e.message;button.disabled=false;}
+ };
+ });
+};
+
+window.schoolAccountEdit=async function(id){
+ if(SCHOOLOS_ADAPTER.user?.role!=='Administrator')return;
+ const owner=SCHOOLOS_ADAPTER.user._id;
+ try{const user=await schoolAccountApi('/accounts/'+id);if(SCHOOLOS_ADAPTER.user?._id!==owner)return;window.schoolAccountCorrection=user;
+ studentFormDrawer('Edit account details','Correct login identity. Use Students / Staff & HR / Parents for school contact and academic records.',[
+ {key:'name',label:'Name',val:user.name,req:true,maxlen:120},
+ {key:'email',label:'Login email',type:'email',val:user.email,req:true,maxlen:254},
+ {key:'reason',label:'Reason for correction',area:true,req:true,maxlen:300},
+ {note:'Changing login email signs out all sessions for this account. Login ID, role and password are unchanged.'}
+ ],'Save corrections','','schoolAccountCorrectionSave');
+ window.schoolDrawerOptions.onRestore=()=>{window.schoolAccountCorrection=user;};
+ }catch(e){toast(e.message);}
+};
+window.schoolAccountCorrectionSave=async function(v){
+ const a=SCHOOLOS_ADAPTER,user=window.schoolAccountCorrection;if(!user||a.accountCorrectionBusy)return false;
+ const owner=a.user?._id;a.accountCorrectionBusy=true;
+ try{const result=await schoolAccountApi('/accounts/'+user._id,{method:'PATCH',body:JSON.stringify({name:v.name,email:v.email,reason:v.reason,expectedUpdatedAt:user.updatedAt})});
+ if(a.user?._id!==owner)return false;
+ if(user._id===owner&&result.sessionRevoked){toast('Account updated. Sign in with your corrected email.');lockApp();return false;}
+ if(user._id===owner){a.user.name=result.user.name;a.user.email=result.user.email;const name=document.querySelector('.sb-user .ut .n');if(name){name.textContent=result.user.name;name.setAttribute('data-school-name',result.user.name);}}
+ toast('Account details corrected');if(user._id===owner)await schoolMyProfile();else await schoolAccountsOpen(undefined,undefined,{replace:true});
+ }catch(e){toast(e.message);}finally{a.accountCorrectionBusy=false;}return false;
+};

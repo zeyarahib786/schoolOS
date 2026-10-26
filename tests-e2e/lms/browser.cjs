@@ -83,7 +83,7 @@ require("../helpers/browser.cjs")(
         assert.strictEqual(await evaluate("lmsWorkspaceState().assignments.filter(r=>r.title==='QA AI quiz '+state.role).length"),1);
         await evaluate('closeDrawer()');
       });
-      await step('AI lesson plans, parent drafts and progress summaries persist without auto-sending',async()=>{
+      await step('AI drafts persist and parent messages send in-app only after explicit review',async()=>{
         for(const kind of ['LessonPlan','Feedback','ParentMessage','Progress']){
           await evaluate(`lmsAiForm(${JSON.stringify(kind)})`);
           if(['ParentMessage','Progress'].includes(kind)){
@@ -94,6 +94,10 @@ require("../helpers/browser.cjs")(
           await fill({topic:'Fictional classroom support'});
           await waitFor(()=>evaluate("!!document.querySelector('[data-ai=title]')&&!lmsAiState().busy"),'AI teaching draft');
           assert.strictEqual(await evaluate('lmsAiState().active.status'),'Draft');
+          if(kind==='ParentMessage'){
+            await evaluate('lmsAiApplyForm()');await waitFor(()=>evaluate("!!document.querySelector('[data-fkey=channel]')"),'Parent message channel selector');
+            await fill({channel:'InApp',reviewed:'I reviewed this draft'});await waitFor(()=>evaluate("lmsAiState().active.status==='Applied'&&!lmsAiState().busy"),'Reviewed in-app parent message');
+          }
           await evaluate('closeDrawer()');
         }
       });

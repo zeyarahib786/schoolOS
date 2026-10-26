@@ -40,6 +40,7 @@ components:
         dateOfBirth: { type: string, format: date }
         nationality: { type: string }
         guardianRelationship: { type: string, enum: [Father, Mother, Guardian, Other] }
+        studentEmail: { type: string, format: email, description: Student own mailbox; distinct from guardian contact email }
         guardianEmail: { type: string, format: email }
         phone: { type: string }
         emergencyContact: { type: string }
@@ -261,6 +262,114 @@ components:
           additionalProperties: { type: boolean }
           example: { Students: true, Payroll: false, Settings: false }
 paths:
+  /auth/login:
+    post:
+      summary: Sign in using an email/login ID and matching selected account role
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, role]
+              properties:
+                email: { type: string, minLength: 1, maxLength: 254, description: Registered email or case-insensitive login ID }
+                password: { type: string, format: password, minLength: 1, maxLength: 128 }
+                role: { type: string, enum: [Administrator, Principal, Teacher, Accountant, Parent, Student] }
+      responses:
+        '200': { description: User and access/refresh tokens with the authoritative stored role }
+        '400': { description: Missing or unknown selected role }
+        '401': { description: Invalid credentials or mismatched selected role; no tokens }
+        '403': { description: Inactive account, suspended guardian or expired temporary password }
+  /auth/profile:
+    get:
+      summary: Own account and linked school identity (all authenticated roles)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Own user, staff, guardian, students and teaching assignments; temporary sessions receive account metadata only }
+  /auth/password:
+    post:
+      summary: Change own password and revoke all sessions
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword: { type: string, format: password, maxLength: 128 }
+                newPassword: { type: string, format: password, minLength: 10, maxLength: 72, description: Uppercase, lowercase and number required }
+      responses:
+        '200': { description: Password changed; sign in again }
+        '401': { description: Wrong current password or revoked session }
+  /auth/accounts/directory:
+    get:
+      summary: Search school records for account provisioning (Administrator only)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: q, in: query, schema: { type: string, maxLength: 80 } }
+        - { name: grade, in: query, schema: { type: string, maxLength: 60 }, description: Exact class label; filters students and linked guardians. Staff remains school-wide. }
+      responses:
+        '200': { description: Up to 50 matching students, staff and guardians per group, plus independent class choices }
+        '403': { description: Administrator role required }
+  /auth/accounts:
+    post:
+      summary: Create a record-linked login with one-time temporary credentials (Administrator only)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [kind, recordId]
+              properties:
+                kind: { type: string, enum: [Student, Staff, Guardian] }
+                recordId: { type: string, pattern: '^[a-fA-F0-9]{24}$' }
+                role: { type: string, enum: [Teacher, Principal, Accountant], description: Required for Staff }
+                email: { type: string, format: email, maxLength: 254 }
+      responses:
+        '201': { description: One-time login ID/password, expiry and account metadata; Cache-Control no-store }
+        '409': { description: Existing account, email, inactive record or conflicting ownership }
+  /auth/accounts/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    get:
+      summary: Read safe login metadata for correction (Administrator only)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Name, email, login ID, role, status and updatedAt; no passwords }
+    patch:
+      summary: Correct login name/email (Administrator only)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [name, email, reason, expectedUpdatedAt]
+              properties:
+                name: { type: string, minLength: 2, maxLength: 120 }
+                email: { type: string, format: email, maxLength: 254 }
+                reason: { type: string, minLength: 3, maxLength: 300 }
+                expectedUpdatedAt: { type: string, format: date-time }
+      responses:
+        '200': { description: Safe user metadata and sessionRevoked; email changes revoke all sessions }
+        '403': { description: Administrator role required }
+        '409': { description: Stale version or duplicate email }
+  /auth/accounts/{id}/reset:
+    post:
+      summary: Reset an active non-Administrator account and revoke sessions (Administrator only)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: One-time replacement temporary credentials; Cache-Control no-store }
+        '404': { description: Active managed account not found }
   /staff:
     get:
       summary: >-
@@ -1014,22 +1123,6 @@ paths:
         '201': { description: User created, tokens issued }
         '400': { description: Validation error, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
         '409': { description: Email already registered }
-  /auth/login:
-    post:
-      summary: Log in with email and password
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [email, password]
-              properties:
-                email: { type: string }
-                password: { type: string }
-      responses:
-        '200': { description: Login successful, tokens issued }
-        '401': { description: Invalid credentials (generic message - no user enumeration) }
   /auth/refresh:
     post:
       summary: Exchange a valid refresh token for a new token pair
@@ -3314,7 +3407,7 @@ paths:
     get:
       summary: Teacher AI configuration status (teaching roles; no credentials)
       security: [{ bearerAuth: [] }]
-      responses: { '200': { description: Enabled, configured, model and setup reason }, '403': { description: Teaching role required } }
+      responses: { '200': { description: Enabled, configured, provider, model and setup reason }, '403': { description: Teaching role required } }
   /lms/ai/students:
     get:
       summary: Active students in a currently authorised teaching context

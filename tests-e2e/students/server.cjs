@@ -42,7 +42,7 @@ const mongoose = require(root + "/node_modules/mongoose");
     await fetch("http://127.0.0.1:4400/api/v1/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+      body: JSON.stringify({role:'Administrator',
         email: "administrator@example.invalid",
         password: "LocalFixture123!",
       }),

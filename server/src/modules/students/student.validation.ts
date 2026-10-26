@@ -57,6 +57,7 @@ export const createStudentSchema = z.object({
     dateOfBirth: z.coerce.date().max(new Date(), 'Date of birth cannot be in the future').optional(),
     nationality: z.string().trim().max(80).optional(),
     guardianRelationship: z.enum(['Father', 'Mother', 'Guardian', 'Other']).optional(),
+    studentEmail: z.string().trim().email().max(254).optional(),
     guardianEmail: z.string().trim().email().max(254).optional(),
     emergencyContact: z
       .string()
@@ -95,6 +96,7 @@ export const updateStudentSchema = z.object({
       .array(
         z.enum([
           'guardianEmail',
+          'studentEmail',
           'emergencyContact',
           'address',
           'medicalNotes',

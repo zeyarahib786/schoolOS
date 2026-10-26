@@ -284,6 +284,13 @@ function studentEditForm(id) {
         half: true,
       },
       {
+        label: "Student’s own email",
+        key: "student_email",
+        type: "email",
+        val: s.studentEmail || "",
+        half: true,
+      },
+      {
         label: "Guardian email",
         key: "email",
         type: "email",

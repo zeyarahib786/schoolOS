@@ -87,6 +87,9 @@ afterEach(() => {
   jest.restoreAllMocks();
   for (const key of [
     'TEACHER_AI_ENABLED',
+    'TEACHER_AI_PROVIDER',
+    'GEMINI_API_KEY',
+    'GROQ_API_KEY',
     'OPENAI_API_KEY',
     'TEACHER_AI_MODEL',
     'NOTIFICATIONS_ENABLED',
@@ -190,6 +193,9 @@ describe('Teacher AI Studio', () => {
     );
     expect((await generate(t)).status).toBe(400);
     expect(await TeacherAiDraft.countDocuments({ status: 'Failed' })).toBe(2);
+    const failed = await TeacherAiDraft.find({ status: 'Failed' });
+    expect(failed.every((d) => !!d.failureMessage)).toBe(true);
+    expect(failed.map((d) => d.failureMessage).join(' ')).not.toContain('api-key');
   });
   it('keeps draft ownership private and hides revoked scope from saved drafts and student selectors', async () => {
     const { t, other } = await fixture();
@@ -435,14 +441,14 @@ describe('Teacher AI Studio', () => {
       ).status,
     ).toBe(200);
     expect((await NotificationDelivery.findOne())!.status).toBe('Awaiting approval');
-    const parent=student.guardianUserId;
-    await Student.updateOne({_id:student._id},{$unset:{guardianUserId:1}});
-    await NotificationDelivery.updateMany({},{$set:{status:'Pending'}});
-    const fetchCalls=(global.fetch as jest.Mock).mock.calls.length;
+    const parent = student.guardianUserId;
+    await Student.updateOne({ _id: student._id }, { $unset: { guardianUserId: 1 } });
+    await NotificationDelivery.updateMany({}, { $set: { status: 'Pending' } });
+    const fetchCalls = (global.fetch as jest.Mock).mock.calls.length;
     await processOneDelivery();
     expect((global.fetch as jest.Mock).mock.calls.length).toBe(fetchCalls);
     expect((await NotificationDelivery.findOne())!.errorCode).toBe('TEACHER_AI_RECIPIENT_CHANGED');
-    await Student.updateOne({_id:student._id},{$set:{guardianUserId:parent}});
+    await Student.updateOne({ _id: student._id }, { $set: { guardianUserId: parent } });
 
     d = (await generate(t, 'ParentMessage', { studentId: String(student._id) })).body.data;
     expect(
@@ -455,4 +461,120 @@ describe('Teacher AI Studio', () => {
     ).toBe(503);
     expect((await TeacherAiDraft.findById(d._id))!.status).toBe('Draft');
   });
+});
+
+it.each(['gemini', 'groq'])(
+  'runs all five teacher priorities through %s and applies reviewed school actions using the same permissions',
+  async (providerName) => {
+    const { t, s, student } = await fixture();
+    process.env.TEACHER_AI_PROVIDER = providerName;
+    process.env.GEMINI_API_KEY = 'fictional-gemini';
+    process.env.GROQ_API_KEY = 'fictional-groq';
+    const assignment = await Assignment.create({
+      ...context,
+      title: 'Fictional written response',
+      description: 'Explain plant parts',
+      dueDate: new Date('2099-01-01'),
+      maxScore: 20,
+      createdBy: t.user._id,
+    });
+    const submission = await Submission.create({
+      assignment: assignment._id,
+      student: student._id,
+      content: 'A plant has roots and leaves.',
+    });
+    const fetch = jest.spyOn(global, 'fetch').mockImplementation(async (url, init) => {
+      expect(url).toBe(
+        providerName === 'groq'
+          ? 'https://api.groq.com/openai/v1/chat/completions'
+          : 'https://generativelanguage.googleapis.com/v1beta/interactions',
+      );
+      const body = JSON.parse(String(init?.body));
+      const input = JSON.parse(providerName === 'groq' ? body.messages[1].content : body.input);
+      if (providerName === 'groq')
+        return new Response(
+          JSON.stringify({
+            choices: [{ finish_reason: 'stop', message: { content: JSON.stringify(output(input.request.kind)) } }],
+          }),
+        );
+      return new Response(
+        JSON.stringify({
+          status: 'completed',
+          steps: [
+            { type: 'model_output', content: [{ type: 'text', text: JSON.stringify(output(input.request.kind)) }] },
+          ],
+        }),
+      );
+    });
+    for (const kind of ['Assignment', 'Quiz', 'LessonPlan', 'Feedback', 'ParentMessage', 'Progress']) {
+      const response = await generate(t, kind, {
+        studentId: String(student._id),
+        submissionId: String(submission._id),
+      });
+      expect(response.status).toBe(201);
+      const draft = response.body.data;
+      expect(draft.provider).toBe(providerName);
+      expect(draft.status).toBe('Draft');
+      if (['Assignment', 'Quiz', 'Feedback', 'ParentMessage'].includes(kind)) {
+        const applied = await request(app)
+          .post(base + '/drafts/' + draft._id + '/apply')
+          .set(t.h)
+          .send({
+            reviewed: true,
+            expectedUpdatedAt: draft.updatedAt,
+            action: ['Assignment', 'Quiz'].includes(kind)
+              ? 'SaveAssignment'
+              : kind === 'Feedback'
+                ? 'Grade'
+                : 'Message',
+            dueDate: '2099-01-01T08:00:00Z',
+            status: 'Published',
+          });
+        expect(applied.status).toBe(200);
+      }
+    }
+    expect(fetch).toHaveBeenCalledTimes(6);
+    expect((await Submission.findById(submission._id))!.status).toBe('Graded');
+    const family = await request(app).get('/api/v1/lms/assignments').set(s.h);
+    expect(family.body.data.filter((a: { questions: unknown[] }) => a.questions.length)).toHaveLength(2);
+    expect(JSON.stringify(family.body.data)).not.toContain('Award marks only for Fern');
+  },
+);
+
+it('provides structured student answers to the grader without leaking student identity', async () => {
+  const { t, student } = await fixture();
+  const assignment = await Assignment.create({
+    ...context,
+    title: 'Fictional structured answer assessment',
+    description: 'Explain your answer',
+    questions: [
+      {
+        id: 'q1',
+        type: 'ShortAnswer',
+        prompt: 'Name a plant part.',
+        options: [],
+        answer: 'Root',
+        marks: 20,
+        rubric: 'Credit a correctly named plant part.',
+      },
+    ],
+    dueDate: new Date('2099-01-01'),
+    maxScore: 20,
+    createdBy: t.user._id,
+  });
+  const submission = await Submission.create({
+    assignment: assignment._id,
+    student: student._id,
+    content: 'Structured response; see per-question answers.',
+    answers: [{ questionId: 'q1', value: 'A root takes in water.' }],
+  });
+  const fetch = provider(output('Feedback'));
+  const response = await generate(t, 'Feedback', { submissionId: String(submission._id) });
+  expect(response.status).toBe(201);
+  const input = JSON.parse(JSON.parse(String(fetch.mock.calls[0][1]?.body)).input);
+  expect(input.studentWork.answers).toEqual([{ questionId: 'q1', value: 'A root takes in water.' }]);
+  expect(input.studentWork.response).toBe('Structured response; see per-question answers.');
+  expect(JSON.stringify(input)).not.toContain(student.name);
+  expect(response.body.data.status).toBe('Draft');
+  expect((await Submission.findById(submission._id))!.status).toBe('Submitted');
 });

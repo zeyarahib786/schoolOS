@@ -15,7 +15,7 @@ async function waitFor(check, label, timeout = 45000) {
   }
   throw Error("Timed out: " + label);
 }
-module.exports = async function runBrowser(suite, run) {
+module.exports = async function runBrowser(suite, run, options = {}) {
   const profile = fs.mkdtempSync(
     path.join(os.tmpdir(), "schoolos-" + suite + "-browser-"),
   );
@@ -37,7 +37,8 @@ module.exports = async function runBrowser(suite, run) {
     { stdio: "ignore" },
   );
   let ws;
-  const role = process.env.SCHOOLOS_TEST_ROLE || "Administrator",
+  const role =
+      options.role || process.env.SCHOOLOS_TEST_ROLE || "Administrator",
     cases = [],
     issues = [];
   try {
@@ -50,7 +51,9 @@ module.exports = async function runBrowser(suite, run) {
       .split("\n")[0];
     let page;
     await waitFor(async () => {
-      const targets = await (await fetch("http://127.0.0.1:" + port + "/json/list")).json();
+      const targets = await (
+        await fetch("http://127.0.0.1:" + port + "/json/list")
+      ).json();
       page = targets.find((target) => target.type === "page");
       return Boolean(page?.webSocketDebuggerUrl);
     }, "browser page target");
@@ -70,7 +73,9 @@ module.exports = async function runBrowser(suite, run) {
       if (m.method === "Runtime.exceptionThrown")
         issues.push({
           type: "javascript",
-          detail: m.params.exceptionDetails.exception?.description || m.params.exceptionDetails.text,
+          detail:
+            m.params.exceptionDetails.exception?.description ||
+            m.params.exceptionDetails.text,
         });
       if (
         m.method === "Network.responseReceived" &&
@@ -140,9 +145,19 @@ module.exports = async function runBrowser(suite, run) {
     await cdp("Page.enable");
     await cdp("Runtime.enable");
     await cdp("Network.enable");
-    if(process.env.SCHOOLOS_TEST_BLOCK_FONTS === 'true')
-      await cdp('Network.setBlockedURLs',{urls:['*fonts.googleapis.com*','*fonts.gstatic.com*']});
-    await cdp("Page.navigate", { url: "http://127.0.0.1:5179/" });
+    if (process.env.SCHOOLOS_TEST_BLOCK_FONTS === "true")
+      await cdp("Network.setBlockedURLs", {
+        urls: ["*fonts.googleapis.com*", "*fonts.gstatic.com*"],
+      });
+    if (options.viewport)
+      await cdp("Emulation.setDeviceMetricsOverride", {
+        ...options.viewport,
+        deviceScaleFactor: 1,
+        mobile: false,
+      });
+    await cdp("Page.navigate", {
+      url: options.origin || "http://127.0.0.1:5179/",
+    });
     await waitFor(
       () =>
         evaluate(
@@ -151,12 +166,24 @@ module.exports = async function runBrowser(suite, run) {
       "app boot",
     );
     await evaluate(
-      `document.getElementById('lxEmail').value=${JSON.stringify(process.env.SCHOOLOS_SMOKE_EMAIL || "administrator@example.invalid")};document.getElementById('lxPass').value='LocalFixture123!';enterApp()`,
+      `document.getElementById('lxEmail').value=${JSON.stringify(options.email || process.env.SCHOOLOS_SMOKE_EMAIL || "administrator@example.invalid")};document.getElementById('lxPass').value=${JSON.stringify(options.password || process.env.SCHOOLOS_SMOKE_PASSWORD || "LocalFixture123!")};selectLandingRole(${JSON.stringify(role)});enterApp()`,
     );
-    await waitFor(
-      () => evaluate("Boolean(SCHOOLOS_ADAPTER.connected)"),
-      "authenticated login",
-    );
+    try {
+      await waitFor(
+        () => evaluate("Boolean(SCHOOLOS_ADAPTER.connected)"),
+        "authenticated login",
+      );
+    } catch (error) {
+      const note = await evaluate(
+        "document.getElementById('lxNote')?.textContent || ''",
+      );
+      throw Error(
+        error.message +
+          (note ? ": " + note : "") +
+          "; response failures: " +
+          JSON.stringify(issues.filter((i) => i.type === "http")),
+      );
+    }
     await run({ role, step, api, evaluate, waitFor, fill, cdp, screenshot });
     fs.writeFileSync(
       "/tmp/schoolos-" + suite + "-browser-" + role + ".json",
@@ -164,7 +191,10 @@ module.exports = async function runBrowser(suite, run) {
     );
     if (
       cases.some((c) => !c.pass) ||
-      issues.some((i) => i.type === "javascript" || (i.type === "http" && i.status === 500))
+      issues.some(
+        (i) =>
+          i.type === "javascript" || (i.type === "http" && i.status === 500),
+      )
     )
       process.exitCode = 1;
   } finally {

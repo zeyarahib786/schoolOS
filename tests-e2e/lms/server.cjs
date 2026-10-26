@@ -1,13 +1,15 @@
 // Isolated browser fixture only: deterministic provider response, never a live AI call.
 const realFetch=global.fetch;
-Object.assign(process.env,{TEACHER_AI_ENABLED:'true',OPENAI_API_KEY:'fictional-e2e-key',TEACHER_AI_MODEL:'fictional-e2e-model'});
+const aiProvider=process.env.SCHOOLOS_TEST_AI_PROVIDER||'openai';
+if(!['openai','gemini'].includes(aiProvider))throw Error('Unknown fixture AI provider');
+Object.assign(process.env,{TEACHER_AI_ENABLED:'true',TEACHER_AI_PROVIDER:aiProvider,OPENAI_API_KEY:'fictional-e2e-key',GEMINI_API_KEY:'fictional-gemini-key',TEACHER_AI_MODEL:'fictional-e2e-model'});
 global.fetch=async function(url,options){
- if(String(url)==='https://api.openai.com/v1/responses'){
+ if(['https://api.openai.com/v1/responses','https://generativelanguage.googleapis.com/v1beta/interactions'].includes(String(url))){
   if(process.env.NODE_ENV!=='test')throw Error('AI fixture only allowed in test');
   const payload=JSON.parse(options.body),context=JSON.parse(payload.input),r=context.request;
   const questions=['Assignment','Quiz'].includes(r.kind)?Array.from({length:r.questionCount},(_,i)=>({id:'q'+(i+1),type:i%2?'ShortAnswer':'MCQ',prompt:'Fictional question '+(i+1),options:i%2?[]:['Plant','Stone'],answer:i%2?'Explain plant parts':'Plant',marks:Math.floor(r.maxScore/r.questionCount)+(i<r.maxScore%r.questionCount?1:0),rubric:'Award marks for accurate plant knowledge'})):[];
   const result={title:'AI fixture '+r.kind,body:'Fictional reviewed teaching content. Check learning and provide support.',questions,suggestedScore:r.kind==='Feedback'?(context.facts.objectiveScore??Math.min(10,context.facts.maxScore)):null,warnings:['Fictional provider fixture; not a live AI quality test.']};
-  return new Response(JSON.stringify({status:'completed',output:[{content:[{type:'output_text',text:JSON.stringify(result)}]}]}));
+  return new Response(JSON.stringify(String(url).includes('googleapis.com')?{status:'completed',steps:[{type:'model_output',content:[{type:'text',text:JSON.stringify(result)}]}]}:{status:'completed',output:[{content:[{type:'output_text',text:JSON.stringify(result)}]}]}));
  }
  return realFetch(url,options);
 };
@@ -30,7 +32,7 @@ require("../students/server.cjs");
       await fetch(base + "/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+        body: JSON.stringify({role:'Administrator',
           email: "administrator@example.invalid",
           password: "LocalFixture123!",
         }),
@@ -49,7 +51,7 @@ require("../students/server.cjs");
     if (!res.ok) throw Error(p + JSON.stringify(j));
     return j.data;
   };
-  const teacherLogin=await (await fetch(base+'/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:'teacher@example.invalid',password:'LocalFixture123!'})})).json();
+  const teacherLogin=await (await fetch(base+'/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({role:'Teacher',email:'teacher@example.invalid',password:'LocalFixture123!'})})).json();
   const existingClasses=await api('/classes?limit=100');
   for(const section of ['A','B']){
     const cls=existingClasses.find(c=>c.grade==='Grade 7'&&c.section===section)||await api('/classes','POST',{grade:'Grade 7',section});
@@ -81,7 +83,7 @@ require("../students/server.cjs");
     await fetch(base + "/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+      body: JSON.stringify({role:'Student',
         email: "student@example.invalid",
         password: "LocalFixture123!",
       }),

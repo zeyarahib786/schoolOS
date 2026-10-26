@@ -19,7 +19,13 @@ export async function recipientContact(email: string, channel: 'Email' | 'SMS') 
   const user = await User.findOne({ email: email.toLowerCase(), isActive: true }).select('_id email role');
   if (!user || (await Guardian.exists({ userId: user._id, portalStatus: 'Suspended' })))
     throw ApiError.notFound('Active recipient account not found');
-  if (channel === 'Email') return { user, destination: user.email };
+  if (channel === 'Email') {
+    if (user.email.endsWith('@accounts.schoolos.invalid'))
+      throw ApiError.badRequest(
+        'This account has no real login email. Use an in-app message or correct the school contact details.',
+      );
+    return { user, destination: user.email };
+  }
   const profile =
     user.role === 'Parent'
       ? await Guardian.findOne({ userId: user._id })

@@ -33,6 +33,7 @@ export interface IStudent extends Document {
   nationality?: string;
   guardianRelationship?: 'Father' | 'Mother' | 'Guardian' | 'Other';
   guardianEmail?: string;
+  studentEmail?: string;
   emergencyContact?: string;
   preferredLanguage?: string;
   address?: string;
@@ -117,6 +118,7 @@ const studentSchema = new Schema<IStudent>(
     dateOfBirth: { type: Date },
     nationality: { type: String, trim: true, maxlength: 80 },
     guardianRelationship: { type: String, enum: ['Father', 'Mother', 'Guardian', 'Other'] },
+    studentEmail: { type: String, trim: true, lowercase: true, maxlength: 254 },
     guardianEmail: { type: String, trim: true, lowercase: true, maxlength: 254 },
     emergencyContact: { type: String, trim: true },
     preferredLanguage: { type: String, trim: true, maxlength: 60 },

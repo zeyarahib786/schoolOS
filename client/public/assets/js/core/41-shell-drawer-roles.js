@@ -1,27 +1,64 @@
 /* ============ DRAWER ============ */
-function openDrawer(html) {
-  window._lastFocus = document.activeElement;
-  $("#drawer").innerHTML = html;
-  $("#drawer").removeAttribute("aria-hidden");
-  $("#drawer").classList.add("on");
-  $("#scrim").classList.add("on");
-  a11yEnhance($("#drawer"));
-  localizeView($("#drawer"));
-  setTimeout(() => {
-    const d = $("#drawer");
-    const f = d.querySelector("button,[href],input,select,textarea,[tabindex]");
-    (f || d).focus && (f || d).focus();
-  }, 60);
+window.schoolDrawerTrail = [];
+function drawerScope() { return (window.SCHOOLOS_ADAPTER?.user?._id || '') + ':' + state.module; }
+function drawerEnhance() {
+  const drawer = $("#drawer"), header = drawer.querySelector('.dh');
+  if (header && !header.querySelector('.workspace-back')) {
+    const back = document.createElement('button');
+    back.className = 'btn workspace-back'; back.type = 'button'; back.onclick = backDrawer;
+    back.setAttribute('aria-label', 'Back');
+    back.innerHTML = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m12 5-7 7 7 7M5 12h14"/></svg><span>Back</span>';
+    header.prepend(back);
+  }
+  drawer.querySelectorAll('button[onclick="closeDrawer()"]').forEach(button => {
+    if (!button.textContent.trim()) button.setAttribute('aria-label', 'Close details');
+  });
+  a11yEnhance(drawer); localizeView(drawer);
+}
+function openDrawer(html, options = {}) {
+  const drawer = $("#drawer"), wasOpen = drawer.classList.contains('on');
+  const scope = drawerScope(), sameScope = window.schoolDrawerScope === scope;
+  if (!wasOpen || window.schoolDrawerScope !== scope) {
+    window.schoolDrawerTrail = [];
+    window._lastFocus = document.activeElement;
+  }
+  window.schoolDrawerScope = scope;
+  const template = document.createElement('template'); template.innerHTML = html;
+  const oldTitle = drawer.querySelector('.dh h3')?.textContent;
+  const newTitle = template.content.querySelector('.dh h3')?.textContent;
+  const oldForm = drawer.querySelector('.form-body'), newForm = template.content.querySelector('.form-body');
+  const sensitive = drawer.querySelector('#schoolCredentialReceipt,input[type="password"]');
+  // Keep actual nodes so unsaved wizard values and event listeners survive Back.
+  // Completed forms and one-time credentials must never be resurrected from history.
+  if (wasOpen && sameScope && options.replace !== true && !sensitive && !(oldForm && !newForm) && !(oldTitle && oldTitle === newTitle && !oldForm && !newForm)) {
+    window.schoolDrawerTrail.push({ nodes: [...drawer.childNodes], scroll: drawer.querySelector('.db')?.scrollTop || 0, options: window.schoolDrawerOptions || {} });
+    if (window.schoolDrawerTrail.length > 20) window.schoolDrawerTrail.shift();
+  }
+  window.schoolDrawerOptions = options;
+  drawer.replaceChildren(template.content);
+  document.querySelector('.main')?.setAttribute('inert', '');
+  drawer.removeAttribute('aria-hidden'); drawer.classList.add('on'); $("#scrim").classList.add('on');
+  drawerEnhance();
+  const anchor = drawer.firstElementChild;
+  setTimeout(() => { if (drawer.firstElementChild === anchor && drawer.classList.contains('on')) (drawer.querySelector('button,[href],input,select,textarea,[tabindex]') || drawer).focus?.(); }, 60);
+}
+function backDrawer() {
+  if (window.schoolDrawerScope !== drawerScope()) { closeDrawer(); return; }
+  const previous = window.schoolDrawerTrail.pop();
+  if (!previous) { closeDrawer(); return; }
+  const drawer = $("#drawer");
+  drawer.replaceChildren(...previous.nodes); window.schoolDrawerOptions = previous.options;
+  drawerEnhance();
+  const body = drawer.querySelector('.db'); if (body) body.scrollTop = previous.scroll;
+  drawer.querySelector('.workspace-back')?.focus();
+  previous.options.onRestore?.(previous.scroll);
 }
 function closeDrawer() {
-  $("#drawer").classList.remove("on");
-  $("#drawer").setAttribute("aria-hidden", "true");
-  $("#scrim").classList.remove("on");
-  if (window._lastFocus && window._lastFocus.focus) {
-    try {
-      window._lastFocus.focus();
-    } catch (e) {}
-  }
+  window.schoolDrawerTrail = []; window.schoolDrawerOptions = {};
+  document.querySelector('.main')?.removeAttribute('inert');
+  if (document.getElementById('schoolCredentialReceipt')) $("#drawer").innerHTML = '';
+  $("#drawer").classList.remove('on'); $("#drawer").setAttribute('aria-hidden', 'true'); $("#scrim").classList.remove('on');
+  if (window._lastFocus?.isConnected) { try { window._lastFocus.focus(); } catch (e) {} }
 }
 function toggleSidebar() {
   const open = $("#sidebar").classList.toggle("open");

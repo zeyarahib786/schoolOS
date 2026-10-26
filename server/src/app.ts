@@ -70,7 +70,14 @@ export function createApp(): Express {
       logger,
       genReqId: (req) => (req as Request).requestId,
       // Redact anything that could contain a credential or token from access logs.
-      redact: ['req.headers.authorization', 'req.headers.cookie', 'req.body.password', 'req.body.refreshToken'],
+      redact: [
+        'req.headers.authorization',
+        'req.headers.cookie',
+        'req.body.password',
+        'req.body.currentPassword',
+        'req.body.newPassword',
+        'req.body.refreshToken',
+      ],
       customLogLevel: (_req, res) => (res.statusCode >= 500 ? 'error' : res.statusCode >= 400 ? 'warn' : 'info'),
     }),
   );

@@ -542,7 +542,9 @@ window.lmsWorkspaceSubmissionDetail = function (id) {
         {
           h: "Student response",
           html:
-            '<div style="white-space:pre-wrap">' + esc(r.content) + "</div>",
+            (r.content&&!(r.answers||[]).length?'<div style="white-space:pre-wrap">'+esc(r.content)+'</div>':'')+
+            (r.answers||[]).map((answer,index)=>{const question=(a.questions||[]).find(q=>q.id===answer.questionId);return '<article class="card pad" style="margin-top:12px"><strong>'+esc(question?.prompt||('Question '+(index+1)))+'</strong><p style="white-space:pre-wrap">'+esc(answer.value)+'</p></article>';}).join('')+
+            (!r.content&&!(r.answers||[]).length?'<p>No response recorded.</p>':''),
         },
         {
           h: "Feedback",
@@ -782,18 +784,39 @@ function lmsWorkspaceTargets(){
  host.innerHTML='<h4>Additional class sections</h4><p class="muted">Creates a separate assignment for each selected section. Use Standalone for multiple sections.</p>'+[...new Set(choices)].filter(g=>g!==v.grade).map(g=>'<label style="display:block;margin:8px 0"><input type="checkbox" data-lms-target value="'+studentEscape(g)+'" '+(previous.has(g)?'checked':'')+'> '+studentEscape(g)+'</label>').join('');
  localizeView(host);
 }
-function lmsTeachingPanel(){const b=lmsWorkspaceState(),manager=['Administrator','Principal'].includes(state.role);
- openDrawer(detailDrawer({title:'Teaching assignments',sub:'Class and subject access is linked to actual teacher accounts.',sections:[{h:'Assigned classes',html:b.teaching.length?b.teaching.map(t=>'<div class="card pad" style="margin-bottom:10px"><strong>'+studentEscape(t.teacher?.name||'Teacher')+'</strong><p>'+studentEscape(t.grade+' · '+t.subject+' · '+t.academicYear)+'</p><p>'+(t.active?'Active':'Archived')+'</p>'+(manager&&t.active?'<button class="btn sm" onclick="lmsTeachingRevoke(\''+t._id+'\')">Revoke assignment</button>':'')+'</div>').join(''):'<p>No teaching assignments. Ask school leadership to assign your class and subject.</p>'}],footer:[['Close','closeDrawer()'],...(manager?[['Assign teacher','lmsTeachingForm()',true]]:[])]}));
+function lmsTeachingClassOrder(a,b){const rank=v=>v.startsWith('KG')?Number(v.match(/\d+/)?.[0]||0):Number(v.match(/\d+/)?.[0]||0)+2;return rank(a)-rank(b)||a.localeCompare(b,undefined,{numeric:true});}
+function lmsTeachingPanel(){const b=lmsWorkspaceState(),esc=studentEscape;
+ const options=(values,compare=(a,b)=>a.localeCompare(b,undefined,{numeric:true}))=>[...new Set(values)].sort(compare).map(v=>'<option value="'+esc(v)+'">'+esc(v)+'</option>').join('');
+ const filters='<div class="teaching-toolbar"><label>Search assignments<input class="inp" id="teachingSearch" placeholder="Teacher, class or subject…" oninput="lmsTeachingRender(true)"></label><label>Class / section<select class="inp" id="teachingClass" onchange="lmsTeachingRender(true)"><option value="">All classes</option>'+options(b.teaching.map(t=>t.grade),lmsTeachingClassOrder)+'</select></label><label>Subject<select class="inp" id="teachingSubject" onchange="lmsTeachingRender(true)"><option value="">All subjects</option>'+options(b.teaching.map(t=>t.subject))+'</select></label><label>Status<select class="inp" id="teachingStatus" onchange="lmsTeachingRender(true)"><option value="active">Active</option><option value="all">All statuses</option><option value="archived">Archived</option></select></label></div><p class="muted" id="teachingCount" role="status"></p><div class="teaching-grid" id="teachingGrid"></div><div class="teaching-pagination"><button class="btn sm" id="teachingPrevious" onclick="lmsTeachingPage(-1)">Previous</button><span id="teachingPage"></span><button class="btn sm" id="teachingNext" onclick="lmsTeachingPage(1)">Next</button></div>';
+ openDrawer(detailDrawer({title:'Teaching assignments',sub:'Class and subject access is linked to actual teacher accounts.',sections:[{h:'Assigned classes',html:filters}],footer:[['Close','closeDrawer()'],...(['Administrator','Principal'].includes(state.role)?[['Assign teacher','lmsTeachingForm()',true]]:[])]}));
+ b.teachingPage=1;lmsTeachingRender();
+}
+function lmsTeachingPage(delta){lmsWorkspaceState().teachingPage+=delta;lmsTeachingRender();document.getElementById('teachingGrid')?.scrollIntoView({block:'nearest'});}
+function lmsTeachingRender(reset=false){
+ const host=document.getElementById('teachingGrid');if(!host)return;
+ const b=lmsWorkspaceState(),esc=studentEscape,manager=['Administrator','Principal'].includes(state.role);
+ const q=document.getElementById('teachingSearch').value.trim().toLowerCase(),grade=document.getElementById('teachingClass').value,subject=document.getElementById('teachingSubject').value,status=document.getElementById('teachingStatus').value;
+ const rows=b.teaching.filter(t=>(!grade||t.grade===grade)&&(!subject||t.subject===subject)&&(status==='all'||Boolean(t.active)===(status==='active'))&&(!q||[t.teacher?.name,t.grade,t.subject,t.academicYear].join(' ').toLowerCase().includes(q))).sort((a,b)=>lmsTeachingClassOrder(a.grade,b.grade)||a.subject.localeCompare(b.subject)||String(a.teacher?.name||'').localeCompare(String(b.teacher?.name||'')));
+ const pages=Math.max(1,Math.ceil(rows.length/12));b.teachingPage=reset?1:Math.max(1,Math.min(pages,b.teachingPage||1));
+ host.innerHTML=rows.slice((b.teachingPage-1)*12,b.teachingPage*12).map(t=>'<article class="teaching-card"><div class="teaching-card-top"><strong>'+esc(t.grade)+'</strong><span class="badge '+(t.active?'b-green':'b-gray')+'">'+(t.active?'Active':'Archived')+'</span></div><h4>'+esc(t.subject)+'</h4><p>'+esc(t.teacher?.name||'Teacher')+'</p><div class="teaching-card-bottom"><span class="muted">'+esc(t.academicYear)+'</span>'+(manager&&t.active?'<button class="btn sm" onclick="lmsTeachingRevoke(\''+t._id+'\')">Revoke assignment</button>':'')+'</div></article>').join('')||'<p class="muted">No matching teaching assignments.</p>';
+ document.getElementById('teachingCount').textContent=rows.length+' / '+b.teaching.length;
+ document.getElementById('teachingPage').textContent=b.teachingPage+' / '+pages;
+ document.getElementById('teachingPrevious').disabled=b.teachingPage===1;document.getElementById('teachingNext').disabled=b.teachingPage===pages;
+ if(typeof localizeView==='function')localizeView(host);
 }
 function lmsTeachingForm(){const b=lmsWorkspaceState(),o=b.teachingOptions;if(!o)return;
  studentFormDrawer('Assign teacher','Only active teacher accounts and class sections can be assigned.',[
- {key:'teacher',label:'Teacher account',opts:o.teachers.map(t=>t._id+' · '+t.name),req:true},
- {key:'classSection',label:'Class section',opts:o.classes.map(c=>c._id+' · '+c.grade+' · '+c.section),req:true},
- {key:'subject',label:'Subject',req:true},{key:'academicYear',label:'Academic year',val:SCHOOLOS_ADAPTER.settings?.academicYear,req:true}
+ {key:'teacher',label:'Teacher account',opts:[],req:true,half:true},
+ {key:'classSection',label:'Class section',opts:[],req:true,half:true},
+ {key:'subject',label:'Subject',req:true,half:true},{key:'academicYear',label:'Academic year',val:SCHOOLOS_ADAPTER.settings?.academicYear,req:true,half:true}
  ],'Save teaching assignment','','lmsTeachingSave');
+ const populate=(key,rows,label)=>{const select=document.querySelector('#drawer [data-fkey="'+key+'"]');if(!select)return;select.replaceChildren(...rows.map(row=>{const option=document.createElement('option');option.value=row._id;option.textContent=label(row);return option;}));};
+ populate('teacher',[...o.teachers].sort((a,b)=>a.name.localeCompare(b.name)),t=>t.name);
+ populate('classSection',[...o.classes].sort((a,b)=>{const rank=c=>c.grade.startsWith('KG')?Number(c.grade.match(/\d+/)?.[0]||0):Number(c.grade.match(/\d+/)?.[0]||0)+2;return rank(a)-rank(b)||a.section.localeCompare(b.section);}),c=>c.grade+' · '+c.section);
+ if(typeof localizeView==='function')localizeView(document.querySelector('#drawer'));
 }
 window.lmsTeachingSave=async function(v){const b=lmsWorkspaceState();if(b.teachingSaving)return false;b.teachingSaving=true;const anchor=document.getElementById('drawer').firstElementChild;
- try{await SCHOOLOS_ADAPTER.api('/lms/teaching-assignments',{method:'POST',body:JSON.stringify({...v,teacher:v.teacher.split(' · ')[0],classSection:v.classSection.split(' · ')[0]})});await lmsWorkspaceLoad();if(state.module==='lms'&&document.getElementById('drawer').firstElementChild===anchor)lmsTeachingPanel()}catch(e){toast(e.message)}finally{b.teachingSaving=false}return false;
+ try{await SCHOOLOS_ADAPTER.api('/lms/teaching-assignments',{method:'POST',body:JSON.stringify({...v,teacher:v.teacher,classSection:v.classSection})});await lmsWorkspaceLoad();if(state.module==='lms'&&document.getElementById('drawer').firstElementChild===anchor)lmsTeachingPanel()}catch(e){toast(e.message)}finally{b.teachingSaving=false}return false;
 };
 window.lmsTeachingRevoke=async function(id){const t=lmsWorkspaceState().teaching.find(t=>t._id===id);if(!t||!confirm('Revoke this teaching assignment?'))return;try{await SCHOOLOS_ADAPTER.api('/lms/teaching-assignments/'+id,{method:'PATCH',body:JSON.stringify({active:false,expectedUpdatedAt:t.updatedAt})});await lmsWorkspaceLoad();if(state.module==='lms')lmsTeachingPanel()}catch(e){toast(e.message)}};
 function lmsTemplatesPanel(){const b=lmsWorkspaceState();openDrawer(detailDrawer({title:'Assignment templates',sub:'Reuse instructions and grading settings; choose class and dates before saving.',sections:[{h:'Saved templates',html:b.templates.map(t=>'<div class="card pad" style="margin-bottom:10px"><strong>'+studentEscape(t.name)+'</strong><p>'+studentEscape(t.subject)+'</p><button class="btn" onclick="lmsUseTemplate(\''+t._id+'\')">Use template</button></div>').join('')||'<p>No assignment templates saved.</p>'}],footer:[['Close','closeDrawer()'],['New template','lmsTemplateForm()',true]]}));}
@@ -820,7 +843,7 @@ window.lmsAiOpen=async function(){
     a.status=status;a.drafts=drafts;
     const actions=[['Assignment','Assignment builder'],['Quiz','Quiz builder'],['LessonPlan','Lesson plan'],['Feedback','Grading assistant'],['ParentMessage','Parent message'],['Progress','Progress summary']];
     openDrawer(detailDrawer({title:'Teacher AI Studio',sub:'Plan, assess and communicate with reviewed AI drafts.',sections:[
-      {h:'Quick actions',html:'<div class="teacher-ai-actions">'+actions.map(([kind,label])=>'<button class="btn" onclick="lmsAiForm(\''+kind+'\')">'+studentEscape(label)+'</button>').join('')+'</div><p class="muted">'+(status.configured?'AI is configured. Review accuracy before applying.':'AI setup pending. School administration must configure the server provider.')+'</p>'},
+      {h:'Quick actions',html:'<p class="muted"><b>'+studentEscape(status.provider==='gemini'?'Google Gemini':status.provider==='groq'?'Groq':'OpenAI')+'</b></p><div class="teacher-ai-actions">'+actions.map(([kind,label])=>'<button class="btn" onclick="lmsAiForm(\''+kind+'\')">'+studentEscape(label)+'</button>').join('')+'</div><p class="muted">'+(status.configured?'AI is configured. Review accuracy before applying.':'AI setup pending. School administration must configure the server provider.')+'</p>'},
       {h:'My saved drafts',html:drafts.length?drafts.map(d=>'<button class="teacher-ai-draft btn" onclick="lmsAiPreview(\''+d._id+'\')"><strong>'+studentEscape(d.content?.title||d.request.topic)+'</strong><span class="muted">'+studentEscape(d.request.kind+' · '+d.request.grade+' · '+d.status)+'</span></button>').join(''):'<p>No AI drafts yet.</p>'}
     ],footer:[['Close','closeDrawer()']]}));
   }catch(e){if(lmsAiCurrent(a))toast(e.message);}
@@ -874,8 +897,8 @@ window.lmsAiGenerate=async function(v){
   if(v.difficulty)payload.difficulty=v.difficulty;
   if(v.duration)payload.duration=Number(v.duration);
   if(v.reportDays)payload.reportDays=Number(v.reportDays);
-  if(a.kind==='Feedback')payload.submissionId=a.submissionChoices?.find(s=>s.label===v.submission)?.id;
-  if(['ParentMessage','Progress'].includes(a.kind))payload.studentId=document.getElementById('teacherAiStudent')?.value;
+  if(a.kind==='Feedback'){payload.submissionId=a.submissionChoices?.find(s=>s.label===v.submission)?.id;if(!payload.submissionId){toast('Select a submission in the selected teaching context.');return false;}}
+  if(['ParentMessage','Progress'].includes(a.kind)){payload.studentId=document.getElementById('teacherAiStudent')?.value;if(!payload.studentId){toast('Select a student in the selected teaching context.');return false;}}
   // A changed request gets a new key; retrying the same request never doubles generation cost.
   const signature=JSON.stringify({...payload,requestId:undefined});
   if(a.signature&&a.signature!==signature)payload.requestId=a.requestId=crypto.randomUUID();a.signature=signature;
@@ -884,8 +907,26 @@ window.lmsAiGenerate=async function(v){
   try{
     const row=await lmsAiApi('/lms/ai/drafts',{method:'POST',body:JSON.stringify(payload)});
     if(lmsAiCurrent(a)&&document.querySelector('#drawer')?.firstElementChild===anchor)await lmsAiPreview(row._id);
-  }catch(e){if(lmsAiCurrent(a))toast(e.message);}finally{a.busy=false;if(button?.isConnected){button.disabled=false;button.textContent='Generate draft';}}
+  }catch(e){if(lmsAiCurrent(a)){toast(e.message);if(document.querySelector('#drawer')?.firstElementChild===anchor){
+      const form=document.querySelector('#drawer .form-body');form?.querySelector('[data-ai-error]')?.remove();
+      form?.insertAdjacentHTML('beforeend','<p role="alert" data-ai-error>'+studentEscape(e.message)+' Open My saved drafts to inspect this attempt or use Edit and retry.</p>');
+    }}}finally{a.busy=false;if(button?.isConnected){button.disabled=false;button.textContent='Generate draft';}}
   return false;
+};
+window.lmsAiRetry=function(){
+  const d=lmsAiState().active;if(!d||d.status!=='Failed')return;
+  lmsAiForm(d.request.kind);
+  const values={...d.request,scope:d.request.grade+' / '+d.request.subject+' / '+d.request.academicYear};
+  document.querySelectorAll('#drawer [data-fkey]').forEach(el=>{if(values[el.dataset.fkey]!=null)el.value=String(values[el.dataset.fkey]);});
+  if(d.request.kind==='Feedback'){
+    lmsAiSubmissionChoices();const choice=lmsAiState().submissionChoices?.find(s=>s.id===d.request.submissionId);
+    if(choice)document.querySelector('#drawer [data-fkey=submission]').value=choice.label;
+  }
+  if(['ParentMessage','Progress'].includes(d.request.kind)){
+    const select=document.getElementById('teacherAiStudent');
+    lmsAiStudents().then(()=>{if(document.getElementById('teacherAiStudent')===select)select.value=d.request.studentId||'';});
+  }
+  // A failed attempt is retained for history; only an explicit Generate starts a new provider call.
 };
 window.lmsAiPreview=async function(id){
   const a=lmsAiState(),anchor=document.querySelector('#drawer')?.firstElementChild;
@@ -893,7 +934,7 @@ window.lmsAiPreview=async function(id){
   try{
     const d=await lmsAiApi('/lms/ai/drafts/'+id);if(!lmsAiCurrent(a)||document.querySelector('#drawer')?.firstElementChild!==anchor||(wasOpen&&!drawer.classList.contains('on')))return;
     a.active=d;
-    if(!d.content){openDrawer(detailDrawer({title:'Teacher AI Studio',sub:d.status,sections:[{h:'Draft status',html:'<p>'+(d.status==='Failed'?'Generation failed. Create a new request to try again.':'Generation is in progress. Reopen this draft shortly.')+'</p>'}],footer:[['Back','lmsAiOpen()']]}));return;}
+    if(!d.content){openDrawer(detailDrawer({title:'Teacher AI Studio',sub:d.status,sections:[{h:'Draft status',html:'<p>'+studentEscape(d.status==='Failed'?(d.failureMessage||'This older attempt failed before error details were recorded. Start a new attempt below.'):'Generation is in progress. Reopen this draft shortly.')+'</p>'}],footer:[['Back','lmsAiOpen()'],...(d.status==='Failed'?[['Edit and retry','lmsAiRetry()']]:[['Refresh','lmsAiPreview('+JSON.stringify(d._id)+')']])]}));return;}
     const esc=studentEscape,c=d.content,editable=d.status==='Draft';
     const field=(label,html)=>'<label class="teacher-ai-field"><span>'+label+'</span>'+html+'</label>';
     const input=(key,value,type='text')=>'<input dir="auto" data-ai="'+key+'" type="'+type+'" value="'+esc(value??'')+'" '+(!editable?'disabled':'')+'>';
@@ -935,7 +976,7 @@ window.lmsAiApplyForm=async function(){
       {key:'status',label:'Publication',opts:['Draft','Scheduled','Published'],val:'Draft'},
       {key:'publishAt',label:'Schedule time (if Scheduled)',type:'datetime-local'},
     ]:[]),
-    ...(kind==='ParentMessage'?[{key:'channel',label:'Delivery channel',opts:['InApp','Email','SMS'],val:'InApp',note:'Teacher email and SMS requests require office approval.'}]:[]),
+    ...(kind==='ParentMessage'?[{key:'channel',label:'Delivery channel',opts:['InApp','Email','SMS'],val:'InApp'},{note:'Teacher email and SMS requests require office approval.'}]:[]),
     {key:'reviewed',label:'Review confirmation',opts:['Select confirmation','I reviewed this draft'],req:true},
   ],'Confirm action','','lmsAiApply');
   document.querySelector('#drawer .form-body')?.classList.add('teacher-ai-form');

@@ -220,7 +220,11 @@ describe('Parents enhancement workflows', () => {
     expect(suspended.status).toBe(200);
     expect((await request(app).get('/api/v1/students').set(auth(parent.accessToken))).status).toBe(403);
     expect(
-      (await request(app).post('/api/v1/auth/login').send({ email: parent.email, password: 'StrongPass123' })).status,
+      (
+        await request(app)
+          .post('/api/v1/auth/login')
+          .send({ role: 'Parent', email: parent.email, password: 'StrongPass123' })
+      ).status,
     ).toBe(403);
     expect((await request(app).post('/api/v1/auth/refresh').send({ refreshToken: parent.refreshToken })).status).toBe(
       403,
@@ -233,7 +237,7 @@ describe('Parents enhancement workflows', () => {
     expect((await request(app).get('/api/v1/students').set(auth(parent.accessToken))).status).toBe(200);
     const login = await request(app)
       .post('/api/v1/auth/login')
-      .send({ email: parent.email, password: 'StrongPass123' });
+      .send({ role: 'Parent', email: parent.email, password: 'StrongPass123' });
     expect(login.status).toBe(200);
     expect((await Guardian.findById(g._id))!.lastLoginAt).toBeTruthy();
   });

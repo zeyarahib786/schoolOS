@@ -151,3 +151,20 @@ docker compose config --quiet
 Full test prerequisites and smoke-test behavior are described in [Testing guide](../testing/README.md).
 
 The current Compose stack binds MongoDB, API and web ports to loopback. Its optional seed profile creates fictional local data in test mode; production seeding is explicitly rejected. Production build/release/operator guidance stays in [Deployment](deployment.md).
+
+
+Portal login IDs: set a stable `SCHOOL_LOGIN_CODE` in `server/.env` (e.g. `ANS`). Newly provisioned student/employee/guardian IDs derive from their permanent school reference; existing IDs are preserved. All API sign-in requests now require the selected `role` alongside `email` and `password`. Choose the actual assigned role on the sign-in screen; Accountant is included. Restart the backend after environment changes.
+
+## Additive full-school fictional dataset
+
+With a configured development database and the existing linked Mathematics teacher, run:
+
+```bash
+npm run seed:local-school --prefix server
+```
+
+This adds four teachers (English, Science, Arabic and Social Studies), 14 section-A classes (KG 1, KG 2, Grades 1–12), five new fictional students per class, and one linked guardian per new student. Existing sections, students and account passwords are preserved. Teaching mappings for all five subjects are created for the current academic year. Existing roll numbers and previously issued login IDs are skipped when selecting new rolls. Repeated runs reuse the dataset's `LOCAL26-` references without resetting credentials.
+
+The script is blocked in production. It writes one-time credentials immediately into a private directory `/tmp/schoolos-local-school/` (`credentials.csv`, `credentials.json`, and usage instructions). Files are never committed. First sign-in requires password setup; temporary passwords expire after seven days. If a previously created account's credential file is lost, use Administrator → Login accounts → Reset credentials; rerunning the script never resets an existing password.
+
+These are fictional, locally usable accounts, not real people. Contact emails use reserved `.example` domains and telephone numbers use the reserved `+1 202-555-01xx` range. No messages, documents, attendance marks, payments or assessment results are fabricated. Existing class members remain, so a class can have more than five total students. Teacher mappings across all grades are for testing workflows rather than a staffing plan.

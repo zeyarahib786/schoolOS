@@ -43,10 +43,15 @@ export function verifyAccessToken(token: string): AccessTokenPayload {
 }
 
 /** Revocation, deactivation and role changes apply to every protected request. */
-export async function validateAccessSession(payload: AccessTokenPayload): Promise<void> {
-  const user = await User.findById(payload.sub).select('role isActive refreshTokenVersion').lean();
+export async function validateAccessSession(
+  payload: AccessTokenPayload,
+): Promise<{ mustChangePassword: boolean; temporaryPasswordExpiresAt?: Date }> {
+  const user = await User.findById(payload.sub)
+    .select('role isActive refreshTokenVersion mustChangePassword temporaryPasswordExpiresAt')
+    .lean();
   if (!user || !user.isActive || user.refreshTokenVersion !== payload.tokenVersion || user.role !== payload.role)
     throw ApiError.unauthorized('Session is no longer valid');
+  return { mustChangePassword: user.mustChangePassword, temporaryPasswordExpiresAt: user.temporaryPasswordExpiresAt };
 }
 
 export function verifyRefreshToken(token: string): AccessTokenPayload {
@@ -77,7 +82,10 @@ export async function register(
  * distinguishing them lets an attacker enumerate valid emails (OWASP A07: Identification &
  * Authentication Failures). */
 export async function login(input: LoginInput): Promise<{ user: IUser; accessToken: string; refreshToken: string }> {
-  const user = await User.findOne({ email: input.email.toLowerCase() }).select('+passwordHash');
+  const identity = input.email.trim().toLowerCase();
+  if (identity.endsWith('@accounts.schoolos.invalid'))
+    throw ApiError.unauthorized('Use your school login ID instead of an internal account address');
+  const user = await User.findOne({ $or: [{ email: identity }, { loginId: identity }] }).select('+passwordHash');
   if (!user) throw ApiError.unauthorized('Invalid email or password');
 
   const valid = await user.comparePassword(input.password);
@@ -88,7 +96,15 @@ export async function login(input: LoginInput): Promise<{ user: IUser; accessTok
     throw ApiError.unauthorized('Invalid email or password');
   }
 
+  if (input.role !== user.role)
+    throw ApiError.unauthorized('Invalid credentials or selected role. Select your assigned account role.');
   if (!user.isActive) throw ApiError.forbidden('This account has been deactivated');
+  if (
+    user.mustChangePassword &&
+    user.temporaryPasswordExpiresAt &&
+    user.temporaryPasswordExpiresAt.getTime() < Date.now()
+  )
+    throw ApiError.forbidden('Temporary password expired. Contact school administration for new credentials');
   await assertGuardianPortalAccess(user._id.toString(), user.role);
   if (user.role === 'Parent') await Guardian.updateOne({ userId: user._id }, { $set: { lastLoginAt: new Date() } });
   const tokens = issueTokenPair(user);

@@ -1,11 +1,12 @@
 import { FormEvent, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as authApi from './auth.api';
-import { useAuthStore } from '../../lib/store/authStore';
+import { useAuthStore, Role } from '../../lib/store/authStore';
 
 export function LoginPage(): JSX.Element {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [role, setRole] = useState<Role>('Student');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const setSession = useAuthStore((s) => s.setSession);
@@ -16,7 +17,7 @@ export function LoginPage(): JSX.Element {
     setError(null);
     setSubmitting(true);
     try {
-      const { user, accessToken, refreshToken } = await authApi.login(email, password);
+      const { user, accessToken, refreshToken } = await authApi.login(email, password, role);
       setSession(user, accessToken, refreshToken);
       navigate('/students');
     } catch (err) {
@@ -54,11 +55,11 @@ export function LoginPage(): JSX.Element {
         <p style={{ fontSize: 12.5, color: '#64748B', marginBottom: 20 }}>Sign in to continue</p>
 
         <label htmlFor="email" style={{ fontSize: 12.5, fontWeight: 600, display: 'block', marginBottom: 4 }}>
-          Email
+          Email or login ID
         </label>
         <input
           id="email"
-          type="email"
+          type="text"
           required
           autoComplete="username"
           value={email}
@@ -93,6 +94,10 @@ export function LoginPage(): JSX.Element {
           }}
         />
 
+        <label htmlFor="role">Account role</label>
+        <select id="role" value={role} onChange={e=>setRole(e.target.value as Role)} required>
+          {(['Administrator','Principal','Teacher','Accountant','Parent','Student'] as Role[]).map(r=><option key={r}>{r}</option>)}
+        </select>
         {error && (
           <div
             role="alert"

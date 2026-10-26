@@ -17,7 +17,7 @@ require("../students/server.cjs");
     await fetch(base + "/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+      body: JSON.stringify({role:'Administrator',
         email: "administrator@example.invalid",
         password: "LocalFixture123!",
       }),
@@ -65,7 +65,7 @@ require("../students/server.cjs");
     await fetch(base + "/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+      body: JSON.stringify({role:'Parent',
         email: "parent@example.invalid",
         password: "LocalFixture123!",
       }),

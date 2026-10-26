@@ -269,7 +269,7 @@ runBrowser(
               "suspension complete",
             );
             const blocked = await evaluate(
-              "SCHOOLOS_ADAPTER.api('/auth/login',{method:'POST',body:JSON.stringify({email:'newparent@example.invalid',password:'LocalFixture123!'})}).then(()=>false,e=>e.message)",
+              "SCHOOLOS_ADAPTER.api('/auth/login',{method:'POST',body:JSON.stringify({role:'Parent',email:'newparent@example.invalid',password:'LocalFixture123!'})}).then(()=>false,e=>e.message)",
             );
             assert(String(blocked).includes("suspended"));
             await evaluate("toggleGuardianPortal('GRD-ADMIN')");

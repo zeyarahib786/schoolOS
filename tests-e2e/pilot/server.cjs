@@ -19,7 +19,7 @@ require('../students/server.cjs');
   await Attendance.insertMany(rows.flatMap((student,n)=>['2026-10-08','2026-10-09'].map(date=>({student:student._id,date:new Date(date),session:'AM',status:n%20===0?'Absent':n%15===0?'Late':'Present',markedBy:admin._id}))));
   await Invoice.insertMany(rows.map((student,n)=>({refId:'INV-PILOT-'+String(n+1).padStart(4,'0'),student:student._id,term:'Pilot Term 1',amount:1000.25,paidAmount:0,dueDate:new Date('2026-11-01'),status:'Pending'})));
   const base='http://127.0.0.1:4400/api/v1';
-  const login=await(await fetch(base+'/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:'administrator@example.invalid',password:'LocalFixture123!'})})).json();
+  const login=await(await fetch(base+'/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({role:'Administrator',email:'administrator@example.invalid',password:'LocalFixture123!'})})).json();
   const headers={'Content-Type':'application/json',Authorization:'Bearer '+login.data.accessToken};
   const settings=await(await fetch(base+'/settings',{headers})).json();
   const response=await fetch(base+'/settings',{method:'PUT',headers,body:JSON.stringify({...settings.data,schoolName:'Fictional Pilot School',academicYear:'2026-2027',timezone:'Asia/Dubai',currency:'AED',disabledModules:[],expectedRevision:settings.data.revision})});

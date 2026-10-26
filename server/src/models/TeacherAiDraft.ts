@@ -7,7 +7,9 @@ export interface ITeacherAiDraft {
   request: AiRequest;
   content?: AiContent;
   status: 'Generating' | 'Draft' | 'Applying' | 'Applied' | 'Failed';
+  failureMessage?: string;
   model: string;
+  provider: 'openai' | 'gemini' | 'groq';
   sources: Array<{ title: string; updatedAt: string }>;
   facts: Record<string, unknown>;
   sourceVersion?: string;
@@ -24,7 +26,9 @@ const schema = new Schema<ITeacherAiDraft>(
     request: { type: Schema.Types.Mixed, required: true },
     content: Schema.Types.Mixed,
     status: { type: String, enum: ['Generating', 'Draft', 'Applying', 'Applied', 'Failed'], default: 'Generating' },
+    failureMessage: String,
     model: String,
+    provider: { type: String, enum: ['openai', 'gemini', 'groq'], default: 'openai' },
     sources: [{ _id: false, title: String, updatedAt: String }],
     facts: Schema.Types.Mixed,
     sourceVersion: String,

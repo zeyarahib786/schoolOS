@@ -23,7 +23,9 @@
     "seed": "node --env-file=.env --import tsx src/seed/seed.ts",
     "seed:student": "node --env-file=.env --import tsx src/seed/seedStudentAccount.ts",
     "seed:prod": "node --env-file=.env dist/seed/seed.js",
-    "migrate:curriculum": "node --env-file=.env --import tsx src/modules/curriculum/curriculum.migrate.ts"
+    "migrate:curriculum": "node --env-file=.env --import tsx src/modules/curriculum/curriculum.migrate.ts",
+    "seed:local-school": "node --env-file=.env --import tsx src/seed/seedLocalSchool.ts --apply",
+    "data:merge-sections-a": "node --env-file=.env --import tsx src/seed/mergeSectionsToA.ts"
   },
   "dependencies": {
     "@aws-sdk/client-sns": "^3.1149.0",

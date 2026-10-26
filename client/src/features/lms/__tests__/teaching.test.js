@@ -22,3 +22,27 @@ describe('Teacher assignment workspace',()=>{
   document.querySelector('[data-fkey=subject]').value='Math';r.lmsWorkspaceTargets();expect([...document.querySelectorAll('[data-lms-target]')].map(n=>n.value)).toEqual(['Grade 8 · A']);
  });
 });
+
+describe('Compact teaching directory',()=>{
+ it('shows readable options while submitting exact database IDs',async()=>{
+  const r=runtime([]);r.state.role='Administrator';
+  r.state.lmsWorkspace.teachingOptions={teachers:[{_id:'teacher-id',name:'Sarah Ahmed'}],classes:[{_id:'class-12',grade:'Grade 12',section:'A'},{_id:'class-kg',grade:'KG 1',section:'A'},{_id:'class-2',grade:'Grade 2',section:'A'}]};
+  r.lmsTeachingForm();
+  expect(document.querySelector('[data-fkey=teacher]').textContent).toBe('Sarah Ahmed');
+  expect([...document.querySelectorAll('[data-fkey=classSection] option')].map(o=>o.textContent)).toEqual(['KG 1 · A','Grade 2 · A','Grade 12 · A']);
+  expect(document.querySelector('[data-fkey=teacher]').value).toBe('teacher-id');
+  r.SCHOOLOS_ADAPTER.api=vi.fn().mockResolvedValue({data:{}});r.lmsWorkspaceLoad=vi.fn();r.lmsTeachingPanel=vi.fn();
+  await r.lmsTeachingSave({teacher:'teacher-id',classSection:'class-kg',subject:'English',academicYear:'2026-2027'});
+  expect(JSON.parse(r.SCHOOLOS_ADAPTER.api.mock.calls[0][1].body)).toMatchObject({teacher:'teacher-id',classSection:'class-kg'});
+ });
+ it('paginates a large directory and combines search, class and status filters',()=>{
+  const rows=Array.from({length:30},(_,i)=>({_id:'mapping-'+i,teacher:{name:i%2?'Sarah Ahmed':'Rohan Mehta'},grade:i%2?'Grade 1 · A':'Grade 2 · A',subject:i%2?'English':'Math',academicYear:'2026-2027',active:i<26}));
+  const r=runtime(rows);r.detailDrawer=o=>o.sections.map(s=>s.html).join('');r.openDrawer=html=>{document.body.innerHTML=html;};
+  r.lmsTeachingPanel();expect(document.querySelectorAll('.teaching-card')).toHaveLength(12);expect(document.getElementById('teachingCount').textContent).toBe('26 / 30');
+  r.state.lmsWorkspace.teachingPage=3;r.lmsTeachingRender();expect(document.querySelectorAll('.teaching-card')).toHaveLength(2);
+  document.getElementById('teachingSearch').value='Sarah';document.getElementById('teachingClass').value='Grade 1 · A';r.lmsTeachingRender(true);
+  expect(r.state.lmsWorkspace.teachingPage).toBe(1);expect(document.getElementById('teachingCount').textContent).toBe('13 / 30');
+  document.getElementById('teachingStatus').value='archived';r.lmsTeachingRender(true);expect(document.querySelectorAll('.teaching-card')).toHaveLength(2);
+  expect(document.querySelectorAll('[onclick*=lmsTeachingRevoke]')).toHaveLength(0);
+ });
+});

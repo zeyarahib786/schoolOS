@@ -43,7 +43,7 @@ require('../helpers/browser.cjs')('performance', async ({role, step, evaluate, w
   });
   await step('A delayed response from the previous account cannot enter a new session', async () => {
     async function signIn(email) {
-      await evaluate('document.getElementById("lxEmail").value='+JSON.stringify(email)+';document.getElementById("lxPass").value="LocalFixture123!";enterApp()');
+      await evaluate('document.getElementById("lxEmail").value='+JSON.stringify(email)+';document.getElementById("lxPass").value="LocalFixture123!";selectLandingRole('+JSON.stringify(email.split('@')[0][0].toUpperCase()+email.split('@')[0].slice(1))+');enterApp()');
       await waitFor(()=>evaluate('Boolean(SCHOOLOS_ADAPTER.connected)'), 'new account login');
     }
     await signIn(role.toLowerCase()+'@example.invalid');

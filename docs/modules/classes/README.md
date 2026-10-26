@@ -28,3 +28,9 @@ This release manages current teaching groups. Academic-year rollover, bulk promo
 Recorded local verification: Classes 29 browser workflow checks and Attendance 50, across all six authenticated roles; Students regression 54 browser checks. Backend combined regression passed 66 checks, with a further 10-check focused enhancement run covering transactional rollback. Ownership/timezone unit checks passed 8 checks. No runtime exceptions remained after the focused Principal regression rerun. API role denials and intentionally rejected correction/stale writes are expected in network evidence.
 
 Final client regression: 71 checks passed; client/server production builds and targeted backend lint passed. Vite retains the existing large-bundle advisory. Deployment and any historical data migration require a separate rollout.
+
+## Development section consolidation
+
+For an existing local testing dataset, `npm run data:merge-sections-a --prefix server` previews consolidation of non-A sections into each grade’s active section A. Add `-- --apply` only to apply it. This is disabled in production.
+
+The operation saves a private Extended JSON backup in `/tmp/schoolos-section-merge-<timestamp>/` and applies the merge in a MongoDB transaction. It moves student membership, resolves conflicting rolls, preserves login IDs and account links, updates teaching/coursework/curriculum/timetable/admissions/CRM/fee/broadcast/AI-request scopes, merges duplicate teaching mappings, and removes absorbed section cards. Missing active A sections and incompatible unique coursework/timetable scopes stop the operation. Historical certificates, audit entries and previous change snapshots retain their original values. Student enrollment history records the move. Refresh the client after applying to reload current class lists.

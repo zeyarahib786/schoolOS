@@ -537,7 +537,7 @@ Teacher/Principal/Administrator only. All draft routes are author-owned, and Tea
 
 | Method | Route | Behaviour |
 | --- | --- | --- |
-| GET | `/status` | Enabled/configured/model; never credentials |
+| GET | `/status` | Enabled/configured/provider/model; never credentials |
 | GET | `/students?grade=&subject=&academicYear=` | Active authorised class students; id/name/reference only |
 | GET | `/drafts` | Latest 50 author-owned accessible draft summaries |
 | POST | `/drafts` | Kind, teaching scope, topic, language/options and UUID requestId; persist reviewed-work draft |
@@ -548,3 +548,21 @@ Teacher/Principal/Administrator only. All draft routes are author-owned, and Tea
 Kinds: Assignment, Quiz, LessonPlan, Feedback, ParentMessage, Progress. Parent/Progress require studentId; Feedback requires submissionId. SaveAssignment requires an offset-aware deadline and optionally Scheduled publishAt. Message uses InApp/Email/SMS; Teacher external requests await approval. LessonPlan/Progress are saved/downloadable drafts and have no implicit mutation action. Exact schemas live in `server/src/modules/lms/lms.ai.validation.ts`.
 
 Assignments accept structured questions; submit accepts `answers:[{questionId,value}]` or legacy non-empty content. Answer keys/rubrics and objective-score suggestions are never included in family assignment/submission responses.
+
+### Managed portal accounts
+
+- `GET /auth/profile`: authenticated own account and linked identity/child/teaching records; no user-ID override. Temporary-password sessions receive account metadata only.
+- `POST /auth/password`: `{currentPassword,newPassword}`; strong password validation, changes password and revokes all sessions. Sign in again.
+- `GET /auth/accounts/directory?q=&grade=`: Administrator only, literal name/reference search, maximum 50 records each for students, staff and guardians; exact class filters students and linked guardians before the limit, while staff search remains school-wide. Returns independent saved/active class choices.
+- `POST /auth/accounts`: Administrator only, `{kind:Student|Staff|Guardian,recordId,role?:Teacher|Principal|Accountant,email?}`. Creates linked account atomically, returns one-time temporary credentials with `Cache-Control: no-store`.
+- `POST /auth/accounts/:id/reset`: Administrator only, active non-Administrator accounts; resets temporary credentials and revokes old sessions.
+- `POST /auth/login` requires the `{email,password,role}` payload; `email` accepts an account email or generated login ID. Temporary accounts must use `/auth/password` before accessing school APIs. Existing accounts remain supported.
+
+- `GET /auth/accounts/:id`: Administrator-only login metadata for corrections, including current `updatedAt`; no credentials/hash.
+- `PATCH /auth/accounts/:id`: Administrator-only `{name,email,reason,expectedUpdatedAt}`; stale/duplicate corrections return 409, unknown fields are rejected. Returns `{user,sessionRevoked}`; changing email revokes sessions. School-record links, role, login ID and password are not editable here.
+
+`POST /auth/login` now requires `{email,password,role}` for every caller. `role` must be one of Administrator, Principal, Teacher, Accountant, Parent or Student and must match the stored account role. Missing/unknown values return 400; wrong credentials or a mismatched role return 401 without tokens. Login ID/email lookup remains case-insensitive. New student IDs use `SCHOOL_LOGIN_CODE-STU-academicYearStart-classSection-roll` (roll padded to at least three characters); employee/guardian IDs use `SCHOOL_LOGIN_CODE-EMP|GRD-recordReference`. Existing IDs remain valid.
+
+Provisioning email policy: `/auth/accounts` uses an alternate real email only when `email` is explicitly supplied. It never silently copies Staff/Guardian contact email. Omitted email provisions an ID-only account; its internal storage alias is rejected for email login and email delivery. Student emails matching recorded guardian contacts and reserved internal addresses are rejected. `/auth/accounts/directory` includes `proposedLoginId` for each school record for the read-only generation preview; invalid class/roll/year or unsupported references return null previews and are validated on provisioning.
+
+The student account directory includes `studentEmail` (own mailbox), distinct from guardian contact email. Student create/update accepts optional `studentEmail`; update `clearFields` can remove it. The generation form suggests recorded own email for each role without automatically enabling email sign-in.

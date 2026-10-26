@@ -141,8 +141,8 @@ const LX={
  feats:{en:['Every school workflow in one secure platform','Works in English, Arabic, Urdu & Hindi with RTL','India DPDP, GCC PDPL, GDPR & FERPA aware'],ar:['كل سير عمل مدرسي في منصة آمنة واحدة','يعمل بالإنجليزية والعربية والأردية والهندية مع دعم RTL','متوافق مع DPDP الهند وPDPL الخليج وGDPR وFERPA'],ur:['ہر اسکول ورک فلو ایک محفوظ پلیٹ فارم میں','انگریزی، عربی، اردو اور ہندی میں RTL کے ساتھ','انڈیا DPDP، جی سی سی PDPL، GDPR اور FERPA سے آگاہ'],hi:['हर स्कूल वर्कफ़्लो एक सुरक्षित मंच में','अंग्रेज़ी, अरबी, उर्दू और हिंदी में RTL सहित','भारत DPDP, जीसीसी PDPL, GDPR और FERPA सजग']},
  stats:{en:[['36','Modules'],['6','Role views'],['4','Languages'],['12','Regions']],ar:[['36','وحدة'],['6','أدوار'],['4','لغات'],['12','منطقة']],ur:[['36','ماڈیولز'],['6','کردار'],['4','زبانیں'],['12','خطے']],hi:[['36','मॉड्यूल'],['6','भूमिकाएँ'],['4','भाषाएँ'],['12','क्षेत्र']]},
  signin:{en:'Sign in to your workspace',ar:'سجّل الدخول إلى مساحة عملك',ur:'اپنے ورک اسپیس میں سائن ان کریں',hi:'अपने कार्यक्षेत्र में साइन इन करें'},
- cardsub:{en:'Choose a role to explore the live demo.',ar:'اختر دورًا لاستكشاف العرض التجريبي.',ur:'ڈیمو دیکھنے کے لیے کردار منتخب کریں۔',hi:'लाइव डेमो देखने के लिए भूमिका चुनें।'},
- email:{en:'Email',ar:'البريد الإلكتروني',ur:'ای میل',hi:'ईमेल'},
+ cardsub:{en:'Select your assigned role and sign in with your school account.',ar:'اختر دورك المخصص وسجّل الدخول بحسابك المدرسي.',ur:'اپنا مقررہ کردار منتخب کرکے اسکول اکاؤنٹ سے سائن ان کریں۔',hi:'अपनी निर्धारित भूमिका चुनकर स्कूल खाते से साइन इन करें।'},
+ email:{en:'Email or login ID',ar:'البريد الإلكتروني أو معرّف الدخول',ur:'ای میل یا لاگ ان آئی ڈی',hi:'ईमेल या लॉगिन आईडी'},
  pass:{en:'Password',ar:'كلمة المرور',ur:'پاس ورڈ',hi:'पासवर्ड'},
  rolelab:{en:'Enter as',ar:'ادخل بصفة',ur:'بطور داخل ہوں',hi:'इस रूप में प्रवेश करें'},
  enter:{en:'Enter platform',ar:'دخول المنصة',ur:'پلیٹ فارم میں داخل ہوں',hi:'मंच में प्रवेश करें'},
@@ -183,12 +183,12 @@ function renderLanding(){
   $('#lxNote').textContent=lxT('note');
   $('#lxFoot').textContent=lxT('foot');
   $('#lxBadges').innerHTML=['DPDP','PDPL','GDPR','FERPA','WCAG 2.1 AA'].map(b=>`<span class="lx-badge">${b}</span>`).join('');
-  const roles=['Administrator','Principal','Teacher','Parent','Student'];
-  $('#lxRoles').innerHTML=roles.map(r=>`<button type="button" class="lx-role ${r===LANDING_ROLE?'on':''}" data-role="${r}" onclick="selectLandingRole('${r}')">${escHtml(t(r))}</button>`).join('');
+  const roles=['Administrator','Principal','Teacher','Accountant','Parent','Student'];
+  $('#lxRoles').innerHTML=roles.map(r=>`<button type="button" class="lx-role ${r===LANDING_ROLE?'on':''}" aria-pressed="${r===LANDING_ROLE}" data-role="${r}" onclick="selectLandingRole('${r}')">${escHtml(t(r))}</button>`).join('');
   $('#lxLangs').innerHTML=langEnabled().map(c=>`<button type="button" class="lx-lang ${LANG===c?'on':''}" onclick="setLanguage('${c}')" lang="${c}">${escHtml(LANGS[c].native)}</button>`).join('');
   localizeView(L);
 }
-function selectLandingRole(r){LANDING_ROLE=r;document.querySelectorAll('#lxRoles .lx-role').forEach(el=>el.classList.toggle('on',el.dataset.role===r))}
+function selectLandingRole(r){if(!['Administrator','Principal','Teacher','Accountant','Parent','Student'].includes(r))return;LANDING_ROLE=r;document.querySelectorAll('#lxRoles .lx-role').forEach(el=>{el.classList.toggle('on',el.dataset.role===r);el.setAttribute('aria-pressed',String(el.dataset.role===r))})}
 function enterApp(role){const r=role||LANDING_ROLE||'Administrator';const L=$('#landing');
   L.classList.add('out');const app=document.querySelector('.app');if(app)app.removeAttribute('inert');
   setTimeout(()=>{document.body.classList.add('authed');},560);

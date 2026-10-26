@@ -3,7 +3,7 @@ function dRows(rows){return rows.map(r=>`<div class="lrow" style="justify-conten
 function detailDrawer(o){
   const c=o.color||avc(o.title);
   const stats=(o.stats&&o.stats.length)?`<div class="grid cols-2" style="gap:12px;margin-bottom:6px">${o.stats.map(s=>miniStat(s[0],s[1],s[2]||'blue')).join('')}</div>`:'';
-  const secs=(o.sections||[]).map(sec=>`<h4 style="font-size:13px;margin:18px 0 8px;color:var(--slate-500);text-transform:uppercase;letter-spacing:.05em">${sec.h}</h4>${sec.rows?`<div class="card pad" style="box-shadow:none">${dRows(sec.rows)}</div>`:sec.html||''}`).join('');
+  const secs=(o.sections||[]).map(sec=>sec.note?`<div class="form-note detail-note">${sec.note}</div>`:`<section class="detail-section"><h4 style="font-size:13px;margin:18px 0 8px;color:var(--slate-500);text-transform:uppercase;letter-spacing:.05em">${sec.h}</h4>${sec.rows?`<div class="card pad" style="box-shadow:none">${dRows(sec.rows)}</div>`:sec.html||''}</section>`).join('');
   const foot=(o.footer||[]).map(f=>`<button class="btn ${f[2]?'primary':''}" onclick="${f[1]}">${f[0]}</button>`).join('');
   return `<div class="dh"><span class="avatar" style="width:46px;height:46px;font-size:16px;background:${c}22;color:${darken(c,0.4)}">${o.badge||initials(o.title)}</span>
     <div style="flex:1"><h3 ${o.personTitle?'data-school-person-display':o.recordTitle?'data-i18n-skip="true"':''} style="font-size:17px">${o.title}</h3><div class="muted" style="font-size:12.5px">${o.sub||''}</div></div>

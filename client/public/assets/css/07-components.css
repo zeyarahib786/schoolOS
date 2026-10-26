@@ -151,3 +151,10 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13.5px}
 .teacher-ai-editor input,.teacher-ai-editor textarea{text-align:start}
 .teacher-ai-student{grid-column:1/-1}
 #drawer:has(.teacher-ai-editor) .df,#drawer:has(.teacher-ai-form) .df{flex-wrap:wrap;padding-inline-end:88px}
+
+/* Account identity and first sign-in password setup. */
+#schoolPasswordGate form{display:flex;flex-direction:column;gap:14px;box-shadow:var(--shadow-md)}
+#schoolPasswordGate label{display:flex;flex-direction:column;gap:6px;font-weight:600}
+#schoolPasswordGate input,#drawer .inp{width:100%;min-width:0;box-sizing:border-box;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--card,#fff);color:var(--text,#17212e);font:inherit}
+#schoolPasswordGate [role=alert]{color:var(--red,#b91c1c)}
+#schoolCredentialReceipt{line-height:2;overflow-wrap:anywhere;user-select:text}

@@ -162,7 +162,7 @@ function waitFor(check, label, timeout = 45000) {
         });
     });
     await evaluate(
-      `document.getElementById('lxEmail').value=${JSON.stringify(email)};document.getElementById('lxPass').value=${JSON.stringify(password)};window.enterApp();`,
+      `document.getElementById('lxEmail').value=${JSON.stringify(email)};document.getElementById('lxPass').value=${JSON.stringify(password)};selectLandingRole(${JSON.stringify(process.env.SCHOOLOS_TEST_ROLE || "Administrator")});window.enterApp();`,
     );
     await waitFor(
       () => evaluate("Boolean(window.SCHOOLOS_ADAPTER?.connected)"),

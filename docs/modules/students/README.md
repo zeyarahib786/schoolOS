@@ -65,3 +65,5 @@ Phone numbers use localized digits inside isolated left-to-right elements, inclu
 Document completeness labels, empty-upload messages and replacement controls are localized too; uploaded filenames remain unchanged.
 
 Regression coverage: the localization unit suite and [Arabic browser checks](../../../tests-e2e/arabic/README.md) exercise six roles, profile tabs, stored-name preference, legacy-name fallback and phone direction using isolated fictional fixtures.
+
+Student editing includes a separate optional **Student’s own email** field (`studentEmail`). It can be saved or cleared independently of guardian contact email and is offered when generating a student login in Settings → Login accounts.

@@ -271,6 +271,7 @@
       nationality: s.nationality || "",
       relationship: s.guardianRelationship || "",
       email: s.guardianEmail || "",
+      studentEmail: s.studentEmail || "",
       emergency: s.emergencyContact || "",
       prefLanguage: s.preferredLanguage || "",
       address: s.address || "",
@@ -1122,7 +1123,7 @@
     var email = (document.getElementById("lxEmail") || {}).value || "";
     var password = (document.getElementById("lxPass") || {}).value || "";
     if (!email.trim() || !password) {
-      setLoginBusy(false, "Enter your email and password.");
+      setLoginBusy(false, "Enter your email or login ID and password.");
       return;
     }
     setLoginBusy(true, "Signing in…");
@@ -1130,14 +1131,14 @@
     var loginGeneration = sessionGeneration;
     api("/auth/login", {
       method: "POST",
-      body: JSON.stringify({ email: email.trim(), password: password }),
+      body: JSON.stringify({ email: email.trim(), password: password, role: LANDING_ROLE }),
     })
       .then(function (res) {
         adapter.token = res.data.accessToken;
         adapter.refreshToken = res.data.refreshToken;
         adapter.user = res.data.user;
         saveSession();
-        return hydrate();
+        return schoolAccountPasswordGate().then(function () { return hydrate(); });
       })
       .then(function () {
         assertCurrentSession(loginGeneration);
@@ -1181,6 +1182,7 @@
   };
 
   window.lockApp = function () {
+    if (typeof closeDrawer === "function") closeDrawer();
     var logoutGeneration = sessionGeneration;
     var logout = adapter.token
       ? api("/auth/logout", { method: "POST" }).catch(function () {})
@@ -1959,6 +1961,7 @@
           nationality: "nationality",
           relationship: "guardianRelationship",
           email: "guardianEmail",
+          student_email: "studentEmail",
           emergency: "emergencyContact",
           pref_language: "preferredLanguage",
           address: "address",
@@ -2054,6 +2057,7 @@
           nationality: "nationality",
           relationship: "guardianRelationship",
           email: "guardianEmail",
+          student_email: "studentEmail",
           emergency: "emergencyContact",
           pref_language: "preferredLanguage",
           address: "address",
@@ -5243,7 +5247,7 @@
       if (!res) return null;
       adapter.user = res.data.user;
       saveSession();
-      return hydrate();
+      return schoolAccountPasswordGate().then(function () { return hydrate(); });
     })
     .then(function () {
       assertCurrentSession(restoreGeneration);

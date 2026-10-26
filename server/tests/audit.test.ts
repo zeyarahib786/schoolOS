@@ -54,7 +54,7 @@ describe('Audit Log API', () => {
     await request(app)
       .post('/api/v1/auth/register')
       .send({ name: 'Real User', email, password: 'StrongPass123', role: 'Administrator' });
-    await request(app).post('/api/v1/auth/login').send({ email, password: 'StrongPass123' });
+    await request(app).post('/api/v1/auth/login').send({ role: 'Administrator', email, password: 'StrongPass123' });
 
     const admin = await registerAndLogin('Administrator', 'admin3@alnoor.ae');
     const res = await request(app)
@@ -72,7 +72,7 @@ describe('Audit Log API', () => {
     await request(app)
       .post('/api/v1/auth/register')
       .send({ name: 'Test User', email, password: 'StrongPass123', role: 'Administrator' });
-    await request(app).post('/api/v1/auth/login').send({ email, password: 'WrongPassword1' });
+    await request(app).post('/api/v1/auth/login').send({ role: 'Administrator', email, password: 'WrongPassword1' });
 
     const admin = await registerAndLogin('Administrator', 'admin4@alnoor.ae');
     const res = await request(app)

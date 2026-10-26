@@ -1,5 +1,5 @@
 import { apiClient, ApiSuccess } from '../../lib/api/client';
-import { AuthUser } from '../../lib/store/authStore';
+import { AuthUser, Role } from '../../lib/store/authStore';
 
 interface AuthPayload {
   user: AuthUser;
@@ -7,8 +7,8 @@ interface AuthPayload {
   refreshToken: string;
 }
 
-export async function login(email: string, password: string): Promise<AuthPayload> {
-  const res = await apiClient.post<ApiSuccess<AuthPayload>>('/auth/login', { email, password });
+export async function login(email: string, password: string, role: Role): Promise<AuthPayload> {
+  const res = await apiClient.post<ApiSuccess<AuthPayload>>('/auth/login', { email, password, role });
   return res.data.data;
 }
 

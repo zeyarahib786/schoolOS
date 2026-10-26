@@ -91,6 +91,7 @@ async function buildContext(input: AiRequest) {
       assignment: assignment.description,
       questions: assignment.questions,
       response: submission.content,
+      answers: submission.answers.map(({ questionId, value }) => ({ questionId, value })),
       maxScore: assignment.maxScore,
       objectiveScore: submission.objectiveScore,
     };
@@ -161,6 +162,12 @@ async function buildContext(input: AiRequest) {
       request: { ...input, studentId: undefined, submissionId: undefined },
       curriculum: units.map((u) => ({ title: u.title, outcomes: u.outcomes, framework: u.framework })),
       facts,
+      reportingScope: input.kind === 'ParentMessage' || input.kind === 'Progress' ? {
+        attendance: 'This student only, across all subjects in the explicit rolling date window; not subject sessions or whole-class attendance.',
+        coursework: 'Selected academic year, not necessarily within the attendance date window.',
+        averagePercent: 'Mean of graded submission percentages only; not completion rate and not the average of all published work.',
+        submissionTiming: 'No on-time submission evidence is supplied; overdueUnsubmitted does not establish on-time submission.',
+      } : undefined,
       studentWork,
     },
   };
@@ -214,6 +221,7 @@ export async function generateAiDraft(input: AiRequest, requestId: string, user:
       request: input,
       status: 'Generating',
       model: config.model,
+      provider: config.provider as 'openai' | 'gemini' | 'groq',
       sources: context.sources,
       facts: context.facts,
       sourceVersion: context.sourceVersion,
@@ -235,14 +243,23 @@ export async function generateAiDraft(input: AiRequest, requestId: string, user:
     return draft;
   } catch (e) {
     draft.status = 'Failed';
+    draft.failureMessage =
+      e instanceof ApiError
+        ? e.message
+        : 'Generation failed unexpectedly. Please try again or contact school administration.';
     await draft.save();
     throw e;
   }
 }
 export async function listAiDrafts(user: AuthenticatedUser) {
   await TeacherAiDraft.updateMany(
-    { owner: user.id, status: 'Generating', createdAt: { $lt: new Date(Date.now() - 120000) } },
-    { $set: { status: 'Failed' } },
+    { owner: user.id, status: 'Generating', createdAt: { $lt: new Date(Date.now() - 180000) } },
+    {
+      $set: {
+        status: 'Failed',
+        failureMessage: 'Generation was interrupted or timed out. Please create a new attempt.',
+      },
+    },
   );
   const scopes = user.role === 'Teacher' ? await teacherScope(user) : null;
   return TeacherAiDraft.find({

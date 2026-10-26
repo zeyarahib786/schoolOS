@@ -41,7 +41,7 @@ describe('Auth API', () => {
     await request(app).post('/api/v1/auth/register').send(validUser);
     const res = await request(app)
       .post('/api/v1/auth/login')
-      .send({ email: validUser.email, password: validUser.password });
+      .send({ role: 'Administrator', email: validUser.email, password: validUser.password });
     expect(res.status).toBe(200);
     expect(res.body.data.accessToken).toBeDefined();
   });
@@ -50,7 +50,7 @@ describe('Auth API', () => {
     await request(app).post('/api/v1/auth/register').send(validUser);
     const res = await request(app)
       .post('/api/v1/auth/login')
-      .send({ email: validUser.email, password: 'WrongPass123' });
+      .send({ role: 'Administrator', email: validUser.email, password: 'WrongPass123' });
     expect(res.status).toBe(401);
     expect(res.body.error.message).toBe('Invalid email or password');
   });
@@ -58,7 +58,7 @@ describe('Auth API', () => {
   it('rejects login for a non-existent email with the SAME generic error', async () => {
     const res = await request(app)
       .post('/api/v1/auth/login')
-      .send({ email: 'nobody@alnoor.ae', password: 'WhoKnows123' });
+      .send({ role: 'Administrator', email: 'nobody@alnoor.ae', password: 'WhoKnows123' });
     expect(res.status).toBe(401);
     expect(res.body.error.message).toBe('Invalid email or password');
   });
